@@ -470,36 +470,9 @@ function MiniSpendChart({customerInvoices}){
   );
 }
 
-/* ═══════════════════════════════════════════════
-   ACTIVATION CODES SYSTEM
-   fbz_codes = { "XXXX-XXXX": { used: bool, createdAt, usedBy? } }
-   ADMIN_SECRET = code secret pour accéder au panneau admin
-═══════════════════════════════════════════════ */
-const CODES_KEY="fbz_codes";
-
-const getCodes=()=>{try{return JSON.parse(localStorage.getItem(CODES_KEY)||"{}");}catch{return {};}};
-const saveCodes=c=>localStorage.setItem(CODES_KEY,JSON.stringify(c));
-
 const genCode=()=>{
   const seg=()=>Math.random().toString(36).slice(2,6).toUpperCase();
   return `${seg()}-${seg()}`;
-};
-
-const isCodeValid=code=>{
-  const codes=getCodes();
-  const c=codes[code?.trim().toUpperCase()];
-  return c&&!c.used;
-};
-
-const consumeCode=(code,username)=>{
-  const codes=getCodes();
-  const key=code.trim().toUpperCase();
-  if(codes[key]&&!codes[key].used){
-    codes[key]={...codes[key],used:true,usedBy:username,usedAt:new Date().toISOString()};
-    saveCodes(codes);
-    return true;
-  }
-  return false;
 };
 
 /* ─── ADMIN PANEL ─────────────────────────────── */
