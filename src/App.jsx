@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 
 /* ═══════════════════════════════════════════════
    TRANSLATIONS
@@ -486,12 +486,12 @@ function AdminPanel({onClose,lang}){
   const [loading,setLoading]=useState(true);
 
   // تحميل البيانات من Supabase
-  useState(()=>{
+  useEffect(()=>{
     (async()=>{
       const [c,wa]=await Promise.all([getCodes(),getAdminWA()]);
       setCodes(c); setWaNum(wa); setLoading(false);
     })();
-  });
+  },[]);
 
   const saveWA=async()=>{
     if(!waNum.trim()) return;
@@ -649,7 +649,7 @@ function AdminPanel({onClose,lang}){
           {/* Parrainages */}
           {(()=>{
             const [refs,setRefs]=useState([]);
-            useState(()=>{getReferrals().then(setRefs);});
+            useEffect(()=>{getReferrals().then(setRefs);},[]);
             return refs.length>0&&(
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:10}}>
@@ -762,14 +762,14 @@ function Auth({onLogin,lang,setLang}){
     return urlRef;
   });
 
-  useState(()=>{
+  useEffect(()=>{
     const onHash=()=>{
       const ref=getUrlRef();
       if(ref){setUrlRef(ref);setRefCode(ref);setMode("register");}
     };
     window.addEventListener("hashchange",onHash);
     return ()=>window.removeEventListener("hashchange",onHash);
-  });
+  },[]);
 
   const handleRegister=async()=>{
     const u=username.trim().toLowerCase();
@@ -1850,9 +1850,9 @@ function ReferralPanel({user,lang,onClose}){
   const [myRefs,setMyRefs]=useState([]);
   const refLink=buildRefLink(user.refCode||"");
 
-  useState(()=>{
+  useEffect(()=>{
     getReferrals().then(all=>setMyRefs(all.filter(r=>r.referrer===user.username)));
-  });
+  },[]);
 
   const copyLink=()=>{
     try{
@@ -2067,38 +2067,59 @@ export default function App(){
   const insightStyle=n>0?{bg:"#fffbeb",dot:"#f59e0b",text:"#92400e"}:{bg:"#ecfdf5",dot:"#10B981",text:"#065f46"};
 
   return(
-    <div dir={rtl?"rtl":"ltr"} style={{minHeight:"100svh",background:"#f9fafb",fontFamily:"system-ui,-apple-system,sans-serif",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column"}}>
+    <div dir={rtl?"rtl":"ltr"} style={{minHeight:"100svh",background:"#f1f5f9",fontFamily:"system-ui,-apple-system,sans-serif",display:"flex"}}>
 
       {/* TOAST */}
       {toast&&<div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",background:"#111",color:"#fff",padding:"10px 20px",borderRadius:20,fontSize:14,fontWeight:600,zIndex:300,boxShadow:"0 8px 24px rgba(0,0,0,.3)",animation:"fadeIn .2s",whiteSpace:"nowrap"}}>{toast}</div>}
 
-      {/* HEADER */}
-      <div style={{background:"#fff",padding:"14px 20px 0",borderBottom:"1px solid #f3f4f6",position:"sticky",top:0,zIndex:10}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:20}}>💼</span>
-            <div>
-              <span style={{fontWeight:900,fontSize:16,color:"#2563EB",letterSpacing:"-0.5px"}}>{effectiveCompanyName}</span>
-              <span style={{fontSize:10,color:"#9ca3af",marginLeft:6}}>@{user?.username}</span>
-            </div>
+      {/* SIDEBAR */}
+      <div style={{width:220,background:"#fff",borderRight:"1px solid #e5e7eb",display:"flex",flexDirection:"column",position:"fixed",top:0,left:rtl?"auto":"0",right:rtl?"0":"auto",height:"100vh",zIndex:20}}>
+        <div style={{padding:"20px 16px 14px",borderBottom:"1px solid #f3f4f6"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <span style={{fontSize:22}}>💼</span>
+            <span style={{fontWeight:900,fontSize:17,color:"#2563EB"}}>{t.appName}</span>
           </div>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>setModal("products")} style={{padding:"5px 10px",border:"1px solid #e5e7eb",borderRadius:20,fontSize:12,fontWeight:700,background:"#f9fafb",cursor:"pointer",color:"#374151"}}>📦</button>
-            <button onClick={()=>setShowRefPanel(true)} style={{padding:"5px 10px",border:"1px solid #e5e7eb",borderRadius:20,fontSize:12,fontWeight:700,background:"#f9fafb",cursor:"pointer",color:"#374151"}}>🔗</button>
-            <button onClick={()=>setModal("settings")} style={{padding:"5px 10px",border:"1px solid #e5e7eb",borderRadius:20,fontSize:12,fontWeight:700,background:"#f9fafb",cursor:"pointer",color:"#374151"}}>⚙️</button>
-            <button onClick={()=>setLang(l=>l==="fr"?"ar":"fr")} style={{padding:"5px 10px",border:"1px solid #e5e7eb",borderRadius:20,fontSize:12,fontWeight:700,background:"#f9fafb",cursor:"pointer",color:"#374151"}}>{lang==="fr"?"AR":"FR"}</button>
-            <button onClick={handleLogout} style={{padding:"5px 8px",border:"none",background:"none",cursor:"pointer",fontSize:18,color:"#9ca3af"}} title="Déconnexion">←</button>
-          </div>
+          <div style={{fontSize:11,color:"#9ca3af"}}>{effectiveCompanyName} · @{user?.username}</div>
         </div>
-        <div style={{display:"flex"}}>
-          {[["home","🏠"],["invoices",t.invoices],["customers",t.customers],["history",t.history]].map(([k,l])=>(
-            <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);}} style={{flex:1,padding:"10px 0",border:"none",background:"none",cursor:"pointer",fontSize:11,fontWeight:tab===k?700:500,color:tab===k?"#2563EB":"#9ca3af",borderBottom:tab===k?"2.5px solid #2563EB":"2.5px solid transparent",whiteSpace:"nowrap"}}>{l}</button>
+        <div style={{flex:1,padding:"10px 10px",display:"flex",flexDirection:"column",gap:2}}>
+          {[["home","🏠",t.home],["invoices","🧾",t.invoices],["customers","👥",t.customers],["history","📋",t.history]].map(([k,icon,label])=>(
+            <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);}}
+              style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?700:400,background:tab===k?"#eff6ff":"transparent",color:tab===k?"#2563EB":"#6b7280",textAlign:"left",width:"100%"}}>
+              <span>{icon}</span>{label}
+            </button>
           ))}
+          <div style={{height:1,background:"#f3f4f6",margin:"8px 0"}}/>
+          <button onClick={()=>setModal("invoice")} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:700,background:"#2563EB",color:"#fff",width:"100%",boxShadow:"0 4px 12px rgba(37,99,235,.3)"}}>
+            🧾 {t.newInvoice}
+          </button>
+          <button onClick={()=>setModal("expense")} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:"#fef2f2",color:"#dc2626",width:"100%"}}>
+            – {t.addExpense}
+          </button>
+          <button onClick={()=>setModal("income")} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:600,background:"#ecfdf5",color:"#059669",width:"100%"}}>
+            + {t.addIncome}
+          </button>
+        </div>
+        <div style={{padding:"10px",borderTop:"1px solid #f3f4f6",display:"flex",flexDirection:"column",gap:2}}>
+          <button onClick={()=>setShowRefPanel(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>🔗 {t.refTitle}</button>
+          <button onClick={()=>setModal("products")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>📦 {t.manageProducts}</button>
+          <button onClick={()=>setModal("settings")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>⚙️ {t.settings}</button>
+          <button onClick={()=>setLang(l=>l==="fr"?"ar":"fr")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>🌐 {lang==="fr"?"AR":"FR"}</button>
+          <button onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#ef4444",width:"100%"}}>← Déconnexion</button>
         </div>
       </div>
 
+      {/* MAIN */}
+      <div style={{flex:1,marginLeft:rtl?0:220,marginRight:rtl?220:0,display:"flex",flexDirection:"column",minHeight:"100vh"}}>
+
       {/* CONTENT */}
-      <div style={{flex:1,padding:20,paddingBottom:110,overflowY:"auto"}}>
+      <div style={{flex:1,padding:"28px 32px",paddingBottom:40,overflowY:"auto",maxWidth:900,width:"100%",margin:"0 auto",boxSizing:"border-box"}}>
+
+        {/* Page title */}
+        <div style={{marginBottom:24,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{fontWeight:900,fontSize:20,color:"#111"}}>
+            {tab==="home"&&t.home} {tab==="invoices"&&t.invoices} {tab==="customers"&&t.customers} {tab==="history"&&t.history}
+          </div>
+        </div>
 
         {/* ── HOME ── */}
         {tab==="home"&&(<>
@@ -2239,14 +2260,18 @@ export default function App(){
             }
           </div>
         )}
-      </div>
+      </div>{/* end CONTENT */}
+      </div>{/* end MAIN */}
 
-      {/* BOTTOM BAR */}
-      <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"10px 16px 24px",background:"linear-gradient(to top,#f9fafb 75%,transparent)",display:"flex",gap:8,boxSizing:"border-box"}}>
+      {/* BOTTOM BAR mobile */}
+      <div style={{position:"fixed",bottom:0,left:220,right:0,padding:"10px 24px 16px",background:"linear-gradient(to top,#f1f5f9 75%,transparent)",display:"none",gap:8,boxSizing:"border-box"}} className="mobile-bar">
         <button onClick={()=>setModal("expense")} style={{flex:"0 0 52px",padding:"14px 0",background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:14,fontSize:20,cursor:"pointer"}}>–</button>
         <button onClick={()=>{setInvoicePreselect(null);setModal("invoice");}} style={{flex:2,padding:"14px",background:"#2563EB",border:"none",borderRadius:14,fontSize:14,fontWeight:800,color:"#fff",cursor:"pointer",boxShadow:"0 8px 20px rgba(37,99,235,.4)"}}>🧾 {t.newInvoice}</button>
         <button onClick={()=>setModal("income")} style={{flex:"0 0 52px",padding:"14px 0",background:"#ecfdf5",border:"1.5px solid #a7f3d0",borderRadius:14,fontSize:20,cursor:"pointer"}}>+</button>
       </div>
+
+    </div>
+  );
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
@@ -2312,7 +2337,15 @@ export default function App(){
         @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
         *{-webkit-tap-highlight-color:transparent;box-sizing:border-box}
         input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
-        body{margin:0;background:#f9fafb}
+        body{margin:0;background:#f1f5f9}
+        @media(max-width:768px){
+          [style*="width:220px"]{display:none!important}
+          [style*="marginLeft:220"],[style*="margin-left:220"]{margin-left:0!important;margin-right:0!important}
+          .mobile-header{display:flex!important}
+          .mobile-bar{display:flex!important;left:0!important}
+          [style*="padding:28px 32px"]{padding:16px!important;padding-bottom:100px!important}
+          [style*="fontSize:20,color:#111"]{display:none}
+        }
       `}</style>
     </div>
   );
