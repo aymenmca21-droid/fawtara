@@ -287,10 +287,14 @@ const SB_URL="https://tbsdvvmoyhyszqwkgbjl.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRic2R2dm1veWh5c3pxd2tnYmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MDY1NzUsImV4cCI6MjA5MDQ4MjU3NX0.xgIjslaIeUocxGDXutn9OforeHE6uY_zydP8Xk0fzcU";
 
 const sbFetch=async(path,opts={})=>{
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
-    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":"return=representation",...(opts.headers||{})},
-    ...opts,
-  });
+  const headers={
+    "apikey":SB_KEY,
+    "Authorization":`Bearer ${SB_KEY}`,
+    "Content-Type":"application/json",
+    "Prefer":"return=representation",
+    ...(opts.headers||{}),
+  };
+  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{...opts,headers});
   if(!res.ok){const e=await res.text();throw new Error(e);}
   const txt=await res.text();
   return txt?JSON.parse(txt):null;
@@ -2270,66 +2274,33 @@ export default function App(){
         <button onClick={()=>setModal("income")} style={{flex:"0 0 52px",padding:"14px 0",background:"#ecfdf5",border:"1.5px solid #a7f3d0",borderRadius:14,fontSize:20,cursor:"pointer"}}>+</button>
       </div>
 
-    </div>
-  );
-
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect}/>}
       {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} onSave={name=>{setCompanyName(name);persist({companyName:name});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
+      {modal==="newCustomer"&&<CustomerModal onSave={c=>{saveCustomer(c);setModal(null);showToast("Client ajouté ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
+      {editingCustomer&&<CustomerModal existing={editingCustomer} onSave={c=>{saveCustomer(c);setEditingCustomer(null);setSelectedCustomer(c);showToast("Client modifié ✓");}} onClose={()=>setEditingCustomer(null)} lang={lang}/>}
 
-      {/* ── تأكيد الإيصال ── */}
+      {/* تأكيد الإيصال */}
       {confirmTx&&(
         <div onClick={()=>setConfirmTx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,backdropFilter:"blur(4px)",padding:20}}>
-          <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
-            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:360,boxShadow:"0 24px 64px rgba(0,0,0,.2)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+          <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:360,boxShadow:"0 24px 64px rgba(0,0,0,.2)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
             <div style={{width:52,height:52,borderRadius:16,background:"#ecfdf5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,marginBottom:16}}>✅</div>
             <div style={{fontWeight:900,fontSize:17,color:"#111",marginBottom:8}}>{t.confirmPaid}</div>
-            <div style={{fontSize:14,color:"#6b7280",marginBottom:6,lineHeight:1.5}}>
-              {t.confirmPaidMsg(confirmTx.client||confirmTx.desc, fmt(confirmTx.amount,lang))}
-            </div>
+            <div style={{fontSize:14,color:"#6b7280",marginBottom:6,lineHeight:1.5}}>{t.confirmPaidMsg(confirmTx.client||confirmTx.desc,fmt(confirmTx.amount,lang))}</div>
             {confirmTx.invoiceId&&<div style={{fontSize:12,color:"#9ca3af",marginBottom:20}}>📄 {confirmTx.invoiceId}</div>}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:20}}>
-              <button onClick={()=>setConfirmTx(null)}
-                style={{padding:"13px",borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:700,color:"#6b7280",background:"#fff",cursor:"pointer"}}>
-                {t.confirmNo}
-              </button>
-              <button onClick={()=>{markPaid(confirmTx.id);setConfirmTx(null);showToast(t.markPaid+" ✓");}}
-                style={{padding:"13px",borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#10B981",cursor:"pointer",boxShadow:"0 4px 12px rgba(16,185,129,.35)"}}>
-                {t.confirmYes}
-              </button>
+              <button onClick={()=>setConfirmTx(null)} style={{padding:"13px",borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:700,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.confirmNo}</button>
+              <button onClick={()=>{markPaid(confirmTx.id);setConfirmTx(null);showToast(t.markPaid+" ✓");}} style={{padding:"13px",borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#10B981",cursor:"pointer"}}>{t.confirmYes}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── تفاصيل الفاتورة من الصفحة الرئيسية ── */}
-      {detailTx&&(
-        <InvoicePDFModal
-          invoice={detailTx}
-          lang={lang}
-          onClose={()=>setDetailTx(null)}
-          relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)}
-          onAddPayment={newTx=>handleAddPayment(newTx, detailTx.id)}
-        />
-      )}
-      {modal==="newCustomer"&&<CustomerModal onSave={c=>{saveCustomer(c);setModal(null);showToast("Client ajouté ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
-      {editingCustomer&&<CustomerModal existing={editingCustomer} onSave={c=>{saveCustomer(c);setEditingCustomer(null);setSelectedCustomer(c);showToast("Client modifié ✓");}} onClose={()=>setEditingCustomer(null)} lang={lang}/>}
-      {previewInvoice&&(
-        <InvoicePDFModal
-          invoice={previewInvoice}
-          lang={lang}
-          onClose={()=>setPreviewInvoice(null)}
-          relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)}
-          onAddPayment={newTx=>handleAddPayment(newTx, previewInvoice.id)}
-        />
-      )}
-
-      {/* إشعار الإحالة */}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
-
-      {/* لوحة الإحالات */}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
       <style>{`
@@ -2341,10 +2312,8 @@ export default function App(){
         @media(max-width:768px){
           [style*="width:220px"]{display:none!important}
           [style*="marginLeft:220"],[style*="margin-left:220"]{margin-left:0!important;margin-right:0!important}
-          .mobile-header{display:flex!important}
           .mobile-bar{display:flex!important;left:0!important}
           [style*="padding:28px 32px"]{padding:16px!important;padding-bottom:100px!important}
-          [style*="fontSize:20,color:#111"]{display:none}
         }
       `}</style>
     </div>
