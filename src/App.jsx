@@ -284,7 +284,7 @@ const DEMO_INVOICES=[
    SUPABASE CLIENT
 ═══════════════════════════════════════════════ */
 const SB_URL="https://tbsdvvmoyhyszqwkgbjl.supabase.co";
-const SB_KEY="sb_publishable_3XBhPDzmY-IKsLRsebKxQA_7rqykGjj";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRic2R2dm1veWh5c3pxd2tnYmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MDY1NzUsImV4cCI6MjA5MDQ4MjU3NX0.xgIjslaIeUocxGDXutn9OforeHE6uY_zydP8Xk0fzcU";
 
 const sbFetch=async(path,opts={})=>{
   const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
