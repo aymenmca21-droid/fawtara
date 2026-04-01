@@ -2001,11 +2001,11 @@ export default function App(){
   };
 
   // ── حفظ تلقائي (debounced 1.5s) ──
-  const persistTimer=useState(null)[0];
+  const persistTimer=useRef({t:null});
   const persist=(patch={})=>{
     if(!user) return;
-    clearTimeout(persistTimer.t);
-    persistTimer.t=setTimeout(()=>{
+    clearTimeout(persistTimer.current.t);
+    persistTimer.current.t=setTimeout(()=>{
       saveUserData(user.username,{
         txs:patch.txs??txs, products:patch.products??products,
         invoices:patch.invoices??invoices, customers:patch.customers??customers,
