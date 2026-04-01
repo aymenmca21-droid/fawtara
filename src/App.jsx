@@ -46,9 +46,9 @@ const T = {
     adminRefTitle:"Parrainages reçus",
     adminRefEmpty:"Aucun parrainage",
     // home
-    profit:"Bénéfice net", income:"Revenus", expenses:"Dépenses", owed:"À recevoir",
+    profit:"Bénéfice net 💰", income:"Revenus", expenses:"Dépenses", owed:"À recevoir",
     unpaid:"À encaisser", noUnpaid:"Tout est encaissé 🎉", markPaid:"Encaissé ✓",
-    insight_unpaid:n=>`${n} paiement${n>1?"s":""} en attente`, insight_up:"Bénéfice en hausse 📈",
+    insight_unpaid:n=>`${n} paiement${n>1?"s":""} en attente`, insight_up:"Gagnez 1 000 DA 💰",
     // tx modal
     addIncome:"Revenu", addExpense:"Dépense",
     descPh:"Description", amtPh:"Montant en DA", clientPh:"Client (optionnel)",
@@ -163,7 +163,7 @@ const T = {
     adminRefEmpty:"لا توجد إحالات",
     profit:"صافي الربح", income:"الإيرادات", expenses:"المصروفات", owed:"المستحقات",
     unpaid:"لم يُستلم", noUnpaid:"كل شيء مُحصَّل 🎉", markPaid:"تم ✓",
-    insight_unpaid:n=>`${n} دفعة معلقة`, insight_up:"الربح في ارتفاع 📈",
+    insight_unpaid:n=>`${n} دفعة معلقة`, insight_up:"اربح 1000 دج 💰",
     addIncome:"إيراد", addExpense:"مصروف",
     descPh:"الوصف", amtPh:"المبلغ", clientPh:"العميل",
     received:"مُستلم؟", yes:"نعم", no:"ليس بعد",
@@ -653,26 +653,81 @@ function AdminPanel({onClose,lang}){
           {/* Parrainages */}
           {(()=>{
             const [refs,setRefs]=useState([]);
+            const [search,setSearch]=useState("");
             useEffect(()=>{getReferrals().then(setRefs);},[]);
-            return refs.length>0&&(
+            const filtered=refs.filter(r=>
+              r.referrer?.toLowerCase().includes(search.toLowerCase())||
+              r.newUser?.toLowerCase().includes(search.toLowerCase())||
+              r.ccp?.includes(search)||
+              r.whatsapp?.includes(search)
+            );
+            return(
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:10}}>
                   🔗 Parrainages ({refs.length})
                 </div>
-                {refs.map((r,i)=>(
-                  <div key={i} onClick={()=>{markRefSeenByAdmin(r.newUser);setRefs(prev=>prev.map(x=>x.newUser===r.newUser?{...x,seenByAdmin:true}:x));}}
-                    style={{padding:"12px 14px",background:r.seenByAdmin?"#f9fafb":"#eff6ff",borderRadius:12,marginBottom:8,border:`1px solid ${r.seenByAdmin?"#e5e7eb":"#bfdbfe"}`,cursor:"pointer"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:r.ccp?6:0}}>
-                      <div>
-                        {!r.seenByAdmin&&<span style={{fontSize:10,background:"#2563EB",color:"#fff",borderRadius:20,padding:"2px 8px",fontWeight:700,marginRight:6}}>NEW</span>}
-                        <span style={{fontWeight:700,fontSize:13,color:"#111"}}>@{r.referrer}</span>
-                        <span style={{color:"#9ca3af",fontSize:13}}> → </span>
-                        <span style={{fontWeight:700,fontSize:13,color:"#1d4ed8"}}>@{r.newUser}</span>
+
+                {/* خانة البحث */}
+                {refs.length>0&&(
+                  <input
+                    value={search}
+                    onChange={e=>setSearch(e.target.value)}
+                    placeholder="Rechercher un nom, CCP, WhatsApp..."
+                    style={{...S.inp({marginBottom:12,fontSize:13})}}
+                  />
+                )}
+
+                {filtered.length===0&&refs.length>0&&(
+                  <div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun résultat</div>
+                )}
+
+                {filtered.length===0&&refs.length===0&&(
+                  <div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun parrainage</div>
+                )}
+
+                {filtered.map((r,i)=>(
+                  <div key={i}
+                    onClick={()=>{markRefSeenByAdmin(r.newUser);setRefs(prev=>prev.map(x=>x.newUser===r.newUser?{...x,seenByAdmin:true}:x));}}
+                    style={{padding:"14px",background:r.seenByAdmin?"#f9fafb":"#eff6ff",borderRadius:12,marginBottom:10,border:`1.5px solid ${r.seenByAdmin?"#e5e7eb":"#bfdbfe"}`,cursor:"pointer"}}>
+
+                    {/* Badge NEW */}
+                    {!r.seenByAdmin&&<span style={{fontSize:10,background:"#2563EB",color:"#fff",borderRadius:20,padding:"2px 8px",fontWeight:700,display:"inline-block",marginBottom:8}}>🆕 NOUVEAU</span>}
+
+                    {/* المُحيل والمدعو */}
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                      <div style={{flex:1,background:"#fff",borderRadius:10,padding:"8px 12px",border:"1px solid #e5e7eb"}}>
+                        <div style={{fontSize:10,color:"#9ca3af",fontWeight:700,marginBottom:2}}>PARRAIN</div>
+                        <div style={{fontWeight:800,fontSize:14,color:"#2563EB"}}>@{r.referrer}</div>
                       </div>
-                      <span style={{fontSize:11,color:"#9ca3af"}}>{new Date(r.date).toLocaleDateString()}</span>
+                      <div style={{fontSize:18,color:"#9ca3af"}}>→</div>
+                      <div style={{flex:1,background:"#fff",borderRadius:10,padding:"8px 12px",border:"1px solid #e5e7eb"}}>
+                        <div style={{fontSize:10,color:"#9ca3af",fontWeight:700,marginBottom:2}}>INVITÉ</div>
+                        <div style={{fontWeight:800,fontSize:14,color:"#111"}}>@{r.newUser}</div>
+                      </div>
                     </div>
-                    {r.ccp&&<div style={{fontSize:12,color:"#059669",fontWeight:600,marginTop:4}}>💳 CCP: {r.ccp} · 📞 {r.whatsapp}</div>}
-                    {!r.ccp&&<div style={{fontSize:11,color:"#d97706",marginTop:4}}>⏳ En attente CCP du parrain</div>}
+
+                    {/* التاريخ */}
+                    <div style={{fontSize:11,color:"#9ca3af",marginBottom:8}}>📅 {new Date(r.date).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div>
+
+                    {/* CCP وواتساب */}
+                    {r.ccp?(
+                      <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px 12px",border:"1px solid #a7f3d0"}}>
+                        <div style={{display:"flex",gap:16}}>
+                          <div>
+                            <div style={{fontSize:10,color:"#065f46",fontWeight:700,marginBottom:2}}>💳 CCP</div>
+                            <div style={{fontWeight:800,fontSize:15,color:"#065f46",fontFamily:"monospace"}}>{r.ccp}</div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,color:"#065f46",fontWeight:700,marginBottom:2}}>📞 WHATSAPP</div>
+                            <div style={{fontWeight:800,fontSize:15,color:"#065f46"}}>{r.whatsapp}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ):(
+                      <div style={{background:"#fffbeb",borderRadius:10,padding:"8px 12px",border:"1px solid #fde68a",fontSize:12,color:"#92400e",fontWeight:600}}>
+                        ⏳ En attente des coordonnées du parrain
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -866,12 +921,19 @@ function Auth({onLogin,lang,setLang}){
             placeholder={t.activCodePh}
             style={inp({fontFamily:"monospace",fontWeight:700,letterSpacing:2,fontSize:16,
               borderColor:activCode.length===9?(isCodeValid(activCode)?"#10B981":"#ef4444"):"#e5e7eb"})}/>
-          <input value={refCode} onChange={e=>setRefCode(e.target.value.toUpperCase())}
+          <input
+            value={refCode}
+            onChange={e=>{ if(!getUrlRef()) setRefCode(e.target.value.toUpperCase()); }}
+            readOnly={!!getUrlRef()}
             placeholder={t.refCodePh}
             style={inp({marginBottom:16,fontFamily:"monospace",letterSpacing:1,
-              borderColor:refCode.length>0?"#f59e0b":"#e5e7eb",
-              borderStyle:refCode.length>0?"solid":"dashed"})}/>
-        </>}
+              borderColor:refCode.length>0?"#10B981":"#e5e7eb",
+              borderStyle:refCode.length>0?"solid":"dashed",
+              background:refCode.length>0&&getUrlRef()?"#f0fdf4":"#fff",
+              color:refCode.length>0?"#065f46":"#9ca3af",
+              cursor:getUrlRef()?"default":"text"
+            })}
+          />        </>}
         <button onClick={mode==="login"?handleLogin:handleRegister} disabled={loading}
           style={{width:"100%",padding:14,background:loading?"#93c5fd":"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:loading?"default":"pointer",marginTop:mode==="login"?6:0,transition:"background .2s"}}>
           {loading?"⏳ ...":mode==="login"?t.loginBtn:t.registerBtn}
@@ -1810,7 +1872,8 @@ function ReferralNotif({referral,onClose,lang}){
     setTimeout(onClose,2000);
   };
 
-  const dismiss=async()=>{await markRefSeenByReferrer(referral.newUser);onClose();};
+  // "Plus tard" — لا يُعلّم كمرئي، سيظهر مجدداً عند الدخول التالي
+  const later=()=>onClose();
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,backdropFilter:"blur(6px)",padding:20}}>
@@ -1829,7 +1892,7 @@ function ReferralNotif({referral,onClose,lang}){
             <input value={ccp} onChange={e=>setCcp(e.target.value)} placeholder={t.refCCPPh} style={S.inp({marginBottom:8})}/>
             <input value={wa} onChange={e=>setWa(e.target.value)} placeholder={t.refWAPh} style={S.inp({marginBottom:20})}/>
             <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
-              <button onClick={dismiss} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
+              <button onClick={later} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Plus tard</button>
               <button onClick={send} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#2563EB",cursor:"pointer",boxShadow:"0 4px 14px rgba(37,99,235,.35)"}}>{t.refSend}</button>
             </div>
           </>
@@ -1872,7 +1935,8 @@ function ReferralPanel({user,lang,onClose}){
     const msg=encodeURIComponent(
       `💼 Gère ton commerce facilement avec Fawtara !\n\n` +
       `✅ Factures professionnelles\n✅ Suivi clients & dettes\n✅ Paiement unique — à vie\n\n` +
-      `👉 Inscris-toi ici : ${refLink}\n\n` +
+      `🎁 Inscris-toi via mon lien et je gagne 1 000 DA !\n` +
+      `👉 ${refLink}\n\n` +
       `Pour payer et activer ton compte, contacte le développeur :\n📞 wa.me/${getAdminWA()}`
     );
     window.open(`https://wa.me/?text=${msg}`,"_blank");
