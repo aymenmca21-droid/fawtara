@@ -344,7 +344,7 @@ const consumeCode=async(code,username)=>{
 // ── الإحالات ──
 const getReferrals=async()=>{
   try{const r=await sbFetch("fbz_referrals?select=*&order=date.desc");
-  return (r||[]).map(x=>({referrer:x.referrer,newUser:x.new_user,date:x.date,ccp:x.ccp,whatsapp:x.whatsapp,seenByReferrer:x.seen_by_referrer,seenByAdmin:x.seen_by_admin}));}
+  return (r||[]).map(x=>({referrer:x.referrer,newUser:x.new_user,date:x.date,ccp:x.ccp,whatsapp:x.whatsapp,seenByReferrer:x.seen_by_referrer,seenByAdmin:x.seen_by_admin,paidByAdmin:x.paid_by_admin,paidAt:x.paid_at}));}
   catch{return [];}
 };
 const addReferral=async obj=>{
@@ -355,6 +355,9 @@ const markRefSeenByReferrer=async newUser=>{
 };
 const markRefSeenByAdmin=async newUser=>{
   await sbFetch(`fbz_referrals?new_user=eq.${encodeURIComponent(newUser)}`,{method:"PATCH",body:JSON.stringify({seen_by_admin:true})});
+};
+const markRefPaid=async newUser=>{
+  await sbFetch(`fbz_referrals?new_user=eq.${encodeURIComponent(newUser)}`,{method:"PATCH",body:JSON.stringify({paid_by_admin:true,paid_at:new Date().toISOString()})});
 };
 const setRefCCP=async(newUser,ccp,wa)=>{
   await sbFetch(`fbz_referrals?new_user=eq.${encodeURIComponent(newUser)}`,{method:"PATCH",body:JSON.stringify({ccp,whatsapp:wa})});
@@ -654,44 +657,100 @@ function AdminPanel({onClose,lang}){
           {(()=>{
             const [refs,setRefs]=useState([]);
             const [search,setSearch]=useState("");
+            const [confirmPay,setConfirmPay]=useState(null); // الإحالة المراد تأكيد دفعها
             useEffect(()=>{getReferrals().then(setRefs);},[]);
+
             const filtered=refs.filter(r=>
               r.referrer?.toLowerCase().includes(search.toLowerCase())||
               r.newUser?.toLowerCase().includes(search.toLowerCase())||
               r.ccp?.includes(search)||
               r.whatsapp?.includes(search)
             );
+
+            const handlePay=async(r)=>{
+              await markRefPaid(r.newUser);
+              await markRefSeenByAdmin(r.newUser);
+              setRefs(prev=>prev.map(x=>x.newUser===r.newUser?{...x,paidByAdmin:true,paidAt:new Date().toISOString(),seenByAdmin:true}:x));
+              setConfirmPay(null);
+            };
+
+            // تصدير Excel
+            const exportExcel=()=>{
+              const rows=[
+                ["Parrain","Invité","Date","CCP","WhatsApp","Payé","Date paiement"],
+                ...refs.map(r=>[
+                  r.referrer||"",
+                  r.newUser||"",
+                  r.date?new Date(r.date).toLocaleDateString("fr-FR"):"",
+                  r.ccp||"",
+                  r.whatsapp||"",
+                  r.paidByAdmin?"Oui":"Non",
+                  r.paidAt?new Date(r.paidAt).toLocaleDateString("fr-FR"):"",
+                ])
+              ];
+              const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+              const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+              const url=URL.createObjectURL(blob);
+              const a=document.createElement("a");
+              a.href=url; a.download=`parrainages_${new Date().toISOString().slice(0,10)}.csv`;
+              a.click(); URL.revokeObjectURL(url);
+            };
+
+            const paid=refs.filter(r=>r.paidByAdmin).length;
+            const unpaid=refs.filter(r=>r.ccp&&!r.paidByAdmin).length;
+
             return(
               <div>
-                <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:10}}>
-                  🔗 Parrainages ({refs.length})
+                {/* Header + Export */}
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8}}>
+                    🔗 Parrainages ({refs.length})
+                  </div>
+                  {refs.length>0&&(
+                    <button onClick={exportExcel}
+                      style={{padding:"5px 12px",background:"#059669",color:"#fff",border:"none",borderRadius:8,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+                      📊 Export CSV
+                    </button>
+                  )}
                 </div>
+
+                {/* إحصائيات سريعة */}
+                {refs.length>0&&(
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
+                    {[
+                      {l:"Total",v:refs.length,bg:"#eff6ff",c:"#1d4ed8"},
+                      {l:"Payés",v:paid,bg:"#ecfdf5",c:"#059669"},
+                      {l:"En attente",v:unpaid,bg:"#fffbeb",c:"#d97706"},
+                    ].map(s=>(
+                      <div key={s.l} style={{background:s.bg,borderRadius:10,padding:"8px",textAlign:"center"}}>
+                        <div style={{fontWeight:900,fontSize:18,color:s.c}}>{s.v}</div>
+                        <div style={{fontSize:10,color:s.c,fontWeight:700}}>{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* خانة البحث */}
                 {refs.length>0&&(
-                  <input
-                    value={search}
-                    onChange={e=>setSearch(e.target.value)}
+                  <input value={search} onChange={e=>setSearch(e.target.value)}
                     placeholder="Rechercher un nom, CCP, WhatsApp..."
                     style={{...S.inp({marginBottom:12,fontSize:13})}}
                   />
                 )}
 
-                {filtered.length===0&&refs.length>0&&(
-                  <div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun résultat</div>
-                )}
-
-                {filtered.length===0&&refs.length===0&&(
-                  <div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun parrainage</div>
-                )}
+                {filtered.length===0&&refs.length>0&&<div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun résultat</div>}
+                {filtered.length===0&&refs.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:"#9ca3af",fontSize:13}}>Aucun parrainage</div>}
 
                 {filtered.map((r,i)=>(
                   <div key={i}
-                    onClick={()=>{markRefSeenByAdmin(r.newUser);setRefs(prev=>prev.map(x=>x.newUser===r.newUser?{...x,seenByAdmin:true}:x));}}
-                    style={{padding:"14px",background:r.seenByAdmin?"#f9fafb":"#eff6ff",borderRadius:12,marginBottom:10,border:`1.5px solid ${r.seenByAdmin?"#e5e7eb":"#bfdbfe"}`,cursor:"pointer"}}>
+                    style={{padding:"14px",background:r.paidByAdmin?"#f0fdf4":r.seenByAdmin?"#f9fafb":"#eff6ff",borderRadius:12,marginBottom:10,
+                      border:`1.5px solid ${r.paidByAdmin?"#86efac":r.seenByAdmin?"#e5e7eb":"#bfdbfe"}`}}>
 
-                    {/* Badge NEW */}
-                    {!r.seenByAdmin&&<span style={{fontSize:10,background:"#2563EB",color:"#fff",borderRadius:20,padding:"2px 8px",fontWeight:700,display:"inline-block",marginBottom:8}}>🆕 NOUVEAU</span>}
+                    {/* Badges */}
+                    <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+                      {!r.seenByAdmin&&<span style={{fontSize:10,background:"#2563EB",color:"#fff",borderRadius:20,padding:"2px 8px",fontWeight:700}}>🆕 NOUVEAU</span>}
+                      {r.paidByAdmin&&<span style={{fontSize:10,background:"#059669",color:"#fff",borderRadius:20,padding:"2px 8px",fontWeight:700}}>✅ PAYÉ — {r.paidAt?new Date(r.paidAt).toLocaleDateString("fr-FR"):""}</span>}
+                    </div>
 
                     {/* المُحيل والمدعو */}
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
@@ -706,12 +765,11 @@ function AdminPanel({onClose,lang}){
                       </div>
                     </div>
 
-                    {/* التاريخ */}
                     <div style={{fontSize:11,color:"#9ca3af",marginBottom:8}}>📅 {new Date(r.date).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div>
 
                     {/* CCP وواتساب */}
                     {r.ccp?(
-                      <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px 12px",border:"1px solid #a7f3d0"}}>
+                      <div style={{background:r.paidByAdmin?"#dcfce7":"#ecfdf5",borderRadius:10,padding:"10px 12px",border:`1px solid ${r.paidByAdmin?"#86efac":"#a7f3d0"}`,marginBottom:10}}>
                         <div style={{display:"flex",gap:16}}>
                           <div>
                             <div style={{fontSize:10,color:"#065f46",fontWeight:700,marginBottom:2}}>💳 CCP</div>
@@ -724,12 +782,39 @@ function AdminPanel({onClose,lang}){
                         </div>
                       </div>
                     ):(
-                      <div style={{background:"#fffbeb",borderRadius:10,padding:"8px 12px",border:"1px solid #fde68a",fontSize:12,color:"#92400e",fontWeight:600}}>
+                      <div style={{background:"#fffbeb",borderRadius:10,padding:"8px 12px",border:"1px solid #fde68a",fontSize:12,color:"#92400e",fontWeight:600,marginBottom:10}}>
                         ⏳ En attente des coordonnées du parrain
                       </div>
                     )}
+
+                    {/* زر تأكيد الدفع */}
+                    {r.ccp&&!r.paidByAdmin&&(
+                      <button onClick={()=>{markRefSeenByAdmin(r.newUser);setRefs(prev=>prev.map(x=>x.newUser===r.newUser?{...x,seenByAdmin:true}:x));setConfirmPay(r);}}
+                        style={{width:"100%",padding:"9px",background:"#2563EB",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:800,cursor:"pointer"}}>
+                        ✓ Confirmer le paiement
+                      </button>
+                    )}
                   </div>
                 ))}
+
+                {/* نافذة تأكيد الدفع */}
+                {confirmPay&&(
+                  <div onClick={()=>setConfirmPay(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,backdropFilter:"blur(4px)",padding:20}}>
+                    <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:340,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+                      <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>💰</div>
+                      <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:8,textAlign:"center"}}>Confirmer le paiement ?</div>
+                      <div style={{background:"#f9fafb",borderRadius:12,padding:"12px",marginBottom:20,fontSize:13}}>
+                        <div style={{marginBottom:6}}><b>Parrain:</b> @{confirmPay.referrer}</div>
+                        <div style={{marginBottom:6}}><b>CCP:</b> {confirmPay.ccp}</div>
+                        <div><b>WhatsApp:</b> {confirmPay.whatsapp}</div>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+                        <button onClick={()=>setConfirmPay(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+                        <button onClick={()=>handlePay(confirmPay)} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#059669",cursor:"pointer",boxShadow:"0 4px 12px rgba(5,150,105,.3)"}}>✓ Oui, payé</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -2014,6 +2099,25 @@ function ReferralPanel({user,lang,onClose}){
             </div>
           </div>
 
+          {/* خطوات كيف تربح */}
+          <div style={{background:"linear-gradient(135deg,#ecfdf5,#d1fae5)",borderRadius:14,padding:16,marginBottom:20,border:"1px solid #a7f3d0"}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#065f46",marginBottom:12}}>🤑 Comment gagner 1 000 DA ?</div>
+            {[
+              {step:"①",text:"Partagez votre lien d'invitation",sub:"Via WhatsApp, Facebook..."},
+              {step:"②",text:"Votre ami s'inscrit via votre lien",sub:"Et active son compte"},
+              {step:"③",text:"Vous recevez une notification 🎉",sub:"Entrez votre CCP et WhatsApp"},
+              {step:"④",text:"Recevez 1 000 DA sur votre CCP !",sub:"Versement dans les 48h",hl:true},
+            ].map((s,i)=>(
+              <div key={i} style={{display:"flex",gap:10,marginBottom:i<3?10:0,padding:s.hl?"10px 12px":"6px 0",background:s.hl?"#059669":"transparent",borderRadius:s.hl?10:0}}>
+                <div style={{width:24,height:24,borderRadius:8,background:s.hl?"rgba(255,255,255,.25)":"#059669",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#fff",flexShrink:0}}>{s.step}</div>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:s.hl?"#fff":"#065f46"}}>{s.text}</div>
+                  <div style={{fontSize:11,color:s.hl?"rgba(255,255,255,.8)":"#6b7280"}}>{s.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* بانر الإحالات المعلقة — إذا لم يملأ CCP بعد */}
           {pendingRefs.length>0&&!showFillForm&&(
             <div style={{background:"#fffbeb",borderRadius:14,padding:16,marginBottom:20,border:"1.5px solid #fde68a"}}>
@@ -2264,7 +2368,7 @@ export default function App(){
           </button>
         </div>
         <div style={{padding:"10px",borderTop:"1px solid #f3f4f6",display:"flex",flexDirection:"column",gap:2}}>
-          <button onClick={()=>setShowRefPanel(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>🔗 {t.refTitle}</button>
+          <button onClick={()=>setShowRefPanel(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#059669",width:"100%",fontWeight:700}}>💰 Gagnez 1 000 DA</button>
           <button onClick={()=>setModal("products")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>📦 {t.manageProducts}</button>
           <button onClick={()=>setModal("settings")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>⚙️ {t.settings}</button>
           <button onClick={()=>setLang(l=>l==="fr"?"ar":"fr")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>🌐 {lang==="fr"?"AR":"FR"}</button>
