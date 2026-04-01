@@ -1915,11 +1915,54 @@ function ReferralPanel({user,lang,onClose}){
   const t=T[lang],rtl=lang==="ar";
   const [copied,setCopied]=useState(false);
   const [myRefs,setMyRefs]=useState([]);
+  const [pendingRefs,setPendingRefs]=useState([]); // إحالات لم يُملأ فيها CCP
   const refLink=buildRefLink(user.refCode||"");
 
+  // مرحلة التحقق من كلمة المرور
+  const [authStep,setAuthStep]=useState(false); // هل نعرض نافذة كلمة المرور؟
+  const [passInput,setPassInput]=useState("");
+  const [passErr,setPassErr]=useState(false);
+  const [showFillForm,setShowFillForm]=useState(false); // هل نعرض نموذج CCP؟
+  const [ccp,setCcp]=useState("");
+  const [wa,setWa]=useState("");
+  const [sent,setSent]=useState(false);
+  const [activRef,setActivRef]=useState(null); // الإحالة النشطة للملء
+
   useEffect(()=>{
-    getReferrals().then(all=>setMyRefs(all.filter(r=>r.referrer===user.username)));
+    getReferrals().then(all=>{
+      const mine=all.filter(r=>r.referrer===user.username);
+      setMyRefs(mine);
+      setPendingRefs(mine.filter(r=>!r.ccp));
+    });
   },[]);
+
+  // التحقق من كلمة المرور
+  const verifyPass=async()=>{
+    const acc=await getAccount(user.username);
+    if(acc&&acc.password===passInput){
+      setPassErr(false);
+      setAuthStep(false);
+      setShowFillForm(true);
+      setCcp(""); setWa("");
+    } else {
+      setPassErr(true);
+      setTimeout(()=>setPassErr(false),1500);
+    }
+  };
+
+  // حفظ البيانات
+  const saveCCPData=async()=>{
+    if(!ccp.trim()&&!wa.trim()) return;
+    // حفظ لكل الإحالات التي لم تُملأ بعد
+    for(const r of pendingRefs){
+      await setRefCCP(r.newUser,ccp.trim(),wa.trim());
+      await markRefSeenByReferrer(r.newUser);
+    }
+    setSent(true);
+    // تحديث القائمة
+    getReferrals().then(all=>setMyRefs(all.filter(r=>r.referrer===user.username)));
+    setTimeout(()=>{setShowFillForm(false);setSent(false);},2000);
+  };
 
   const copyLink=()=>{
     try{
@@ -1935,7 +1978,6 @@ function ReferralPanel({user,lang,onClose}){
     const msg=encodeURIComponent(
       `💼 Gère ton commerce facilement avec Fawtara !\n\n` +
       `✅ Factures professionnelles\n✅ Suivi clients & dettes\n✅ Paiement unique — à vie\n\n` +
-      `🎁 Inscris-toi via mon lien et je gagne 1 000 DA !\n` +
       `👉 ${refLink}\n\n` +
       `Pour payer et activer ton compte, contacte le développeur :\n📞 wa.me/${getAdminWA()}`
     );
@@ -1953,6 +1995,7 @@ function ReferralPanel({user,lang,onClose}){
         </div>
 
         <div style={{overflowY:"auto",flex:1,padding:20}}>
+
           {/* رابط الدعوة */}
           <div style={{background:"linear-gradient(135deg,#eff6ff,#dbeafe)",borderRadius:18,padding:20,marginBottom:20}}>
             <div style={{fontSize:12,fontWeight:700,color:"#1d4ed8",marginBottom:10,textTransform:"uppercase",letterSpacing:.8}}>{t.myRefCode}</div>
@@ -1971,18 +2014,43 @@ function ReferralPanel({user,lang,onClose}){
             </div>
           </div>
 
-          {/* كيف يعمل */}
-          <div style={{background:"#f9fafb",borderRadius:14,padding:16,marginBottom:20,border:"1px dashed #e5e7eb"}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:10}}>📖 Comment ça marche ?</div>
-            {[
-              "① Partagez votre lien avec vos amis",
-              "② Ils s'inscrivent via votre lien",
-              "③ Vous recevez une notification",
-              "④ Entrez votre CCP pour recevoir votre commission"
-            ].map((s,i)=>(
-              <div key={i} style={{fontSize:12,color:"#6b7280",padding:"4px 0",lineHeight:1.6}}>{s}</div>
-            ))}
-          </div>
+          {/* بانر الإحالات المعلقة — إذا لم يملأ CCP بعد */}
+          {pendingRefs.length>0&&!showFillForm&&(
+            <div style={{background:"#fffbeb",borderRadius:14,padding:16,marginBottom:20,border:"1.5px solid #fde68a"}}>
+              <div style={{fontWeight:800,fontSize:14,color:"#92400e",marginBottom:6}}>
+                💰 {pendingRefs.length} invitation(s) en attente de vos coordonnées
+              </div>
+              <div style={{fontSize:12,color:"#92400e",marginBottom:12,lineHeight:1.5}}>
+                Entrez votre CCP et WhatsApp pour recevoir votre commission.
+              </div>
+              <button onClick={()=>setAuthStep(true)}
+                style={{width:"100%",padding:"11px",background:"#f59e0b",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer",color:"#fff"}}>
+                💳 Entrer mes coordonnées
+              </button>
+            </div>
+          )}
+
+          {/* نموذج ملء البيانات بعد التحقق */}
+          {showFillForm&&(
+            <div style={{background:"#eff6ff",borderRadius:14,padding:16,marginBottom:20,border:"1.5px solid #bfdbfe",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+              <div style={{fontWeight:800,fontSize:14,color:"#1d4ed8",marginBottom:12}}>💳 Mes coordonnées de paiement</div>
+              {!sent?(
+                <>
+                  <input value={ccp} onChange={e=>setCcp(e.target.value)} placeholder={t.refCCPPh} style={S.inp({marginBottom:8})} autoFocus/>
+                  <input value={wa} onChange={e=>setWa(e.target.value)} placeholder={t.refWAPh} style={S.inp({marginBottom:14})}/>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:8}}>
+                    <button onClick={()=>setShowFillForm(false)} style={{padding:"11px",borderRadius:11,border:"1.5px solid #bfdbfe",fontSize:13,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+                    <button onClick={saveCCPData} disabled={!ccp.trim()&&!wa.trim()}
+                      style={{padding:"11px",borderRadius:11,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#2563EB",cursor:"pointer"}}>
+                      {t.refSend}
+                    </button>
+                  </div>
+                </>
+              ):(
+                <div style={{textAlign:"center",padding:"8px 0",fontSize:15,fontWeight:800,color:"#059669"}}>✓ {t.refSent}</div>
+              )}
+            </div>
+          )}
 
           {/* قائمة المدعوّين */}
           <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:12}}>
@@ -2006,6 +2074,34 @@ function ReferralPanel({user,lang,onClose}){
           ))}
         </div>
       </div>
+
+      {/* نافذة التحقق من كلمة المرور */}
+      {authStep&&(
+        <div onClick={()=>setAuthStep(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(6px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
+            style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:340,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:40,marginBottom:8}}>🔐</div>
+              <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:4}}>Confirmer votre identité</div>
+              <div style={{fontSize:13,color:"#6b7280"}}>Entrez votre mot de passe pour continuer</div>
+            </div>
+            <input
+              autoFocus
+              type="password"
+              value={passInput}
+              onChange={e=>setPassInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&verifyPass()}
+              placeholder="••••••••"
+              style={S.inp({marginBottom:16,borderColor:passErr?"#ef4444":"#e5e7eb",fontSize:16,textAlign:"center",letterSpacing:4})}
+            />
+            {passErr&&<div style={{color:"#dc2626",fontSize:13,fontWeight:600,textAlign:"center",marginBottom:12}}>Mot de passe incorrect</div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+              <button onClick={()=>setAuthStep(false)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
+              <button onClick={verifyPass} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#2563EB",cursor:"pointer"}}>Confirmer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
