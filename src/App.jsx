@@ -1320,30 +1320,33 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 ═══════════════════════════════════════════════ */
 function ProductsModal({products,onSave,onDelete,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
-  const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState(""), [editing,setEditing]=useState(null);
-  const [filter,setFilter]=useState("all"); // all | low | out
+  const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
+  const [filter,setFilter]=useState("all");
   const ok=name.trim()&&parseFloat(price)>0;
   const submit=()=>{
     if(!ok)return;
-    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stock?parseInt(stock):null});
-    setName("");setPrice("");setStock("");setEditing(null);
+    const stockVal=stock?parseInt(stock):0;
+    const alertVal=alertThreshold?parseInt(alertThreshold):5;
+    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stockVal,alertThreshold:alertVal});
+    setName("");setPrice("");setStock("");setAlertThreshold("5");setEditing(null);
   };
-  const startEdit=p=>{setEditing(p.id);setName(p.name);setPrice(String(p.price));setStock(p.stock!=null?String(p.stock):"");};
+  const startEdit=p=>{setEditing(p.id);setName(p.name);setPrice(String(p.price));setStock(p.stock!=null?String(p.stock):"0");setAlertThreshold(p.alertThreshold!=null?String(p.alertThreshold):"5");};
 
   const withStock=products.filter(p=>p.stock!=null);
   const outOfStock=withStock.filter(p=>p.stock===0);
-  const lowStock=withStock.filter(p=>p.stock>0&&p.stock<=5);
+  const lowStock=withStock.filter(p=>p.stock>0&&p.stock<=(p.alertThreshold??5));
 
   const filtered=products.filter(p=>{
     if(filter==="out") return p.stock===0;
-    if(filter==="low") return p.stock!=null&&p.stock>0&&p.stock<=5;
+    if(filter==="low") return p.stock!=null&&p.stock>0&&p.stock<=(p.alertThreshold??5);
     return true;
   });
 
   const stockColor=p=>{
     if(p.stock==null) return null;
+    const threshold=p.alertThreshold??5;
     if(p.stock===0) return {bg:"#fef2f2",c:"#dc2626",label:"Épuisé"};
-    if(p.stock<=5) return {bg:"#fffbeb",c:"#d97706",label:`${p.stock} restant${p.stock>1?"s":""}`};
+    if(p.stock<=threshold) return {bg:"#fffbeb",c:"#d97706",label:`${p.stock} restant${p.stock>1?"s":""}`};
     return {bg:"#ecfdf5",c:"#059669",label:`${p.stock} en stock`};
   };
 
@@ -1391,29 +1394,34 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
               <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.productName} style={S.inp()}/>
               <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Prix (DA)" style={S.inp()}/>
             </div>
-            {/* Stock avec toggle */}
-            <div style={{marginBottom:10}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                <span style={{fontSize:13,color:"#374151",fontWeight:600}}>📦 Gestion du stock</span>
-                <button onClick={()=>setStock(stock===""?"0":"")}
-                  style={{padding:"3px 10px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
-                    background:stock!==""?"#eff6ff":"#f3f4f6",color:stock!==""?"#1d4ed8":"#6b7280"}}>
-                  {stock!==""?"Activé ✓":"Désactivé"}
-                </button>
-              </div>
-              {stock!==""&&(
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {/* Stock */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:5}}>📦 Stock actuel</div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
                   <input type="number" min="0" value={stock} onChange={e=>setStock(e.target.value)}
-                    placeholder="Quantité en stock"
-                    style={S.inp({fontSize:15,fontWeight:700,borderColor:"#bfdbfe"})}/>
-                  <div style={{display:"flex",gap:4,flexShrink:0}}>
-                    {[1,5,10].map(n=>(
+                    style={S.inp({fontSize:15,fontWeight:700})}/>
+                  <div style={{display:"flex",gap:2,flexShrink:0}}>
+                    {[1,5].map(n=>(
                       <button key={n} onClick={()=>setStock(String(Math.max(0,(parseInt(stock)||0)+n)))}
-                        style={{padding:"6px 10px",borderRadius:8,border:"1px solid #bfdbfe",background:"#eff6ff",color:"#1d4ed8",fontSize:12,fontWeight:700,cursor:"pointer"}}>+{n}</button>
+                        style={{padding:"5px 8px",borderRadius:8,border:"1px solid #bfdbfe",background:"#eff6ff",color:"#1d4ed8",fontSize:11,fontWeight:700,cursor:"pointer"}}>+{n}</button>
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:5}}>⚠️ Alerte si stock ≤</div>
+                <div style={{display:"flex",gap:4}}>
+                  <input type="number" min="1" value={alertThreshold} onChange={e=>setAlertThreshold(e.target.value)}
+                    style={S.inp({fontSize:15,fontWeight:700,borderColor:"#fde68a"})}/>
+                  <div style={{display:"flex",gap:2,flexShrink:0}}>
+                    {[3,5,10].map(n=>(
+                      <button key={n} onClick={()=>setAlertThreshold(String(n))}
+                        style={{padding:"5px 7px",borderRadius:8,border:`1px solid ${alertThreshold==n?"#f59e0b":"#e5e7eb"}`,background:alertThreshold==n?"#fffbeb":"#f9fafb",color:alertThreshold==n?"#d97706":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
             <div style={{display:"flex",gap:8}}>
               {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}}>{t.cancel}</button>}
@@ -2526,7 +2534,7 @@ export default function App(){
           {/* تحذير المخزون */}
           {(()=>{
             const out=products.filter(p=>p.stock===0);
-            const low=products.filter(p=>p.stock!=null&&p.stock>0&&p.stock<=5);
+            const low=products.filter(p=>p.stock!=null&&p.stock>0&&p.stock<=(p.alertThreshold??5));
             return(out.length>0||low.length>0)&&(
               <div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:6}}>
                 {out.length>0&&<div style={{background:"#fef2f2",borderRadius:12,padding:"10px 14px",border:"1px solid #fecaca",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setModal("products")}>
