@@ -2664,22 +2664,32 @@ export default function App(){
           <div style={S.card()}>
             {txs.length===0
               ?<div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>{t.noHistory}</div>
-              :[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
-                <div key={tx.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
-                  <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:tx.type==="income"?"#ecfdf5":"#fef2f2",fontSize:16}}>
-                    {tx.type==="income"?"↑":"↓"}
+              :[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>{
+                const linkedInv=tx.invoiceId?invoices.find(i=>i.id===tx.invoiceId):null;
+                return(
+                  <div key={tx.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
+                    <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:tx.type==="income"?"#ecfdf5":"#fef2f2",fontSize:16}}>
+                      {tx.type==="income"?"↑":"↓"}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:14,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
+                      <div style={{fontSize:11,color:"#9ca3af"}}>{tx.client||tx.date}{tx.invoiceId?` · 📄${tx.invoiceId}`:""}</div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontWeight:700,fontSize:14,color:tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="income"?"+":"–"}{fmt(tx.amount,lang)}</div>
+                      {!tx.paid&&tx.type==="income"&&<div style={{fontSize:10,color:"#d97706",fontWeight:700}}>EN ATTENTE</div>}
+                    </div>
+                    {/* زر الفاتورة */}
+                    {linkedInv&&(
+                      <button onClick={()=>setPreviewInvoice(linkedInv)}
+                        style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,color:"#1d4ed8",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                        🧾 PDF
+                      </button>
+                    )}
+                    <button onClick={()=>delTx(tx.id)} style={{background:"none",border:"none",color:"#d1d5db",fontSize:18,cursor:"pointer",padding:4,flexShrink:0,lineHeight:1}}>×</button>
                   </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:600,fontSize:14,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
-                    <div style={{fontSize:11,color:"#9ca3af"}}>{tx.client||tx.date}{tx.invoiceId?` · 📄${tx.invoiceId}`:""}</div>
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    <div style={{fontWeight:700,fontSize:14,color:tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="income"?"+":"–"}{fmt(tx.amount,lang)}</div>
-                    {!tx.paid&&tx.type==="income"&&<div style={{fontSize:10,color:"#d97706",fontWeight:700}}>EN ATTENTE</div>}
-                  </div>
-                  <button onClick={()=>delTx(tx.id)} style={{background:"none",border:"none",color:"#d1d5db",fontSize:18,cursor:"pointer",padding:4,flexShrink:0,lineHeight:1}}>×</button>
-                </div>
-              ))
+                );
+              })
             }
           </div>
         )}
