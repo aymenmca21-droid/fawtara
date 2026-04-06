@@ -1321,37 +1321,154 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 function ProductsModal({products,onSave,onDelete,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState(""), [editing,setEditing]=useState(null);
+  const [filter,setFilter]=useState("all"); // all | low | out
   const ok=name.trim()&&parseFloat(price)>0;
-  const submit=()=>{if(!ok)return;onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stock?parseInt(stock):null});setName("");setPrice("");setStock("");setEditing(null);};
+  const submit=()=>{
+    if(!ok)return;
+    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stock?parseInt(stock):null});
+    setName("");setPrice("");setStock("");setEditing(null);
+  };
   const startEdit=p=>{setEditing(p.id);setName(p.name);setPrice(String(p.price));setStock(p.stock!=null?String(p.stock):"");};
+
+  const withStock=products.filter(p=>p.stock!=null);
+  const outOfStock=withStock.filter(p=>p.stock===0);
+  const lowStock=withStock.filter(p=>p.stock>0&&p.stock<=5);
+
+  const filtered=products.filter(p=>{
+    if(filter==="out") return p.stock===0;
+    if(filter==="low") return p.stock!=null&&p.stock>0&&p.stock<=5;
+    return true;
+  });
+
+  const stockColor=p=>{
+    if(p.stock==null) return null;
+    if(p.stock===0) return {bg:"#fef2f2",c:"#dc2626",label:"Épuisé"};
+    if(p.stock<=5) return {bg:"#fffbeb",c:"#d97706",label:`${p.stock} restant${p.stock>1?"s":""}`};
+    return {bg:"#ecfdf5",c:"#059669",label:`${p.stock} en stock`};
+  };
+
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
-      <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"} style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"88svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+      <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"} style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"92svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div style={{fontWeight:900,fontSize:17,color:"#111"}}>{t.manageProducts}</div>
+          <div style={{fontWeight:900,fontSize:17,color:"#111"}}>📦 {t.manageProducts}</div>
           <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
         </div>
+
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
+
+          {/* alertes stock */}
+          {(outOfStock.length>0||lowStock.length>0)&&(
+            <div style={{marginBottom:14,display:"flex",flexDirection:"column",gap:6}}>
+              {outOfStock.length>0&&(
+                <div style={{background:"#fef2f2",borderRadius:10,padding:"10px 14px",border:"1px solid #fecaca",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:16}}>🚨</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#b91c1c"}}>Rupture de stock ({outOfStock.length})</div>
+                    <div style={{fontSize:11,color:"#dc2626"}}>{outOfStock.map(p=>p.name).join(", ")}</div>
+                  </div>
+                </div>
+              )}
+              {lowStock.length>0&&(
+                <div style={{background:"#fffbeb",borderRadius:10,padding:"10px 14px",border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:16}}>⚠️</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#92400e"}}>Stock faible ({lowStock.length})</div>
+                    <div style={{fontSize:11,color:"#d97706"}}>{lowStock.map(p=>`${p.name} (${p.stock})`).join(", ")}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* formulaire ajout/modif */}
           <div style={{background:"#f9fafb",borderRadius:14,padding:14,marginBottom:16}}>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.6,marginBottom:10}}>
+              {editing?"Modifier le produit":"Nouveau produit"}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:8}}>
               <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.productName} style={S.inp()}/>
-              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder={t.productPrice} style={S.inp()}/>
-              <input type="number" value={stock} onChange={e=>setStock(e.target.value)} placeholder={t.productStock} style={S.inp()}/>
+              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Prix (DA)" style={S.inp()}/>
+            </div>
+            {/* Stock avec toggle */}
+            <div style={{marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                <span style={{fontSize:13,color:"#374151",fontWeight:600}}>📦 Gestion du stock</span>
+                <button onClick={()=>setStock(stock===""?"0":"")}
+                  style={{padding:"3px 10px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                    background:stock!==""?"#eff6ff":"#f3f4f6",color:stock!==""?"#1d4ed8":"#6b7280"}}>
+                  {stock!==""?"Activé ✓":"Désactivé"}
+                </button>
+              </div>
+              {stock!==""&&(
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <input type="number" min="0" value={stock} onChange={e=>setStock(e.target.value)}
+                    placeholder="Quantité en stock"
+                    style={S.inp({fontSize:15,fontWeight:700,borderColor:"#bfdbfe"})}/>
+                  <div style={{display:"flex",gap:4,flexShrink:0}}>
+                    {[1,5,10].map(n=>(
+                      <button key={n} onClick={()=>setStock(String(Math.max(0,(parseInt(stock)||0)+n)))}
+                        style={{padding:"6px 10px",borderRadius:8,border:"1px solid #bfdbfe",background:"#eff6ff",color:"#1d4ed8",fontSize:12,fontWeight:700,cursor:"pointer"}}>+{n}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{display:"flex",gap:8}}>
               {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}}>{t.cancel}</button>}
-              <button onClick={submit} disabled={!ok} style={{flex:2,padding:10,background:ok?"#2563EB":"#e5e7eb",border:"none",borderRadius:10,fontSize:14,fontWeight:700,color:ok?"#fff":"#9ca3af",cursor:ok?"pointer":"default"}}>{editing?t.editProduct:t.addNewProduct}</button>
+              <button onClick={submit} disabled={!ok} style={{flex:2,padding:10,background:ok?"#2563EB":"#e5e7eb",border:"none",borderRadius:10,fontSize:14,fontWeight:700,color:ok?"#fff":"#9ca3af",cursor:ok?"pointer":"default"}}>
+                {editing?"✓ Enregistrer":t.addNewProduct}
+              </button>
             </div>
           </div>
-          {products.length===0?<div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af"}}>{t.noProducts}</div>:
-            products.map(p=>(
-              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:"1px solid #f3f4f6"}}>
-                <div style={{flex:1}}><div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div><div style={{fontSize:12,color:"#9ca3af"}}>{fmt(p.price,lang)}{p.stock!=null?` · Stock: ${p.stock}`:""}</div></div>
+
+          {/* filtres */}
+          {products.length>0&&(
+            <div style={{display:"flex",gap:6,marginBottom:12}}>
+              {[["all","Tous"],["low","⚠ Stock faible"],["out","🚨 Épuisé"]].map(([k,l])=>(
+                <button key={k} onClick={()=>setFilter(k)}
+                  style={{padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                    background:filter===k?"#2563EB":"#f3f4f6",color:filter===k?"#fff":"#6b7280"}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* liste produits */}
+          {filtered.length===0?(
+            <div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af"}}>{t.noProducts}</div>
+          ):filtered.map(p=>{
+            const sc=stockColor(p);
+            return(
+              <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"12px",borderRadius:12,marginBottom:6,
+                background:sc&&p.stock===0?"#fef2f2":sc&&p.stock<=5?"#fffbeb":"#f9fafb",
+                border:`1px solid ${sc&&p.stock===0?"#fecaca":sc&&p.stock<=5?"#fde68a":"#e5e7eb"}`}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div>
+                  <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{fmt(p.price,lang)}</div>
+                </div>
+                {/* badge stock */}
+                {sc&&(
+                  <div style={{background:sc.bg,borderRadius:20,padding:"3px 10px",fontSize:11,fontWeight:700,color:sc.c,flexShrink:0}}>
+                    {sc.label}
+                  </div>
+                )}
+                {/* boutons ajustement stock */}
+                {p.stock!=null&&(
+                  <div style={{display:"flex",gap:3,flexShrink:0}}>
+                    <button onClick={()=>onSave({...p,stock:Math.max(0,(p.stock||0)-1)})}
+                      style={{width:24,height:24,borderRadius:6,border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:700,color:"#374151",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                    <button onClick={()=>onSave({...p,stock:(p.stock||0)+1})}
+                      style={{width:24,height:24,borderRadius:6,border:"1px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:14,fontWeight:700,color:"#374151",display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                  </div>
+                )}
                 <button onClick={()=>startEdit(p)} style={{background:"#f0f9ff",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:600,color:"#0284c7",cursor:"pointer"}}>✏</button>
                 <button onClick={()=>onDelete(p.id)} style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:600,color:"#dc2626",cursor:"pointer"}}>×</button>
               </div>
-            ))
-          }
+            );
+          })}
         </div>
       </div>
     </div>
@@ -2324,7 +2441,17 @@ export default function App(){
     if(!customers.find(c=>c.name===invoice.customer)){
       cust2=[{id:uid(),name:invoice.customer,phone:""},...customers]; setCustomers(cust2);
     }
-    persist({invoices:inv2,txs:tx2,customers:cust2});
+    // تخفيض المخزون تلقائياً
+    let prod2=products;
+    invoice.lines.forEach(line=>{
+      const p=products.find(x=>x.name===line.name&&x.stock!=null);
+      if(p){
+        const newStock=Math.max(0,p.stock-(parseInt(line.qty)||1));
+        prod2=prod2.map(x=>x.id===p.id?{...x,stock:newStock}:x);
+      }
+    });
+    if(prod2!==products) setProducts(prod2);
+    persist({invoices:inv2,txs:tx2,customers:cust2,products:prod2});
     setModal(null); showToast(t.invoiceCreated);
   };
 
@@ -2391,10 +2518,30 @@ export default function App(){
 
         {/* ── HOME ── */}
         {tab==="home"&&(<>
-          <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:insightStyle.bg,borderRadius:12,marginBottom:20}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:insightStyle.bg,borderRadius:12,marginBottom:16}}>
             <div style={{width:8,height:8,borderRadius:"50%",background:insightStyle.dot,flexShrink:0}}/>
             <span style={{fontSize:13,fontWeight:600,color:insightStyle.text}}>{insightText}</span>
           </div>
+
+          {/* تحذير المخزون */}
+          {(()=>{
+            const out=products.filter(p=>p.stock===0);
+            const low=products.filter(p=>p.stock!=null&&p.stock>0&&p.stock<=5);
+            return(out.length>0||low.length>0)&&(
+              <div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:6}}>
+                {out.length>0&&<div style={{background:"#fef2f2",borderRadius:12,padding:"10px 14px",border:"1px solid #fecaca",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setModal("products")}>
+                  <span>🚨</span>
+                  <div style={{flex:1}}><span style={{fontWeight:700,fontSize:13,color:"#b91c1c"}}>Rupture: </span><span style={{fontSize:13,color:"#dc2626"}}>{out.map(p=>p.name).join(", ")}</span></div>
+                  <span style={{fontSize:12,color:"#9ca3af"}}>Gérer →</span>
+                </div>}
+                {low.length>0&&<div style={{background:"#fffbeb",borderRadius:12,padding:"10px 14px",border:"1px solid #fde68a",display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setModal("products")}>
+                  <span>⚠️</span>
+                  <div style={{flex:1}}><span style={{fontWeight:700,fontSize:13,color:"#92400e"}}>Stock faible: </span><span style={{fontSize:13,color:"#d97706"}}>{low.map(p=>`${p.name} (${p.stock})`).join(", ")}</span></div>
+                  <span style={{fontSize:12,color:"#9ca3af"}}>Gérer →</span>
+                </div>}
+              </div>
+            );
+          })()}
           <div style={{background:net>=0?"linear-gradient(135deg,#059669,#10B981)":"linear-gradient(135deg,#b91c1c,#ef4444)",borderRadius:20,padding:"28px 24px",marginBottom:16,position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",right:-20,top:-20,width:120,height:120,borderRadius:"50%",background:"rgba(255,255,255,.08)"}}/>
             <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,.75)",marginBottom:6,textTransform:"uppercase",letterSpacing:1}}>{t.profit}</div>
