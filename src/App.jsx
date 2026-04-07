@@ -1322,6 +1322,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
   const [filter,setFilter]=useState("all");
+  const [confirmDel,setConfirmDel]=useState(null); // المنتج المراد حذفه
   const ok=name.trim()&&parseFloat(price)>0;
   const submit=()=>{
     if(!ok)return;
@@ -1473,10 +1474,28 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
                   </div>
                 )}
                 <button onClick={()=>startEdit(p)} style={{background:"#f0f9ff",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:600,color:"#0284c7",cursor:"pointer"}}>✏</button>
-                <button onClick={()=>onDelete(p.id)} style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:600,color:"#dc2626",cursor:"pointer"}}>×</button>
+                <button onClick={()=>setConfirmDel(p)} style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,fontWeight:600,color:"#dc2626",cursor:"pointer"}}>×</button>
               </div>
             );
           })}
+
+          {/* نافذة تأكيد حذف المنتج */}
+          {confirmDel&&(
+            <div onClick={()=>setConfirmDel(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,backdropFilter:"blur(4px)",padding:20}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+                <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>🗑</div>
+                <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:8,textAlign:"center"}}>Supprimer ce produit ?</div>
+                <div style={{background:"#f9fafb",borderRadius:12,padding:"10px 14px",marginBottom:20,textAlign:"center"}}>
+                  <div style={{fontWeight:700,fontSize:15,color:"#111"}}>{confirmDel.name}</div>
+                  <div style={{fontSize:13,color:"#6b7280"}}>{fmt(confirmDel.price,lang)}{confirmDel.stock!=null?` · Stock: ${confirmDel.stock}`:""}</div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <button onClick={()=>setConfirmDel(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+                  <button onClick={()=>{onDelete(confirmDel.id);setConfirmDel(null);}} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Supprimer</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -2357,8 +2376,9 @@ export default function App(){
   const [companyName,setCompanyName]=useState("");
   const [confirmTx,setConfirmTx]=useState(null);
   const [detailTx,setDetailTx]=useState(null);
-  const [pendingRef,setPendingRef]=useState(null);   // إشعار الإحالة الجديدة
-  const [showRefPanel,setShowRefPanel]=useState(false); // لوحة الإحالات
+  const [pendingRef,setPendingRef]=useState(null);
+  const [showRefPanel,setShowRefPanel]=useState(false);
+  const [confirmDelInvoice,setConfirmDelInvoice]=useState(null);
 
   const t=T[lang],rtl=lang==="ar";
   const effectiveCompanyName=companyName||(user?.shopName)||t.companyName;
@@ -2429,6 +2449,13 @@ export default function App(){
 
   const saveProduct=p=>{const p2=products.findIndex(x=>x.id===p.id)>=0?products.map(x=>x.id===p.id?p:x):[p,...products];setProducts(p2);persist({products:p2});};
   const delProduct=id=>{const p2=products.filter(x=>x.id!==id);setProducts(p2);persist({products:p2});};
+  const delInvoice=id=>{
+    const inv2=invoices.filter(x=>x.id!==id);
+    const tx2=txs.filter(x=>x.invoiceId!==id);
+    setInvoices(inv2); setTxs(tx2);
+    persist({invoices:inv2,txs:tx2});
+    showToast("Facture supprimée ✓");
+  };
 
   const saveCustomer=c=>{const c2=customers.findIndex(x=>x.id===c.id)>=0?customers.map(x=>x.id===c.id?c:x):[c,...customers];setCustomers(c2);persist({customers:c2});};
   const delCustomer=id=>{const c2=customers.filter(x=>x.id!==id);setCustomers(c2);persist({customers:c2});setSelectedCustomer(null);};
@@ -2614,17 +2641,19 @@ export default function App(){
               const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
               const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
               return(
-                <div key={inv.id} onClick={()=>setPreviewInvoice(inv)} style={{...S.card({marginBottom:10,cursor:"pointer",display:"flex",alignItems:"center",gap:12})}}
+                <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
                   onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
-                  <div style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>🧾</div>
-                  <div style={{flex:1,minWidth:0}}>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
                     <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
                     <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                   </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                     <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.total,lang)}</div>
                     <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
                   </div>
+                  <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
+                    style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
                 </div>
               );
             })}
@@ -2731,6 +2760,27 @@ export default function App(){
       {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
+
+      {/* تأكيد حذف الفاتورة */}
+      {confirmDelInvoice&&(
+        <div onClick={()=>setConfirmDelInvoice(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:340,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>🗑</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:8,textAlign:"center"}}>Supprimer cette facture ?</div>
+            <div style={{background:"#f9fafb",borderRadius:12,padding:"12px 14px",marginBottom:6,textAlign:"center"}}>
+              <div style={{fontWeight:700,fontSize:15,color:"#111"}}>{confirmDelInvoice.id}</div>
+              <div style={{fontSize:13,color:"#6b7280"}}>{confirmDelInvoice.customer} · {fmt(confirmDelInvoice.total,lang)}</div>
+            </div>
+            <div style={{background:"#fef2f2",borderRadius:10,padding:"8px 12px",marginBottom:20,fontSize:12,color:"#b91c1c",fontWeight:600}}>
+              ⚠️ Les transactions liées seront aussi supprimées
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <button onClick={()=>setConfirmDelInvoice(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+              <button onClick={()=>{delInvoice(confirmDelInvoice.id);setConfirmDelInvoice(null);}} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes up{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
