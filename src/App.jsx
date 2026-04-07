@@ -2628,37 +2628,56 @@ export default function App(){
         </>)}
 
         {/* ── INVOICES ── */}
-        {tab==="invoices"&&(
+        {tab==="invoices"&&(()=>{
+          const [search,setSearch]=useState("");
+          const filtered=invoices.filter(inv=>
+            inv.customer?.toLowerCase().includes(search.toLowerCase())||
+            inv.id?.toLowerCase().includes(search.toLowerCase())
+          );
+          const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
+          const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
+          const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+          return(
           <div>
+            {/* بحث */}
+            {invoices.length>0&&(
+              <div style={{position:"relative",marginBottom:16}}>
+                <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
+                <input value={search} onChange={e=>setSearch(e.target.value)}
+                  placeholder="Rechercher par client ou N° facture..."
+                  style={{...S.inp({paddingLeft:36,borderRadius:12})}}/>
+                {search&&<button onClick={()=>setSearch("")}
+                  style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#9ca3af"}}>×</button>}
+              </div>
+            )}
+
             {invoices.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:12}}>🧾</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>{t.noInvoices}</div>
                 <button onClick={()=>setModal("invoice")} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
               </div>
-            ):invoices.map(inv=>{
-              const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
-              const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
-              const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
-              return(
-                <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
-                  onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
-                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
-                    <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
-                  </div>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
-                    <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.total,lang)}</div>
-                    <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
-                  </div>
-                  <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
-                    style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
+            ):filtered.length===0?(
+              <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat pour "{search}"</div>
+            ):filtered.map(inv=>(
+              <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
+                onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
+                <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
+                <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
+                  <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                 </div>
-              );
-            })}
+                <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                  <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.total,lang)}</div>
+                  <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
+                </div>
+                <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
+                  style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
+              </div>
+            ))}
           </div>
-        )}
+          );
+        })()}
 
         {/* ── CUSTOMERS ── */}
         {tab==="customers"&&(
@@ -2689,7 +2708,9 @@ export default function App(){
         )}
 
         {/* ── HISTORY ── */}
-        {tab==="history"&&(
+        {tab==="history"&&(()=>{
+          const [confirmDelTx,setConfirmDelTx]=useState(null);
+          return(
           <div style={S.card()}>
             {txs.length===0
               ?<div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>{t.noHistory}</div>
@@ -2708,20 +2729,41 @@ export default function App(){
                       <div style={{fontWeight:700,fontSize:14,color:tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="income"?"+":"–"}{fmt(tx.amount,lang)}</div>
                       {!tx.paid&&tx.type==="income"&&<div style={{fontSize:10,color:"#d97706",fontWeight:700}}>EN ATTENTE</div>}
                     </div>
-                    {/* زر الفاتورة */}
                     {linkedInv&&(
                       <button onClick={()=>setPreviewInvoice(linkedInv)}
                         style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,color:"#1d4ed8",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
                         🧾 PDF
                       </button>
                     )}
-                    <button onClick={()=>delTx(tx.id)} style={{background:"none",border:"none",color:"#d1d5db",fontSize:18,cursor:"pointer",padding:4,flexShrink:0,lineHeight:1}}>×</button>
+                    <button onClick={()=>setConfirmDelTx(tx)} style={{background:"none",border:"none",color:"#d1d5db",fontSize:18,cursor:"pointer",padding:4,flexShrink:0,lineHeight:1}}>×</button>
                   </div>
                 );
               })
             }
+
+            {/* نافذة تأكيد حذف المعاملة */}
+            {confirmDelTx&&(
+              <div onClick={()=>setConfirmDelTx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+                <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+                  <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>🗑</div>
+                  <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:12,textAlign:"center"}}>Supprimer cette entrée ?</div>
+                  <div style={{background:"#f9fafb",borderRadius:12,padding:"12px 14px",marginBottom:20}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#111",marginBottom:4}}>{confirmDelTx.desc}</div>
+                    <div style={{fontSize:13,color:"#6b7280"}}>{confirmDelTx.client||confirmDelTx.date}</div>
+                    <div style={{fontWeight:800,fontSize:16,color:confirmDelTx.type==="income"?"#059669":"#dc2626",marginTop:6}}>
+                      {confirmDelTx.type==="income"?"+":"–"}{fmt(confirmDelTx.amount,lang)}
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <button onClick={()=>setConfirmDelTx(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+                    <button onClick={()=>{delTx(confirmDelTx.id);setConfirmDelTx(null);}} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Supprimer</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+          );
+        })()}
       </div>{/* end CONTENT */}
       </div>{/* end MAIN */}
 
