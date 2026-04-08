@@ -1505,19 +1505,25 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 /* ═══════════════════════════════════════════════
    INVOICE PDF MODAL  — avec historique des paiements
 ═══════════════════════════════════════════════ */
-function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment}){
+function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings}){
   const t=T[lang], rtl=lang==="ar";
   const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
   const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const bs=bizSettings||{};
 
-  // Dépenses (transactions payées liées à cette facture)
+  // حسابات TVA + Timbre
+  const montantHT=invoice.total;
+  const tvaAmt=bs.tvaEnabled?Math.round(montantHT*bs.tvaRate/100):0;
+  const montantTTC=montantHT+tvaAmt;
+  const timbreAmt=bs.timbreEnabled?calcTimbre(montantTTC):0;
+  const totalFinal=montantTTC+timbreAmt;
+
   const paidTxs=(relatedTxs||[]).filter(tx=>tx.paid).sort((a,b)=>new Date(a.date)-new Date(b.date));
   const totalPaid=paidTxs.reduce((s,tx)=>s+tx.amount,0);
-  const remaining=Math.max(0, invoice.total - totalPaid);
+  const remaining=Math.max(0, totalFinal - totalPaid);
   const isFullyPaid=remaining===0;
 
-  // Formulaire nouvelle dépense
   const [showForm,setShowForm]=useState(false);
   const [newAmt,setNewAmt]=useState("");
   const [newNote,setNewNote]=useState("");
@@ -1528,19 +1534,13 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment}){
     if(!canAdd) return;
     const amt=Math.min(parseFloat(newAmt), remaining);
     onAddPayment({
-      id:uid(),
-      type:"income",
-      amount:amt,
+      id:uid(), type:"income", amount:amt,
       desc:newNote.trim()||`Facture ${invoice.id} — dépense ${paidTxs.length+1}`,
-      client:invoice.customer,
-      date:newDate,
-      paid:true,
-      invoiceId:invoice.id,
+      client:invoice.customer, date:newDate, paid:true, invoiceId:invoice.id,
     });
     setNewAmt(""); setNewNote(""); setShowForm(false);
   };
 
-  // بناء HTML المشترك للفاتورة
   const buildHTML=(autoPrint=false)=>{
     const rows=invoice.lines.map(l=>`
       <tr>
@@ -1556,18 +1556,19 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment}){
         <td style="text-align:right;color:#9ca3af">${tx.date}</td>
       </tr>`).join("");
     const statusLabel=isFullyPaid?t.statusPaid:(t["status"+cap(invoice.payStatus)]||"");
-    const badgeBg=isFullyPaid?"#ecfdf5":sb[invoice.payStatus];
-    const badgeColor=isFullyPaid?"#059669":sc[invoice.payStatus];
+    const badgeBg=isFullyPaid?"#ecfdf5":sb[invoice.payStatus]||"#f3f4f6";
+    const badgeColor=isFullyPaid?"#059669":sc[invoice.payStatus]||"#374151";
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Facture ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:system-ui,sans-serif;padding:40px;color:#111;max-width:700px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
   .company{font-size:22px;font-weight:900;color:#2563EB}
+  .nif{font-size:12px;color:#6b7280;margin-top:3px;font-family:monospace}
   .inv-no{font-size:14px;color:#6b7280;margin-top:4px}
   .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${badgeBg};color:${badgeColor}}
-  .customer-block{margin-bottom:28px}
+  .customer-block{margin-bottom:24px}
   .label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
   .value{font-size:15px;font-weight:600}
   table{width:100%;border-collapse:collapse;margin-top:4px}
@@ -1575,12 +1576,13 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment}){
   th:not(:first-child){text-align:right}
   td{padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px}
   td:not(:first-child){text-align:right}
-  .total-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0 0;border-top:2px solid #111;margin-top:8px}
+  .sub-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+  .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:2px solid #111;margin-top:8px}
   .total-label{font-size:15px;font-weight:700}
   .total-value{font-size:26px;font-weight:900;color:#2563EB}
-  .section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin:28px 0 10px}
+  .section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 10px}
   .remain-row{display:flex;justify-content:space-between;padding:12px 0 0;border-top:1px solid #e5e7eb;margin-top:4px}
-  .footer{margin-top:56px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center}
+  .footer{margin-top:48px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center}
   @media print{body{padding:24px} .no-print{display:none}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
@@ -1589,6 +1591,7 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 <div class="header">
   <div>
     <div class="company">${invoice.companyName||"Fawtara"}</div>
+    ${bs.nif?`<div class="nif">NIF: ${bs.nif}</div>`:""}
     <div class="inv-no">${t.invoiceNo} ${invoice.id}</div>
   </div>
   <div style="text-align:right">
@@ -1606,15 +1609,22 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
   <thead><tr>
     <th>Description</th>
     <th style="text-align:center">${t.qty}</th>
-    <th style="text-align:right">${t.unitPrice}</th>
-    <th style="text-align:right">${t.total}</th>
+    <th style="text-align:right">${bs.tvaEnabled?"Prix HT":t.unitPrice}</th>
+    <th style="text-align:right">${bs.tvaEnabled?"Montant HT":t.total}</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
 
+<div style="margin-top:16px;border-top:1px solid #e5e7eb;padding-top:12px">
+  <div class="sub-row"><span>Sous-total HT</span><span style="font-weight:700">${montantHT.toLocaleString()} DA</span></div>
+  ${bs.tvaEnabled?`<div class="sub-row"><span>TVA ${bs.tvaRate}%</span><span style="font-weight:700;color:#d97706">+${tvaAmt.toLocaleString()} DA</span></div>`:""}
+  ${bs.tvaEnabled?`<div class="sub-row" style="border-top:1px solid #e5e7eb;padding-top:6px"><span style="font-weight:700">Total TTC</span><span style="font-weight:800">${montantTTC.toLocaleString()} DA</span></div>`:""}
+  ${bs.timbreEnabled?`<div class="sub-row"><span>Droit de Timbre (LF 2025)</span><span style="font-weight:700;color:#059669">+${timbreAmt.toLocaleString()} DA</span></div>`:""}
+</div>
+
 <div class="total-row">
-  <div class="total-label">${t.total}</div>
-  <div class="total-value">${invoice.total.toLocaleString()} DA</div>
+  <div class="total-label">Total à payer</div>
+  <div class="total-value">${totalFinal.toLocaleString()} DA</div>
 </div>
 
 ${paidTxs.length>0?`
@@ -1625,7 +1635,7 @@ ${paidTxs.length>0?`
   <div style="font-size:16px;font-weight:900;color:${remaining>0?"#d97706":"#059669"}">${remaining>0?remaining.toLocaleString()+" DA":"✓"}</div>
 </div>`:""}
 
-<div class="footer">Fawtara</div>
+<div class="footer">Fawtara${bs.nif?` · NIF: ${bs.nif}`:""}</div>
 </body></html>`;
   };
 
@@ -2028,56 +2038,148 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
 }
 
 /* ═══════════════════════════════════════════════
+   CALCUL DROIT DE TIMBRE — Loi de Finances 2025
+   Art. 100 Code du Timbre — paiement espèces uniquement
+   ≤300 DA: exonéré | 300-30000: 1% | 30000-100000: 1.5% | >100000: 2%
+   Minimum: 5 DA
+═══════════════════════════════════════════════ */
+const calcTimbre=(montantTTC)=>{
+  if(montantTTC<=300) return 0;
+  let timbre=0;
+  if(montantTTC<=30000) timbre=montantTTC*0.01;
+  else if(montantTTC<=100000) timbre=montantTTC*0.015;
+  else timbre=montantTTC*0.02;
+  return Math.max(5,Math.ceil(timbre));
+};
+
+/* ═══════════════════════════════════════════════
    SETTINGS MODAL
 ═══════════════════════════════════════════════ */
-function SettingsModal({companyName,onSave,onClose,lang}){
+function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(companyName);
+  const [nif,setNif]=useState(settings?.nif||"");
+  const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
+  const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
+  const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
   const ok=name.trim().length>0;
+
+  const save=()=>{
+    if(!ok)return;
+    onSave(name.trim(),{nif:nif.trim(),tvaEnabled,tvaRate,timbreEnabled});
+    onClose();
+  };
+
+  // aperçu calcul
+  const exampleHT=50000;
+  const exampleTVA=tvaEnabled?Math.round(exampleHT*tvaRate/100):0;
+  const exampleTTC=exampleHT+exampleTVA;
+  const exampleTimbre=timbreEnabled?calcTimbre(exampleTTC):0;
+
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
-        style={{background:"#fff",borderRadius:"22px 22px 0 0",padding:"24px 20px 36px",width:"100%",maxWidth:480,animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+        style={{background:"#fff",borderRadius:"22px 22px 0 0",padding:"0",width:"100%",maxWidth:520,maxHeight:"90svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+
         {/* Header */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+        <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:38,height:38,borderRadius:10,background:"#f0f9ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>⚙️</div>
-            <div style={{fontWeight:900,fontSize:17,color:"#111"}}>{t.settingsTitle}</div>
+            <div style={{width:36,height:36,borderRadius:10,background:"#f0f9ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>⚙️</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#111"}}>{t.settingsTitle}</div>
           </div>
-          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280"}}>×</button>
         </div>
 
-        {/* Field */}
-        <div style={{marginBottom:24}}>
-          <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>
-            {t.companyNameLabel}
-          </div>
-          <input
-            autoFocus
-            value={name}
-            onChange={e=>setName(e.target.value)}
-            placeholder={t.companyNamePh}
-            style={{...S.inp({fontSize:18,fontWeight:700,padding:"14px 14px",borderRadius:12,borderColor:ok?"#2563EB":"#e5e7eb"})}}
-          />
-          <div style={{fontSize:12,color:"#9ca3af",marginTop:8,display:"flex",alignItems:"center",gap:6}}>
-            <span>📄</span> {t.companyNameHint}
-          </div>
-        </div>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
 
-        {/* Preview */}
-        <div style={{background:"#f9fafb",borderRadius:12,padding:"14px 16px",marginBottom:20,border:"1px dashed #e5e7eb"}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Aperçu facture</div>
-          <div style={{fontWeight:900,fontSize:16,color:"#2563EB",marginBottom:2}}>{name||t.companyNamePh}</div>
-          <div style={{fontSize:11,color:"#9ca3af"}}>Facture N° INV-XXXXXX · {new Date().toISOString().split("T")[0]}</div>
+          {/* Nom entreprise */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{t.companyNameLabel}</div>
+            <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.companyNamePh}
+              style={{...S.inp({fontSize:16,fontWeight:700,borderColor:ok?"#2563EB":"#e5e7eb"})}}/>
+          </div>
+
+          {/* NIF */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>NIF — Numéro d'Identification Fiscale</div>
+            <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="Ex: 000316123456789"
+              style={{...S.inp({fontFamily:"monospace",fontSize:15,letterSpacing:1})}}/>
+            <div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>Apparaît sur toutes vos factures PDF</div>
+          </div>
+
+          {/* TVA */}
+          <div style={{background:"#f9fafb",borderRadius:14,padding:14,marginBottom:14,border:"1px solid #e5e7eb"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:tvaEnabled?12:0}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>📊 TVA</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>Taxe sur la Valeur Ajoutée</div>
+              </div>
+              <button onClick={()=>setTvaEnabled(!tvaEnabled)}
+                style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                  background:tvaEnabled?"#2563EB":"#e5e7eb",color:tvaEnabled?"#fff":"#6b7280"}}>
+                {tvaEnabled?"Activé ✓":"Désactivé"}
+              </button>
+            </div>
+            {tvaEnabled&&(
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8}}>Taux :</div>
+                <div style={{display:"flex",gap:8}}>
+                  {[9,19].map(r=>(
+                    <button key={r} onClick={()=>setTvaRate(r)}
+                      style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${tvaRate===r?"#2563EB":"#e5e7eb"}`,
+                        background:tvaRate===r?"#eff6ff":"#fff",color:tvaRate===r?"#1d4ed8":"#6b7280",
+                        fontSize:15,fontWeight:800,cursor:"pointer"}}>
+                      {r}%
+                    </button>
+                  ))}
+                </div>
+                <div style={{fontSize:11,color:"#9ca3af",marginTop:8}}>9% = biens essentiels · 19% = taux général</div>
+              </div>
+            )}
+          </div>
+
+          {/* Droit de Timbre */}
+          <div style={{background:"#f9fafb",borderRadius:14,padding:14,marginBottom:16,border:"1px solid #e5e7eb"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:timbreEnabled?12:0}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>🪙 Droit de Timbre</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>Paiement espèces — LF 2025</div>
+              </div>
+              <button onClick={()=>setTimbreEnabled(!timbreEnabled)}
+                style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                  background:timbreEnabled?"#059669":"#e5e7eb",color:timbreEnabled?"#fff":"#6b7280"}}>
+                {timbreEnabled?"Activé ✓":"Désactivé"}
+              </button>
+            </div>
+            {timbreEnabled&&(
+              <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px 12px",fontSize:12,color:"#065f46"}}>
+                <div style={{fontWeight:700,marginBottom:6}}>Barème LF 2025 (Art. 100) :</div>
+                <div>≤ 300 DA → Exonéré</div>
+                <div>300 → 30 000 DA → 1% (min. 5 DA)</div>
+                <div>30 001 → 100 000 DA → 1,5%</div>
+                <div>&gt; 100 000 DA → 2%</div>
+                <div style={{marginTop:6,fontWeight:700,color:"#b91c1c"}}>⚡ Paiement électronique = exonéré</div>
+              </div>
+            )}
+          </div>
+
+          {/* Aperçu */}
+          {(tvaEnabled||timbreEnabled)&&(
+            <div style={{background:"#eff6ff",borderRadius:12,padding:"12px 14px",marginBottom:16,border:"1px solid #bfdbfe"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#1d4ed8",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>Exemple — Facture de {exampleHT.toLocaleString()} DA HT</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:"#374151"}}>Montant HT</span><span style={{fontWeight:700}}>{exampleHT.toLocaleString()} DA</span></div>
+              {tvaEnabled&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:"#374151"}}>TVA {tvaRate}%</span><span style={{fontWeight:700,color:"#d97706"}}>+{exampleTVA.toLocaleString()} DA</span></div>}
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4,borderTop:"1px solid #bfdbfe",paddingTop:4}}><span style={{color:"#374151",fontWeight:700}}>Total TTC</span><span style={{fontWeight:800}}>{exampleTTC.toLocaleString()} DA</span></div>
+              {timbreEnabled&&<div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:"#374151"}}>Droit de Timbre</span><span style={{fontWeight:700,color:"#059669"}}>+{exampleTimbre.toLocaleString()} DA</span></div>}
+              {timbreEnabled&&<div style={{display:"flex",justifyContent:"space-between",fontSize:14,borderTop:"1px solid #bfdbfe",paddingTop:4}}><span style={{fontWeight:800,color:"#111"}}>Total Final</span><span style={{fontWeight:900,color:"#2563EB"}}>{(exampleTTC+exampleTimbre).toLocaleString()} DA</span></div>}
+            </div>
+          )}
         </div>
 
         {/* Buttons */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave(name.trim());onClose();}}
-            style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af",boxShadow:ok?"0 4px 12px rgba(37,99,235,.3)":"none"}}>
-            {t.save}
-          </button>
+          <button onClick={save} style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
     </div>
@@ -2374,6 +2476,7 @@ export default function App(){
   const [editingCustomer,setEditingCustomer]=useState(null);
   const [invoicePreselect,setInvoicePreselect]=useState(null);
   const [companyName,setCompanyName]=useState("");
+  const [bizSettings,setBizSettings]=useState({nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false});
   const [confirmTx,setConfirmTx]=useState(null);
   const [detailTx,setDetailTx]=useState(null);
   const [pendingRef,setPendingRef]=useState(null);
@@ -2393,6 +2496,7 @@ export default function App(){
     setInvoices(data.invoices||[]);
     setCustomers(data.customers||[]);
     setCompanyName(data.companyName||userInfo.shopName||"");
+    setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false});
     setStarted((data.txs||[]).length>0||(data.invoices||[]).length>0);
     // فحص الإحالات الجديدة
     try{
@@ -2419,6 +2523,7 @@ export default function App(){
         txs:patch.txs??txs, products:patch.products??products,
         invoices:patch.invoices??invoices, customers:patch.customers??customers,
         companyName:patch.companyName??effectiveCompanyName,
+        bizSettings:patch.bizSettings??bizSettings,
       });
     },1500);
   };
@@ -2776,9 +2881,9 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
-      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect}/>}
+      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings}/>}
       {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang}/>}
-      {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} onSave={name=>{setCompanyName(name);persist({companyName:name});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
+      {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} settings={bizSettings} onSave={(name,s)=>{setCompanyName(name);setBizSettings(s);persist({companyName:name,bizSettings:s});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="newCustomer"&&<CustomerModal onSave={c=>{saveCustomer(c);setModal(null);showToast("Client ajouté ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
       {editingCustomer&&<CustomerModal existing={editingCustomer} onSave={c=>{saveCustomer(c);setEditingCustomer(null);setSelectedCustomer(c);showToast("Client modifié ✓");}} onClose={()=>setEditingCustomer(null)} lang={lang}/>}
 
@@ -2798,8 +2903,8 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
