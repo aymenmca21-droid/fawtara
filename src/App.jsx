@@ -2484,6 +2484,8 @@ export default function App(){
   const [pendingRef,setPendingRef]=useState(null);
   const [showRefPanel,setShowRefPanel]=useState(false);
   const [confirmDelInvoice,setConfirmDelInvoice]=useState(null);
+  const [invoiceSearch,setInvoiceSearch]=useState("");
+  const [confirmDelTx,setConfirmDelTx]=useState(null);
 
   const t=T[lang],rtl=lang==="ar";
   const effectiveCompanyName=companyName||(user?.shopName)||t.companyName;
@@ -2736,28 +2738,25 @@ export default function App(){
 
         {/* ── INVOICES ── */}
         {tab==="invoices"&&(()=>{
-          const [search,setSearch]=useState("");
           const filtered=invoices.filter(inv=>
-            inv.customer?.toLowerCase().includes(search.toLowerCase())||
-            inv.id?.toLowerCase().includes(search.toLowerCase())
+            inv.customer?.toLowerCase().includes(invoiceSearch.toLowerCase())||
+            inv.id?.toLowerCase().includes(invoiceSearch.toLowerCase())
           );
           const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
           const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
           const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
           return(
           <div>
-            {/* بحث */}
             {invoices.length>0&&(
               <div style={{position:"relative",marginBottom:16}}>
                 <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
-                <input value={search} onChange={e=>setSearch(e.target.value)}
+                <input value={invoiceSearch} onChange={e=>setInvoiceSearch(e.target.value)}
                   placeholder="Rechercher par client ou N° facture..."
                   style={{...S.inp({paddingLeft:36,borderRadius:12})}}/>
-                {search&&<button onClick={()=>setSearch("")}
+                {invoiceSearch&&<button onClick={()=>setInvoiceSearch("")}
                   style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#9ca3af"}}>×</button>}
               </div>
             )}
-
             {invoices.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:12}}>🧾</div>
@@ -2765,7 +2764,7 @@ export default function App(){
                 <button onClick={()=>setModal("invoice")} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
               </div>
             ):filtered.length===0?(
-              <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat pour "{search}"</div>
+              <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat pour "{invoiceSearch}"</div>
             ):filtered.map(inv=>(
               <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
@@ -2815,9 +2814,7 @@ export default function App(){
         )}
 
         {/* ── HISTORY ── */}
-        {tab==="history"&&(()=>{
-          const [confirmDelTx,setConfirmDelTx]=useState(null);
-          return(
+        {tab==="history"&&(
           <div style={S.card()}>
             {txs.length===0
               ?<div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>{t.noHistory}</div>
@@ -2848,7 +2845,6 @@ export default function App(){
               })
             }
 
-            {/* نافذة تأكيد حذف المعاملة */}
             {confirmDelTx&&(
               <div onClick={()=>setConfirmDelTx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
                 <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
@@ -2869,8 +2865,7 @@ export default function App(){
               </div>
             )}
           </div>
-          );
-        })()}
+        )}
       </div>{/* end CONTENT */}
       </div>{/* end MAIN */}
 
