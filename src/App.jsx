@@ -373,6 +373,20 @@ const setAdminWA=async n=>{
 };
 
 /* ═══════════════════════════════════════════════
+   CALCUL DROIT DE TIMBRE — LF 2025 Art. 100
+   ≤300 DA: exonéré | 300-30000: 1% | 30001-100000: 1.5% | >100000: 2%
+   Minimum: 5 DA — paiement électronique: exonéré
+═══════════════════════════════════════════════ */
+const calcTimbre=(montantTTC)=>{
+  if(montantTTC<=300) return 0;
+  let timbre=0;
+  if(montantTTC<=30000) timbre=montantTTC*0.01;
+  else if(montantTTC<=100000) timbre=montantTTC*0.015;
+  else timbre=montantTTC*0.02;
+  return Math.max(5,Math.ceil(timbre));
+};
+
+/* ═══════════════════════════════════════════════
    AFFILIATE — نظام رابط الدعوة
 ═══════════════════════════════════════════════ */
 const REF_KEY="fbz_ref"; // localStorage فقط للـ ref URL
@@ -2040,18 +2054,6 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
 /* ═══════════════════════════════════════════════
    CALCUL DROIT DE TIMBRE — Loi de Finances 2025
    Art. 100 Code du Timbre — paiement espèces uniquement
-   ≤300 DA: exonéré | 300-30000: 1% | 30000-100000: 1.5% | >100000: 2%
-   Minimum: 5 DA
-═══════════════════════════════════════════════ */
-const calcTimbre=(montantTTC)=>{
-  if(montantTTC<=300) return 0;
-  let timbre=0;
-  if(montantTTC<=30000) timbre=montantTTC*0.01;
-  else if(montantTTC<=100000) timbre=montantTTC*0.015;
-  else timbre=montantTTC*0.02;
-  return Math.max(5,Math.ceil(timbre));
-};
-
 /* ═══════════════════════════════════════════════
    SETTINGS MODAL
 ═══════════════════════════════════════════════ */
