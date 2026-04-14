@@ -1526,93 +1526,138 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
 <title>Facture ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,sans-serif;padding:40px;color:#111;max-width:700px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #e5e7eb}
-  .company-name{font-size:22px;font-weight:900;color:#2563EB;margin-bottom:6px}
-  .company-info{font-size:11px;color:#6b7280;line-height:1.8;font-family:monospace}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh;padding:40px 20px}
+  .page{background:#fff;max-width:720px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+  .header{background:linear-gradient(135deg,#1e3a8a 0%,#2563EB 100%);padding:36px 40px;display:flex;justify-content:space-between;align-items:flex-start}
+  .logo-block img{height:64px;max-width:160px;object-fit:contain;margin-bottom:10px;display:block;filter:brightness(0) invert(1)}
+  .company-name{font-size:20px;font-weight:800;color:#fff;margin-bottom:6px}
+  .company-info{font-size:11px;color:rgba(255,255,255,.7);line-height:1.9}
   .company-info span{display:block}
-  .inv-no{font-size:14px;color:#6b7280;margin-top:4px}
-  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${badgeBg};color:${badgeColor}}
-  .customer-block{background:#f9fafb;border-radius:10px;padding:14px 16px;margin-bottom:24px;border:1px solid #e5e7eb}
-  .label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
-  .value{font-size:15px;font-weight:600}
-  table{width:100%;border-collapse:collapse;margin-top:4px}
-  th{text-align:left;font-size:11px;color:#9ca3af;text-transform:uppercase;padding:0 0 10px;border-bottom:2px solid #e5e7eb}
+  .inv-block{text-align:right}
+  .inv-label{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .inv-number{font-size:28px;font-weight:900;color:#fff;margin-bottom:10px;font-family:monospace}
+  .inv-date{font-size:13px;color:rgba(255,255,255,.8)}
+  .badge{display:inline-block;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .badge-paid{background:rgba(16,185,129,.25);border-color:rgba(16,185,129,.5);color:#6ee7b7}
+  .badge-unpaid{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);color:#fca5a5}
+  .badge-partial{background:rgba(245,158,11,.25);border-color:rgba(245,158,11,.5);color:#fcd34d}
+  .body{padding:36px 40px}
+  .customer-section{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #f1f5f9}
+  .section-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .customer-name{font-size:20px;font-weight:700;color:#1e293b}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:right}
+  .meta-item{background:#f8fafc;border-radius:8px;padding:10px 14px}
+  .meta-item .label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+  .meta-item .val{font-size:13px;font-weight:600;color:#1e293b}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px}
+  thead tr{background:#f8fafc}
+  th{text-align:left;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;padding:12px 14px;border-bottom:2px solid #e2e8f0}
   th:not(:first-child){text-align:right}
-  td{padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px}
+  tbody tr:hover{background:#f8fafc}
+  td{padding:13px 14px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#334155}
   td:not(:first-child){text-align:right}
-  .sub-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
-  .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:2px solid #111;margin-top:8px}
-  .total-label{font-size:15px;font-weight:700}
-  .total-value{font-size:26px;font-weight:900;color:#2563EB}
-  .section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 10px}
-  .remain-row{display:flex;justify-content:space-between;padding:12px 0 0;border-top:1px solid #e5e7eb;margin-top:4px}
-  .footer{margin-top:48px;padding-top:16px;border-top:2px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;line-height:1.8;font-family:monospace}
-  @media print{body{padding:24px} .no-print{display:none}}
+  td:first-child{font-weight:500}
+  .totals{background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .total-line{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;color:#64748b}
+  .total-line.divider{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:14px}
+  .total-line.main{font-size:18px;font-weight:800;color:#1e293b;margin-top:4px}
+  .total-line.main span:last-child{color:#2563EB;font-size:22px}
+  .payments-section{margin-bottom:24px}
+  .payments-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px}
+  .payment-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f0fdf4;border-radius:8px;margin-bottom:6px;border:1px solid #dcfce7}
+  .payment-row .pamt{font-weight:700;color:#059669}
+  .remaining-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:10px;margin-top:4px}
+  .remaining-row.owed{background:#fffbeb;border:1px solid #fde68a}
+  .remaining-row.clear{background:#ecfdf5;border:1px solid #a7f3d0}
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 40px;display:flex;justify-content:space-between;align-items:center}
+  .footer-left{font-size:11px;color:#94a3b8;line-height:1.8;font-family:monospace}
+  .footer-right{text-align:right;font-size:11px;color:#94a3b8}
+  @media print{
+    body{background:#fff;padding:0}
+    .page{box-shadow:none;border-radius:0;max-width:100%}
+  }
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </head><body>
+<div class="page">
 
-<div class="header">
-  <div>
-    ${bs.logo?`<img src="${bs.logo}" alt="logo" style="height:70px;max-width:180px;object-fit:contain;margin-bottom:10px;display:block"/>`:""}
-    <div class="company-name">${invoice.companyName||"Fawtara"}</div>
-    <div class="company-info">
-      ${bs.activite?`<span>Activité : ${bs.activite}</span>`:""}
-      ${bs.adresse?`<span>Adresse : ${bs.adresse}</span>`:""}
-      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
-      ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
-      ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
-      ${bs.article?`<span>Article : ${bs.article}</span>`:""}
+  <div class="header">
+    <div class="logo-block">
+      ${bs.logo?`<img src="${bs.logo}" alt="logo"/>`:""}
+      <div class="company-name">${invoice.companyName||"Fawtara"}</div>
+      <div class="company-info">
+        ${bs.activite?`<span>${bs.activite}</span>`:""}
+        ${bs.adresse?`<span>${bs.adresse}</span>`:""}
+      </div>
+    </div>
+    <div class="inv-block">
+      <div class="inv-label">Facture</div>
+      <div class="inv-number">${invoice.id}</div>
+      <div class="inv-date">${invoice.date}</div>
+      <div class="badge ${invoice.payStatus==="paid"||isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
     </div>
   </div>
-  <div style="text-align:right">
-    <div style="font-size:22px;font-weight:900;color:#111;margin-bottom:6px">${t.invoiceNo}</div>
-    <div style="font-size:18px;font-weight:700;color:#2563EB;margin-bottom:8px">${invoice.id}</div>
-    <div class="badge">${statusLabel}</div>
-    <div style="font-size:13px;color:#6b7280;margin-top:8px">${invoice.date}</div>
+
+  <div class="body">
+
+    <div class="customer-section">
+      <div>
+        <div class="section-label">Facturé à</div>
+        <div class="customer-name">${invoice.customer}</div>
+      </div>
+      <div class="meta-grid">
+        ${bs.nif?`<div class="meta-item"><div class="label">NIF</div><div class="val">${bs.nif}</div></div>`:""}
+        ${bs.nis?`<div class="meta-item"><div class="label">NIS</div><div class="val">${bs.nis}</div></div>`:""}
+        ${bs.rc?`<div class="meta-item"><div class="label">RC</div><div class="val">${bs.rc}</div></div>`:""}
+        ${bs.article?`<div class="meta-item"><div class="label">Article</div><div class="val">${bs.article}</div></div>`:""}
+      </div>
+    </div>
+
+    <table>
+      <thead><tr>
+        <th>Description</th>
+        <th style="text-align:center">Qté</th>
+        <th style="text-align:right">${bs.tvaEnabled?"Prix HT":"Prix unit."}</th>
+        <th style="text-align:right">${bs.tvaEnabled?"Montant HT":"Total"}</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="totals">
+      <div class="total-line"><span>Sous-total HT</span><span style="font-weight:600;color:#1e293b">${montantHT.toLocaleString()} DA</span></div>
+      ${bs.tvaEnabled?`<div class="total-line"><span>TVA ${bs.tvaRate}%</span><span style="font-weight:600;color:#d97706">+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
+      ${bs.tvaEnabled?`<div class="total-line divider"><span style="font-weight:600">Total TTC</span><span style="font-weight:700;color:#1e293b">${montantTTC.toLocaleString()} DA</span></div>`:""}
+      ${bs.timbreEnabled?`<div class="total-line"><span>Droit de Timbre <span style="font-size:11px;color:#94a3b8">(LF 2025 Art.100)</span></span><span style="font-weight:600;color:#059669">+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
+      <div class="total-line divider main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+    </div>
+
+    ${paidTxs.length>0?`
+    <div class="payments-section">
+      <div class="payments-title">Historique des paiements</div>
+      ${paidTxs.map((tx,i)=>`
+      <div class="payment-row">
+        <div style="font-size:13px;color:#374151">${i===0?t.firstPayment:t.paymentNum(i+1)} · ${tx.date}</div>
+        <div class="pamt">+ ${tx.amount.toLocaleString()} DA</div>
+      </div>`).join("")}
+      <div class="remaining-row ${remaining>0?"owed":"clear"}">
+        <span style="font-weight:700;font-size:14px;color:${remaining>0?"#92400e":"#065f46"}">${remaining>0?t.remaining:t.fullyPaid}</span>
+        <span style="font-weight:800;font-size:16px;color:${remaining>0?"#d97706":"#059669"}">${remaining>0?remaining.toLocaleString()+" DA":"✓ Soldé"}</span>
+      </div>
+    </div>`:""}
+
   </div>
-</div>
 
-<div class="customer-block">
-  <div class="label">${t.customer}</div>
-  <div class="value">${invoice.customer}</div>
-</div>
+  <div class="footer">
+    <div class="footer-left">
+      ${[bs.nif?`NIF: ${bs.nif}`:"", bs.nis?`NIS: ${bs.nis}`:"", bs.rc?`RC: ${bs.rc}`:"", bs.article?`Art: ${bs.article}`:""].filter(Boolean).join("  ·  ")}
+      ${bs.adresse?`<br>${bs.adresse}`:""}
+    </div>
+    <div class="footer-right">
+      <div style="font-weight:700;color:#2563EB;font-size:13px">${invoice.companyName||"Fawtara"}</div>
+      <div>Document généré par Fawtara</div>
+    </div>
+  </div>
 
-<table>
-  <thead><tr>
-    <th>Description</th>
-    <th style="text-align:center">${t.qty}</th>
-    <th style="text-align:right">${bs.tvaEnabled?"Prix HT":t.unitPrice}</th>
-    <th style="text-align:right">${bs.tvaEnabled?"Montant HT":t.total}</th>
-  </tr></thead>
-  <tbody>${rows}</tbody>
-</table>
-
-<div style="margin-top:16px;border-top:1px solid #e5e7eb;padding-top:12px">
-  <div class="sub-row"><span style="color:#6b7280">Sous-total HT</span><span style="font-weight:700">${montantHT.toLocaleString()} DA</span></div>
-  ${bs.tvaEnabled?`<div class="sub-row"><span style="color:#6b7280">TVA ${bs.tvaRate}%</span><span style="font-weight:700;color:#d97706">+${tvaAmt.toLocaleString()} DA</span></div>`:""}
-  ${bs.tvaEnabled?`<div class="sub-row" style="border-top:1px solid #e5e7eb;padding-top:6px"><span style="font-weight:700">Total TTC</span><span style="font-weight:800">${montantTTC.toLocaleString()} DA</span></div>`:""}
-  ${bs.timbreEnabled?`<div class="sub-row"><span style="color:#6b7280">Droit de Timbre (LF 2025 Art.100)</span><span style="font-weight:700;color:#059669">+${timbreAmt.toLocaleString()} DA</span></div>`:""}
-</div>
-
-<div class="total-row">
-  <div class="total-label">Total à payer</div>
-  <div class="total-value">${totalFinal.toLocaleString()} DA</div>
-</div>
-
-${paidTxs.length>0?`
-<div class="section-title">${t.payments}</div>
-<table><tbody>${payRows}</tbody></table>
-<div class="remain-row">
-  <div style="font-size:13px;font-weight:700;color:${remaining>0?"#d97706":"#059669"}">${remaining>0?t.remaining:t.fullyPaid}</div>
-  <div style="font-size:16px;font-weight:900;color:${remaining>0?"#d97706":"#059669"}">${remaining>0?remaining.toLocaleString()+" DA":"✓"}</div>
-</div>`:""}
-
-<div class="footer">
-  ${invoice.companyName||"Fawtara"}
-  ${bs.nif?` · NIF: ${bs.nif}`:""}${bs.nis?` · NIS: ${bs.nis}`:""}${bs.rc?` · RC: ${bs.rc}`:""}${bs.article?` · Art: ${bs.article}`:""}
-  ${bs.adresse?`<br>${bs.adresse}`:""}
 </div>
 </body></html>`;
   };
