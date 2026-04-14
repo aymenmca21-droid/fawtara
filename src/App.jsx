@@ -1527,12 +1527,13 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:system-ui,sans-serif;padding:40px;color:#111;max-width:700px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-  .company{font-size:22px;font-weight:900;color:#2563EB}
-  .nif{font-size:12px;color:#6b7280;margin-top:3px;font-family:monospace}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:24px;border-bottom:2px solid #e5e7eb}
+  .company-name{font-size:22px;font-weight:900;color:#2563EB;margin-bottom:6px}
+  .company-info{font-size:11px;color:#6b7280;line-height:1.8;font-family:monospace}
+  .company-info span{display:block}
   .inv-no{font-size:14px;color:#6b7280;margin-top:4px}
   .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${badgeBg};color:${badgeColor}}
-  .customer-block{margin-bottom:24px}
+  .customer-block{background:#f9fafb;border-radius:10px;padding:14px 16px;margin-bottom:24px;border:1px solid #e5e7eb}
   .label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
   .value{font-size:15px;font-weight:600}
   table{width:100%;border-collapse:collapse;margin-top:4px}
@@ -1546,7 +1547,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .total-value{font-size:26px;font-weight:900;color:#2563EB}
   .section-title{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin:24px 0 10px}
   .remain-row{display:flex;justify-content:space-between;padding:12px 0 0;border-top:1px solid #e5e7eb;margin-top:4px}
-  .footer{margin-top:48px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center}
+  .footer{margin-top:48px;padding-top:16px;border-top:2px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;line-height:1.8;font-family:monospace}
   @media print{body{padding:24px} .no-print{display:none}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
@@ -1554,11 +1555,20 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="header">
   <div>
-    <div class="company">${invoice.companyName||"Fawtara"}</div>
-    ${bs.nif?`<div class="nif">NIF: ${bs.nif}</div>`:""}
-    <div class="inv-no">${t.invoiceNo} ${invoice.id}</div>
+    ${bs.logo?`<img src="${bs.logo}" alt="logo" style="height:70px;max-width:180px;object-fit:contain;margin-bottom:10px;display:block"/>`:""}
+    <div class="company-name">${invoice.companyName||"Fawtara"}</div>
+    <div class="company-info">
+      ${bs.activite?`<span>Activité : ${bs.activite}</span>`:""}
+      ${bs.adresse?`<span>Adresse : ${bs.adresse}</span>`:""}
+      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
+      ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
+      ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
+      ${bs.article?`<span>Article : ${bs.article}</span>`:""}
+    </div>
   </div>
   <div style="text-align:right">
+    <div style="font-size:22px;font-weight:900;color:#111;margin-bottom:6px">${t.invoiceNo}</div>
+    <div style="font-size:18px;font-weight:700;color:#2563EB;margin-bottom:8px">${invoice.id}</div>
     <div class="badge">${statusLabel}</div>
     <div style="font-size:13px;color:#6b7280;margin-top:8px">${invoice.date}</div>
   </div>
@@ -1580,10 +1590,10 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </table>
 
 <div style="margin-top:16px;border-top:1px solid #e5e7eb;padding-top:12px">
-  <div class="sub-row"><span>Sous-total HT</span><span style="font-weight:700">${montantHT.toLocaleString()} DA</span></div>
-  ${bs.tvaEnabled?`<div class="sub-row"><span>TVA ${bs.tvaRate}%</span><span style="font-weight:700;color:#d97706">+${tvaAmt.toLocaleString()} DA</span></div>`:""}
+  <div class="sub-row"><span style="color:#6b7280">Sous-total HT</span><span style="font-weight:700">${montantHT.toLocaleString()} DA</span></div>
+  ${bs.tvaEnabled?`<div class="sub-row"><span style="color:#6b7280">TVA ${bs.tvaRate}%</span><span style="font-weight:700;color:#d97706">+${tvaAmt.toLocaleString()} DA</span></div>`:""}
   ${bs.tvaEnabled?`<div class="sub-row" style="border-top:1px solid #e5e7eb;padding-top:6px"><span style="font-weight:700">Total TTC</span><span style="font-weight:800">${montantTTC.toLocaleString()} DA</span></div>`:""}
-  ${bs.timbreEnabled?`<div class="sub-row"><span>Droit de Timbre (LF 2025)</span><span style="font-weight:700;color:#059669">+${timbreAmt.toLocaleString()} DA</span></div>`:""}
+  ${bs.timbreEnabled?`<div class="sub-row"><span style="color:#6b7280">Droit de Timbre (LF 2025 Art.100)</span><span style="font-weight:700;color:#059669">+${timbreAmt.toLocaleString()} DA</span></div>`:""}
 </div>
 
 <div class="total-row">
@@ -1599,7 +1609,11 @@ ${paidTxs.length>0?`
   <div style="font-size:16px;font-weight:900;color:${remaining>0?"#d97706":"#059669"}">${remaining>0?remaining.toLocaleString()+" DA":"✓"}</div>
 </div>`:""}
 
-<div class="footer">Fawtara${bs.nif?` · NIF: ${bs.nif}`:""}</div>
+<div class="footer">
+  ${invoice.companyName||"Fawtara"}
+  ${bs.nif?` · NIF: ${bs.nif}`:""}${bs.nis?` · NIS: ${bs.nis}`:""}${bs.rc?` · RC: ${bs.rc}`:""}${bs.article?` · Art: ${bs.article}`:""}
+  ${bs.adresse?`<br>${bs.adresse}`:""}
+</div>
 </body></html>`;
   };
 
@@ -1751,7 +1765,7 @@ ${paidTxs.length>0?`
 /* ═══════════════════════════════════════════════
    CUSTOMER DETAIL VIEW
 ═══════════════════════════════════════════════ */
-function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,lang}){
+function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,onOpenInvoice,lang}){
   const t=T[lang],rtl=lang==="ar";
   const custInvs=invoices.filter(i=>i.customer===customer.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custTxs=txs.filter(x=>x.client===customer.name&&x.type==="income").sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1875,14 +1889,23 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
         {custInvs.length===0?(
           <div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af",fontSize:14}}>{t.noInvoices}</div>
         ):custInvs.map(inv=>(
-          <div key={inv.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
-            <div>
-              <div style={{fontWeight:600,fontSize:14,color:"#111"}}>{inv.id}</div>
-              <div style={{fontSize:11,color:"#9ca3af"}}>{inv.date} · {inv.lines.map(l=>l.name).slice(0,2).join(", ")}</div>
+          <div key={inv.id} onClick={()=>onOpenInvoice(inv)}
+            style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",borderRadius:10,marginBottom:4,cursor:"pointer",border:"1px solid #f3f4f6",background:"#fff",transition:"box-shadow .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.08)"}
+            onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:34,height:34,borderRadius:9,background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧾</div>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.id}</div>
+                <div style={{fontSize:11,color:"#9ca3af"}}>{inv.date} · {inv.lines.map(l=>l.name).slice(0,2).join(", ")}</div>
+              </div>
             </div>
-            <div style={{textAlign:"right"}}>
-              <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{fmt(inv.total,lang)}</div>
-              <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
+            <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{fmt(inv.total,lang)}</div>
+                <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
+              </div>
+              <div style={{color:"#d1d5db",fontSize:14}}>›</div>
             </div>
           </div>
         ))}
@@ -1896,7 +1919,8 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
 ═══════════════════════════════════════════════ */
 function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onNewCustomer,onNewInvoice}){
   const t=T[lang],rtl=lang==="ar";
-  const [sort,setSort]=useState("spent"); // "spent"|"debt"|"recent"
+  const [sort,setSort]=useState("spent");
+  const [search,setSearch]=useState("");
 
   // Build enriched customer data
   const enriched=useMemo(()=>customers.map(c=>{
@@ -1913,7 +1937,7 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
     if(sort==="debt")  return b.debt-a.debt;
     if(sort==="recent") return new Date(b.lastDate||0)-new Date(a.lastDate||0);
     return 0;
-  });
+  }).filter(c=>c.name?.toLowerCase().includes(search.toLowerCase())||c.phone?.includes(search));
 
   const totalRevenue=enriched.reduce((s,c)=>s+c.totalSpent,0);
   const totalDebt=enriched.reduce((s,c)=>s+c.debt,0);
@@ -1957,15 +1981,27 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
         </div>
       )}
 
-      {/* Sort tabs + list */}
-      <div style={{display:"flex",gap:6,marginBottom:12}}>
-        {[["spent","💰"],["debt","⚠"],["recent","🕒"]].map(([k,icon])=>(
-          <button key={k} onClick={()=>setSort(k)} style={{padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:sort===k?"#2563EB":"#f3f4f6",color:sort===k?"#fff":"#6b7280"}}>{icon}</button>
-        ))}
-        <button onClick={onNewCustomer} style={{marginLeft:"auto",padding:"6px 14px",background:"#2563EB",color:"#fff",border:"none",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ {t.newCustomer.replace("+ ","")}</button>
+      {/* Sort tabs + search */}
+      <div style={{marginBottom:12}}>
+        <div style={{position:"relative",marginBottom:10}}>
+          <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Rechercher un client..."
+            style={{...S.inp({paddingLeft:36,borderRadius:12})}}/>
+          {search&&<button onClick={()=>setSearch("")}
+            style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#9ca3af"}}>×</button>}
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {[["spent","💰"],["debt","⚠"],["recent","🕒"]].map(([k,icon])=>(
+            <button key={k} onClick={()=>setSort(k)} style={{padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:sort===k?"#2563EB":"#f3f4f6",color:sort===k?"#fff":"#6b7280"}}>{icon}</button>
+          ))}
+          <button onClick={onNewCustomer} style={{marginLeft:"auto",padding:"6px 14px",background:"#2563EB",color:"#fff",border:"none",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ {t.newCustomer.replace("+ ","")}</button>
+        </div>
       </div>
 
-      {sorted.length===0?(
+      {sorted.length===0&&search?(
+        <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun client pour "{search}"</div>
+      ):sorted.length===0?(
         <div style={{textAlign:"center",padding:"60px 20px"}}>
           <div style={{fontSize:48,marginBottom:12}}>👥</div>
           <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>{t.noCustomers}</div>
@@ -2010,15 +2046,30 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
 function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(companyName);
+  const [logo,setLogo]=useState(settings?.logo||"");
   const [nif,setNif]=useState(settings?.nif||"");
+  const [nis,setNis]=useState(settings?.nis||"");
+  const [rc,setRc]=useState(settings?.rc||"");
+  const [activite,setActivite]=useState(settings?.activite||"");
+  const [adresse,setAdresse]=useState(settings?.adresse||"");
+  const [article,setArticle]=useState(settings?.article||"");
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
   const ok=name.trim().length>0;
 
+  const handleLogo=e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    if(file.size>300000){alert("الصورة كبيرة جداً — اختر صورة أقل من 300KB");return;}
+    const reader=new FileReader();
+    reader.onload=ev=>setLogo(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{nif:nif.trim(),tvaEnabled,tvaRate,timbreEnabled});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled});
     onClose();
   };
 
@@ -2044,19 +2095,83 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
 
-          {/* Nom entreprise */}
-          <div style={{marginBottom:20}}>
+          {/* اسم الشركة */}
+          <div style={{marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{t.companyNameLabel}</div>
             <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.companyNamePh}
               style={{...S.inp({fontSize:16,fontWeight:700,borderColor:ok?"#2563EB":"#e5e7eb"})}}/>
           </div>
 
-          {/* NIF */}
+          {/* اللوغو */}
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>NIF — Numéro d'Identification Fiscale</div>
-            <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="Ex: 000316123456789"
-              style={{...S.inp({fontFamily:"monospace",fontSize:15,letterSpacing:1})}}/>
-            <div style={{fontSize:11,color:"#9ca3af",marginTop:5}}>Apparaît sur toutes vos factures PDF</div>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>🖼 Logo — شعار المؤسسة</div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              {logo?(
+                <div style={{position:"relative",flexShrink:0}}>
+                  <img src={logo} alt="logo" style={{width:72,height:72,borderRadius:12,objectFit:"contain",border:"1.5px solid #e5e7eb",background:"#f9fafb",padding:4}}/>
+                  <button onClick={()=>setLogo("")}
+                    style={{position:"absolute",top:-6,right:-6,width:20,height:20,borderRadius:"50%",background:"#ef4444",border:"none",color:"#fff",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+                </div>
+              ):(
+                <div style={{width:72,height:72,borderRadius:12,border:"2px dashed #e5e7eb",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,background:"#f9fafb",flexShrink:0}}>🖼</div>
+              )}
+              <div style={{flex:1}}>
+                <label style={{display:"block",padding:"10px 14px",background:"#eff6ff",border:"1.5px solid #bfdbfe",borderRadius:10,fontSize:13,fontWeight:600,color:"#1d4ed8",cursor:"pointer",textAlign:"center"}}>
+                  {logo?"تغيير الشعار":"رفع الشعار"}
+                  <input type="file" accept="image/*" onChange={handleLogo} style={{display:"none"}}/>
+                </label>
+                <div style={{fontSize:10,color:"#9ca3af",marginTop:5,textAlign:"center"}}>PNG · JPG · max 300KB · يظهر في الفاتورة</div>
+              </div>
+            </div>
+          </div>
+
+          {/* معلومات قانونية */}
+          <div style={{background:"#f9fafb",borderRadius:14,padding:14,marginBottom:16,border:"1px solid #e5e7eb"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:14,display:"flex",alignItems:"center",gap:6}}>
+              📋 Informations légales — تظهر في كل فاتورة PDF
+            </div>
+
+            {/* NIF */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>NIF — رقم التعريف الجبائي</div>
+              <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="000316123456789"
+                style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
+            </div>
+
+            {/* NIS */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>NIS — رقم التعريف الإحصائي</div>
+              <input value={nis} onChange={e=>setNis(e.target.value)} placeholder="099812001234567"
+                style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
+            </div>
+
+            {/* RC */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>RC — رقم السجل التجاري</div>
+              <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="Ex: 16/00-0012345B19"
+                style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
+            </div>
+
+            {/* Article */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>Article — رقم المادة الجبائية</div>
+              <input value={article} onChange={e=>setArticle(e.target.value)} placeholder="Ex: 16123456789"
+                style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
+            </div>
+
+            {/* Activité */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>Activité — طبيعة النشاط</div>
+              <input value={activite} onChange={e=>setActivite(e.target.value)} placeholder="Ex: Commerce de détail, Import-Export..."
+                style={S.inp()}/>
+            </div>
+
+            {/* Adresse */}
+            <div style={{marginBottom:0}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>Adresse — العنوان الكامل</div>
+              <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Ex: 12 Rue Didouche Mourad, Alger"
+                style={S.inp()}/>
+            </div>
           </div>
 
           {/* TVA */}
@@ -2748,6 +2863,7 @@ export default function App(){
               onEdit={c=>{setEditingCustomer(c);}}
               onDelete={id=>{delCustomer(id);showToast(t.deleteCustomer+" ✓");}}
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
+              onOpenInvoice={inv=>setPreviewInvoice(inv)}
             />
           ):(
             <CustomersTab
