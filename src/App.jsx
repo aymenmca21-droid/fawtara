@@ -2199,7 +2199,10 @@ const montantEnLettres=(n)=>{
   if(dec>0) res+=" et "+c2(dec)+" centime"+(dec>1?"s":"");
   return res.trim();
 };
-   Art. 100 Code du Timbre — paiement espèces uniquement
+
+/* ═══════════════════════════════════════════════
+   CALCUL DROIT DE TIMBRE — LF 2025 Art. 100
+   paiement espèces uniquement
 /* ═══════════════════════════════════════════════
    SETTINGS MODAL
 ═══════════════════════════════════════════════ */
