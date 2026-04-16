@@ -1095,16 +1095,58 @@ function CustomerModal({existing,onSave,onClose,lang}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(existing?.name||"");
   const [phone,setPhone]=useState(existing?.phone||"");
+  const [nif,setNif]=useState(existing?.nif||"");
+  const [nis,setNis]=useState(existing?.nis||"");
+  const [rc,setRc]=useState(existing?.rc||"");
+  const [adresse,setAdresse]=useState(existing?.adresse||"");
+  const [isProf,setIsProf]=useState(!!(existing?.nif||existing?.rc));
   const ok=name.trim();
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
-      <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"} style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 36px",width:"100%",maxWidth:480,animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
-        <div style={{fontWeight:900,fontSize:17,color:"#111",marginBottom:20}}>{existing?t.editCustomer:t.newCustomer}</div>
-        <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
-        <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:20})}/>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+      <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
+        style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"0",width:"100%",maxWidth:480,maxHeight:"88svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+        <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{fontWeight:900,fontSize:17,color:"#111"}}>{existing?t.editCustomer:t.newCustomer}</div>
+          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280"}}>×</button>
+        </div>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
+          <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
+          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:14})}/>
+          <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:16})}/>
+
+          {/* Type de client */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,padding:"10px 14px",background:"#f9fafb",borderRadius:12}}>
+            <span style={{fontSize:13,color:"#374151",fontWeight:600,flex:1}}>Client professionnel (entreprise) ?</span>
+            <button onClick={()=>setIsProf(!isProf)}
+              style={{padding:"5px 16px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                background:isProf?"#2563EB":"#e5e7eb",color:isProf?"#fff":"#6b7280"}}>
+              {isProf?"Oui ✓":"Non"}
+            </button>
+          </div>
+
+          {isProf&&(
+            <div style={{background:"#eff6ff",borderRadius:14,padding:14,border:"1px solid #bfdbfe",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>📋 Informations légales du client</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>NIF</div>
+                  <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="000316..." style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>NIS</div>
+                  <input value={nis} onChange={e=>setNis(e.target.value)} placeholder="099812..." style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                </div>
+                <div style={{gridColumn:"1/-1"}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>RC — Registre du Commerce</div>
+                  <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="16/00-0012345B19" style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim()});onClose();}}
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim()});onClose();}}
             style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
@@ -1153,27 +1195,32 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t}
 /* ═══════════════════════════════════════════════
    INVOICE MODAL
 ═══════════════════════════════════════════════ */
-function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer}){
+function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings}){
   const t=T[lang],rtl=lang==="ar";
   const [customer,setCustomer]=useState(preselectedCustomer||"");
   const [custInput,setCustInput]=useState(preselectedCustomer||"");
   const [showCustDrop,setShowCustDrop]=useState(false);
   const [showNewCust,setShowNewCust]=useState(false);
-  const [lines,setLines]=useState([{id:uid(),productId:null,name:"",price:"",qty:1}]);
+  const [lines,setLines]=useState([{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
   const [payStatus,setPayStatus]=useState("paid");
   const [paidAmt,setPaidAmt]=useState("");
+  const [modePaiement,setModePaiement]=useState("espèces");
+  const [echeance,setEcheance]=useState("");
+  const [showMore,setShowMore]=useState(false);
 
   const allCustNames=[...new Set([...customers.map(c=>c.name),...invoices.map(i=>i.customer).filter(Boolean)])];
   const filtered=allCustNames.filter(c=>c.toLowerCase().includes(custInput.toLowerCase())).slice(0,6);
+  const custObj=customers.find(c=>c.name===customer);
 
   const custInvs=invoices.filter(i=>i.customer===customer);
   const usedProdIds=[...new Set(custInvs.flatMap(i=>i.lines.map(l=>l.productId)).filter(Boolean))];
   const suggested=usedProdIds.map(id=>products.find(p=>p.id===id)).filter(Boolean).slice(0,4);
 
-  const total=lines.reduce((s,l)=>s+(parseFloat(l.price)||0)*(parseInt(l.qty)||0),0);
+  const lineTotal=l=>(parseFloat(l.price)||0)*(parseInt(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
+  const total=lines.reduce((s,l)=>s+lineTotal(l),0);
   const owingAmt=payStatus==="unpaid"?total:payStatus==="partial"?total-(parseFloat(paidAmt)||0):0;
 
-  const addLine=()=>setLines(p=>[...p,{id:uid(),productId:null,name:"",price:"",qty:1}]);
+  const addLine=()=>setLines(p=>[...p,{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
   const setLP=(lid,prod)=>setLines(p=>p.map(l=>l.id===lid?{...l,productId:prod.id,name:prod.name,price:prod.price}:l));
   const updL=(lid,f,v)=>setLines(p=>p.map(l=>l.id===lid?{...l,[f]:v}:l));
   const canCreate=customer.trim()&&lines.some(l=>l.name.trim()&&parseFloat(l.price)>0);
@@ -1182,7 +1229,13 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     if(!canCreate)return;
     const invId="INV-"+String(Date.now()).slice(-6);
     const paidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
-    const invoice={id:invId,customer:customer.trim(),lines:lines.filter(l=>l.name.trim()),total,payStatus,paidAmount,date:today(),companyName};
+    const invoice={
+      id:invId, customer:customer.trim(),
+      lines:lines.filter(l=>l.name.trim()),
+      total, payStatus, paidAmount, date:today(), companyName,
+      modePaiement, echeance,
+      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
+    };
     const txs=[];
     if(paidAmount>0) txs.push({id:uid(),type:"income",amount:paidAmount,desc:`Facture ${invId}`,client:customer.trim(),date:today(),paid:true,invoiceId:invId});
     if(owingAmt>0) txs.push({id:uid(),type:"income",amount:owingAmt,desc:`Facture ${invId} (reste)`,client:customer.trim(),date:today(),paid:false,invoiceId:invId});
@@ -1267,6 +1320,29 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
             </div>
             {payStatus==="partial"&&<div style={{marginTop:10}}><input type="number" placeholder={t.paidAmount} value={paidAmt} onChange={e=>setPaidAmt(e.target.value)} style={S.inp({fontSize:16,fontWeight:700})}/>{paidAmt&&total>0&&<div style={{fontSize:12,color:"#9ca3af",marginTop:4}}>Reste: {fmt(total-(parseFloat(paidAmt)||0),lang)}</div>}</div>}
           </div>
+
+          {/* Mode de paiement + Échéance */}
+          <div style={{marginTop:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Mode de paiement</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+              {["espèces","chèque","virement","CCP","carte"].map(m=>(
+                <button key={m} onClick={()=>setModePaiement(m)}
+                  style={{padding:"7px 14px",borderRadius:20,border:`1.5px solid ${modePaiement===m?"#2563EB":"#e5e7eb"}`,
+                    background:modePaiement===m?"#eff6ff":"#fff",color:modePaiement===m?"#1d4ed8":"#6b7280",
+                    fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  {m}
+                </button>
+              ))}
+            </div>
+
+            {payStatus==="unpaid"&&(
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>Date d'échéance (optionnel)</div>
+                <input type="date" value={echeance} onChange={e=>setEcheance(e.target.value)}
+                  style={S.inp({fontSize:14})}/>
+              </div>
+            )}
+          </div>
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0}}>
           <button onClick={create} disabled={!canCreate} style={{width:"100%",padding:15,background:canCreate?"#2563EB":"#e5e7eb",color:canCreate?"#fff":"#9ca3af",border:"none",borderRadius:14,fontSize:16,fontWeight:800,cursor:canCreate?"pointer":"default",boxShadow:canCreate?"0 8px 20px rgba(37,99,235,.35)":"none"}}>
@@ -1274,7 +1350,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
           </button>
         </div>
       </div>
-      {showNewCust&&<CustomerModal onSave={c=>{setCustomer(c.name);setCustInput(c.name);onCreated&&false;/* just inject name */}}  onClose={()=>setShowNewCust(false)} lang={lang}/>}
+      {showNewCust&&<CustomerModal onSave={c=>{setCustomer(c.name);setCustInput(c.name);onCreated&&false;}}  onClose={()=>setShowNewCust(false)} lang={lang}/>}
     </div>
   );
 }
@@ -1506,13 +1582,20 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   };
 
   const buildHTML=(autoPrint=false)=>{
-    const rows=invoice.lines.map(l=>`
-      <tr>
+    const rows=invoice.lines.map(l=>{
+      const pu=parseFloat(l.price)||0;
+      const qty=parseInt(l.qty)||1;
+      const rem=parseFloat(l.remise)||0;
+      const montant=pu*qty*(1-rem/100);
+      return `<tr>
         <td>${l.name}</td>
-        <td style="text-align:center">${l.qty||1}</td>
-        <td style="text-align:right">${(parseFloat(l.price)||0).toLocaleString()} DA</td>
-        <td style="text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseInt(l.qty)||1)).toLocaleString()} DA</td>
-      </tr>`).join("");
+        <td style="text-align:center">${qty}</td>
+        <td style="text-align:center;font-size:11px;color:#64748b">${l.unite||"unité"}</td>
+        <td style="text-align:right">${pu.toLocaleString()} DA</td>
+        ${rem>0?`<td style="text-align:center;color:#d97706">-${rem}%</td>`:`<td style="text-align:center;color:#94a3b8">—</td>`}
+        <td style="text-align:right;font-weight:600">${montant.toLocaleString()} DA</td>
+      </tr>`;
+    }).join("");
     const payRows=paidTxs.map((tx,i)=>`
       <tr>
         <td>${i===0?t.firstPayment:t.paymentNum(i+1)}</td>
@@ -1520,141 +1603,150 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
         <td style="text-align:right;color:#9ca3af">${tx.date}</td>
       </tr>`).join("");
     const statusLabel=isFullyPaid?t.statusPaid:(t["status"+cap(invoice.payStatus)]||"");
-    const badgeBg=isFullyPaid?"#ecfdf5":sb[invoice.payStatus]||"#f3f4f6";
-    const badgeColor=isFullyPaid?"#059669":sc[invoice.payStatus]||"#374151";
+    const ci=invoice.customerInfo||{};
+    const lettres=montantEnLettres(totalFinal);
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Facture ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:32px}
-  .page{max-width:720px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #1e293b;margin-bottom:24px}
+  .page{max-width:740px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #1e293b;margin-bottom:20px}
   .logo-block img{height:56px;max-width:150px;object-fit:contain;margin-bottom:8px;display:block}
   .company-name{font-size:18px;font-weight:900;color:#1e293b;margin-bottom:5px}
   .company-info{font-size:10.5px;color:#64748b;line-height:1.9}
   .company-info span{display:block}
   .inv-block{text-align:right}
   .inv-title{font-size:28px;font-weight:900;color:#1e293b;letter-spacing:-1px;margin-bottom:4px}
-  .inv-number{font-size:13px;color:#64748b;font-family:monospace;margin-bottom:8px}
-  .inv-date{font-size:12px;color:#64748b}
-  .badge{display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px;border:1.5px solid #1e293b;color:#1e293b}
+  .inv-number{font-size:13px;color:#64748b;font-family:monospace;margin-bottom:4px}
+  .inv-date{font-size:12px;color:#64748b;margin-bottom:2px}
+  .badge{display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px;border:1.5px solid}
   .badge-paid{border-color:#059669;color:#059669}
   .badge-unpaid{border-color:#dc2626;color:#dc2626}
   .badge-partial{border-color:#d97706;color:#d97706}
-
-  .info-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:24px}
-  .customer-block{flex:1}
-  .block-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
-  .customer-name{font-size:17px;font-weight:700;color:#1e293b}
-  .legal-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
-  .legal-item{font-size:10.5px;color:#64748b}
-  .legal-item strong{color:#1e293b}
-
-  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .party-block{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .party-name{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px}
+  .party-info{font-size:10.5px;color:#64748b;line-height:1.9;font-family:monospace}
+  .party-info span{display:block}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
   thead tr{border-bottom:2px solid #1e293b}
-  th{text-align:left;font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:1px;padding:8px 10px}
-  th:not(:first-child){text-align:right}
+  th{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;padding:8px 8px;text-align:left}
   tbody tr{border-bottom:1px solid #e2e8f0}
-  tbody tr:last-child{border-bottom:none}
-  td{padding:10px 10px;font-size:13px;color:#1e293b}
-  td:not(:first-child){text-align:right}
-
-  .totals{border:1.5px solid #e2e8f0;border-radius:6px;padding:16px 20px;margin-bottom:20px}
-  .total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#64748b}
-  .total-line.sep{border-top:1px solid #e2e8f0;margin-top:8px;padding-top:12px}
-  .total-line.main{font-size:17px;font-weight:900;color:#1e293b;border-top:2px solid #1e293b;margin-top:6px;padding-top:10px}
-
-  .payments-title{font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
-  .payment-row{display:flex;justify-content:space-between;padding:7px 10px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;font-size:12px}
-  .payment-row .pamt{font-weight:700;color:#059669}
-  .remain-row{display:flex;justify-content:space-between;padding:9px 12px;border:1.5px solid #1e293b;border-radius:4px;margin-top:6px}
-  .remain-row.clear{border-color:#059669}
-
-  .footer{margin-top:32px;padding-top:14px;border-top:1.5px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end}
+  td{padding:9px 8px;font-size:13px;color:#1e293b}
+  .tc{text-align:center}
+  .tr{text-align:right;font-weight:600}
+  .totals{border:1.5px solid #e2e8f0;border-radius:6px;padding:14px 18px;margin-bottom:14px}
+  .tl{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#64748b}
+  .tl.sep{border-top:1px solid #e2e8f0;margin-top:6px;padding-top:10px}
+  .tl.main{font-size:17px;font-weight:900;color:#1e293b;border-top:2px solid #1e293b;margin-top:6px;padding-top:10px}
+  .lettres{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#374151}
+  .pr{display:flex;justify-content:space-between;padding:7px 10px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;font-size:12px}
+  .pr .pamt{font-weight:700;color:#059669}
+  .rr{display:flex;justify-content:space-between;padding:9px 12px;border:1.5px solid #1e293b;border-radius:4px;margin-top:6px}
+  .rr.clear{border-color:#059669}
+  .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end}
   .footer-legal{font-size:9.5px;color:#94a3b8;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:10px;color:#94a3b8;text-align:right}
-  @media print{body{padding:20px} * {-webkit-print-color-adjust:exact}}
+  @media print{body{padding:20px}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
-</head><body>
-<div class="page">
+</head><body><div class="page">
 
-  <div class="header">
-    <div class="logo-block">
-      ${bs.logo?`<img src="${bs.logo}" alt="logo"/>`:""}
-      <div class="company-name">${invoice.companyName||"Fawtara"}</div>
-      <div class="company-info">
-        ${bs.activite?`<span>${bs.activite}</span>`:""}
-        ${bs.adresse?`<span>${bs.adresse}</span>`:""}
-      </div>
-    </div>
-    <div class="inv-block">
-      <div class="inv-title">FACTURE</div>
-      <div class="inv-number">${invoice.id}</div>
-      <div class="inv-date">${invoice.date}</div>
-      <div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
+<div class="header">
+  <div class="logo-block">
+    ${bs.logo?`<img src="${bs.logo}" alt="logo"/>`:""}
+    <div class="company-name">${invoice.companyName||"Fawtara"}</div>
+    <div class="company-info">
+      ${bs.activite?`<span>${bs.activite}</span>`:""}
+      ${bs.adresse?`<span>${bs.adresse}</span>`:""}
     </div>
   </div>
-
-  <div class="info-row">
-    <div class="customer-block">
-      <div class="block-label">Facturé à</div>
-      <div class="customer-name">${invoice.customer}</div>
-    </div>
-    ${(bs.nif||bs.nis||bs.rc||bs.article)?`
-    <div>
-      <div class="block-label">Identifiants fiscaux</div>
-      <div class="legal-grid">
-        ${bs.nif?`<div class="legal-item"><strong>NIF</strong> ${bs.nif}</div>`:""}
-        ${bs.nis?`<div class="legal-item"><strong>NIS</strong> ${bs.nis}</div>`:""}
-        ${bs.rc?`<div class="legal-item"><strong>RC</strong> ${bs.rc}</div>`:""}
-        ${bs.article?`<div class="legal-item"><strong>Art.</strong> ${bs.article}</div>`:""}
-      </div>
-    </div>`:""}
+  <div class="inv-block">
+    <div class="inv-title">FACTURE</div>
+    <div class="inv-number">N° ${invoice.id}</div>
+    <div class="inv-date">Date : ${invoice.date}</div>
+    ${invoice.echeance?`<div class="inv-date">Échéance : ${invoice.echeance}</div>`:""}
+    <div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
   </div>
-
-  <table>
-    <thead><tr>
-      <th>Description</th>
-      <th style="text-align:center">Qté</th>
-      <th style="text-align:right">${bs.tvaEnabled?"Prix HT":"Prix unit."}</th>
-      <th style="text-align:right">${bs.tvaEnabled?"Montant HT":"Total"}</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-
-  <div class="totals">
-    <div class="total-line"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
-    ${bs.tvaEnabled?`<div class="total-line"><span>TVA ${bs.tvaRate}%</span><span>+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
-    ${bs.tvaEnabled?`<div class="total-line sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
-    ${bs.timbreEnabled?`<div class="total-line"><span>Droit de Timbre (LF 2025)</span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
-    <div class="total-line main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
-  </div>
-
-  ${paidTxs.length>0?`
-  <div>
-    <div class="payments-title">Historique des paiements</div>
-    ${paidTxs.map((tx,i)=>`
-    <div class="payment-row">
-      <span>${i===0?t.firstPayment:t.paymentNum(i+1)} — ${tx.date}</span>
-      <span class="pamt">+ ${tx.amount.toLocaleString()} DA</span>
-    </div>`).join("")}
-    <div class="remain-row ${remaining===0?"clear":""}">
-      <span style="font-weight:700;font-size:13px">${remaining>0?t.remaining:t.fullyPaid}</span>
-      <span style="font-weight:800;font-size:14px">${remaining>0?remaining.toLocaleString()+" DA":"✓ Soldé"}</span>
-    </div>
-  </div>`:""}
-
-  <div class="footer">
-    <div class="footer-legal">
-      ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:""].filter(Boolean).join("  ·  ")}
-      ${bs.adresse?`<br>${bs.adresse}`:""}
-    </div>
-    <div class="footer-brand">Document généré par Fawtara</div>
-  </div>
-
 </div>
-</body></html>`;
+
+<div class="parties">
+  <div class="party-block">
+    <div class="party-label">Vendeur</div>
+    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
+    <div class="party-info">
+      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
+      ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
+      ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
+      ${bs.article?`<span>Art. : ${bs.article}</span>`:""}
+      ${bs.adresse?`<span>${bs.adresse}</span>`:""}
+    </div>
+  </div>
+  <div class="party-block">
+    <div class="party-label">Acheteur</div>
+    <div class="party-name">${invoice.customer}</div>
+    <div class="party-info">
+      ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
+      ${ci.nis?`<span>NIS : ${ci.nis}</span>`:""}
+      ${ci.rc?`<span>RC : ${ci.rc}</span>`:""}
+      ${ci.adresse?`<span>${ci.adresse}</span>`:""}
+      ${ci.phone?`<span>Tél : ${ci.phone}</span>`:""}
+    </div>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Désignation</th>
+    <th class="tc">Qté</th>
+    <th class="tc">Unité</th>
+    <th style="text-align:right">${bs.tvaEnabled?"PU HT":"Prix unit."}</th>
+    <th class="tc">Remise</th>
+    <th style="text-align:right">${bs.tvaEnabled?"Montant HT":"Total"}</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="totals">
+  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
+  ${bs.tvaEnabled?`<div class="tl"><span>TVA ${bs.tvaRate}%</span><span>+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
+  ${bs.tvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
+  ${bs.timbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
+  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+</div>
+
+<div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres}</div>
+
+<div style="margin-bottom:14px;font-size:12px;color:#475569">
+  <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
+  ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
+</div>
+
+${paidTxs.length>0?`
+<div style="margin-bottom:14px">
+  <div style="font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
+  ${paidTxs.map((tx,i)=>`
+  <div class="pr">
+    <span>${i===0?t.firstPayment:t.paymentNum(i+1)} — ${tx.date}</span>
+    <span class="pamt">+ ${tx.amount.toLocaleString()} DA</span>
+  </div>`).join("")}
+  <div class="rr ${remaining===0?"clear":""}">
+    <span style="font-weight:700;font-size:13px">${remaining>0?t.remaining:t.fullyPaid}</span>
+    <span style="font-weight:800;font-size:14px">${remaining>0?remaining.toLocaleString()+" DA":"✓ Soldé"}</span>
+  </div>
+</div>`:""}
+
+<div class="footer">
+  <div class="footer-legal">
+    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:""].filter(Boolean).join("  ·  ")}
+    ${bs.adresse?`<br>${bs.adresse}`:""}
+  </div>
+  <div class="footer-brand">Document généré par Fawtara</div>
+</div>
+
+</div></body></html>`;
   };
 
   const openInTab=(autoPrint=false)=>{
@@ -2078,7 +2170,35 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
 }
 
 /* ═══════════════════════════════════════════════
-   CALCUL DROIT DE TIMBRE — Loi de Finances 2025
+   MONTANT EN LETTRES — المبلغ بالحروف (دينار جزائري)
+═══════════════════════════════════════════════ */
+const montantEnLettres=(n)=>{
+  if(!n||n===0) return "zéro dinar";
+  const u=["","un","deux","trois","quatre","cinq","six","sept","huit","neuf","dix","onze","douze","treize","quatorze","quinze","seize","dix-sept","dix-huit","dix-neuf"];
+  const d=["","","vingt","trente","quarante","cinquante","soixante","soixante","quatre-vingt","quatre-vingt"];
+  const c2=(n)=>{
+    if(n<20) return u[n];
+    const di=Math.floor(n/10), un=n%10;
+    if(di===7) return un===0?"soixante-dix":un===1?"soixante et onze":"soixante-"+u[10+un];
+    if(di===9) return un===0?"quatre-vingt-dix":"quatre-vingt-"+u[10+un];
+    return d[di]+(un===0&&di===8?"s":un===1&&di!==8?" et "+u[un]:un>0?"-"+u[un]:"");
+  };
+  const c3=(n)=>{
+    if(n===0) return "";
+    const cent=Math.floor(n/100), rest=n%100;
+    let r=cent>1?u[cent]+" cent"+(rest===0?"s":""):cent===1?"cent":"";
+    if(rest>0) r+=(r?" ":"")+c2(rest);
+    return r;
+  };
+  const entier=Math.floor(n), dec=Math.round((n-entier)*100);
+  let res="";
+  if(entier>=1000000) res+=c3(Math.floor(entier/1000000))+" million"+(Math.floor(entier/1000000)>1?"s":"")+" ";
+  if(entier>=1000) res+=c3(Math.floor((entier%1000000)/1000))+" mille ";
+  res+=c3(entier%1000);
+  res=res.trim()+" dinar"+(entier>1?"s":"");
+  if(dec>0) res+=" et "+c2(dec)+" centime"+(dec>1?"s":"");
+  return res.trim();
+};
    Art. 100 Code du Timbre — paiement espèces uniquement
 /* ═══════════════════════════════════════════════
    SETTINGS MODAL
