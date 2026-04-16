@@ -3069,6 +3069,14 @@ export default function App(){
   const [invoiceSearch,setInvoiceSearch]=useState("");
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
+  // History filters
+  const [histFilter,setHistFilter]=useState("all");
+  const [dateFrom,setDateFrom]=useState("");
+  const [dateTo,setDateTo]=useState("");
+  const [histSearch,setHistSearch]=useState("");
+  // Rapport
+  const [rapportMonth,setRapportMonth]=useState(new Date().getMonth());
+  const [rapportYear,setRapportYear]=useState(new Date().getFullYear());
 
   const t=T[lang],rtl=lang==="ar";
   const effectiveCompanyName=companyName||(user?.shopName)||t.companyName;
@@ -3428,10 +3436,94 @@ export default function App(){
 
         {/* ── HISTORY ── */}
         {tab==="history"&&(()=>{
-          const [histFilter,setHistFilter]=useState("all");
-          const [dateFrom,setDateFrom]=useState("");
-          const [dateTo,setDateTo]=useState("");
-          const [histSearch,setHistSearch]=useState("");
+          const filtered=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(tx=>{
+            if(histFilter==="income"&&tx.type!=="income") return false;
+            if(histFilter==="expense"&&tx.type!=="expense") return false;
+            if(dateFrom&&tx.date<dateFrom) return false;
+            if(dateTo&&tx.date>dateTo) return false;
+            if(histSearch&&!tx.desc?.toLowerCase().includes(histSearch.toLowerCase())&&!tx.client?.toLowerCase().includes(histSearch.toLowerCase())) return false;
+            return true;
+          });
+          const totalIncome=filtered.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0);
+          const totalExpense=filtered.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
+          const exportCSV=()=>{
+            const rows=[["Date","Type","Description","Client","Montant","Statut","Facture"],...filtered.map(tx=>[tx.date,tx.type==="income"?"Revenu":"Dépense",tx.desc||"",tx.client||"",tx.amount,tx.paid?"Payé":"En attente",tx.invoiceId||""])];
+            const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement("a");
+            a.href=url; a.download=`historique_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+          };
+          return(
+            <div>
+              <div style={S.card({marginBottom:12})}>
+                <div style={{position:"relative",marginBottom:12}}>
+                  <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
+                  <input value={histSearch} onChange={e=>setHistSearch(e.target.value)} placeholder="Rechercher..." style={{...S.inp({paddingLeft:36})}}/>
+                </div>
+                <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+                  {[["all","Tout"],["income","↑ Revenus"],["expense","↓ Dépenses"]].map(([k,l])=>(
+                    <button key={k} onClick={()=>setHistFilter(k)} style={{padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,background:histFilter===k?"#2563EB":"#f3f4f6",color:histFilter===k?"#fff":"#6b7280"}}>{l}</button>
+                  ))}
+                  <button onClick={exportCSV} style={{marginLeft:"auto",padding:"6px 14px",background:"#059669",color:"#fff",border:"none",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export CSV</button>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><div style={{fontSize:10,color:"#9ca3af",marginBottom:4,fontWeight:600}}>Du</div><input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)} style={S.inp({fontSize:13})}/></div>
+                  <div><div style={{fontSize:10,color:"#9ca3af",marginBottom:4,fontWeight:600}}>Au</div><input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)} style={S.inp({fontSize:13})}/></div>
+                </div>
+                {(dateFrom||dateTo)&&<button onClick={()=>{setDateFrom("");setDateTo("");}} style={{marginTop:8,fontSize:11,color:"#6b7280",background:"none",border:"none",cursor:"pointer",padding:0}}>× Effacer les dates</button>}
+              </div>
+              {filtered.length>0&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+                  <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px",textAlign:"center"}}><div style={{fontWeight:900,fontSize:14,color:"#059669"}}>{fmt(totalIncome,lang)}</div><div style={{fontSize:9,color:"#065f46",fontWeight:700,marginTop:2}}>REVENUS</div></div>
+                  <div style={{background:"#fef2f2",borderRadius:10,padding:"10px",textAlign:"center"}}><div style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>{fmt(totalExpense,lang)}</div><div style={{fontSize:9,color:"#b91c1c",fontWeight:700,marginTop:2}}>DÉPENSES</div></div>
+                  <div style={{background:"#eff6ff",borderRadius:10,padding:"10px",textAlign:"center"}}><div style={{fontWeight:900,fontSize:14,color:"#2563EB"}}>{filtered.length}</div><div style={{fontSize:9,color:"#1d4ed8",fontWeight:700,marginTop:2}}>ENTRÉES</div></div>
+                </div>
+              )}
+              <div style={S.card()}>
+                {filtered.length===0
+                  ?<div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucune entrée trouvée</div>
+                  :filtered.map(tx=>{
+                    const linkedInv=tx.invoiceId?invoices.find(i=>i.id===tx.invoiceId):null;
+                    return(
+                      <div key={tx.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
+                        <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:tx.type==="income"?"#ecfdf5":"#fef2f2",fontSize:16}}>{tx.type==="income"?"↑":"↓"}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:14,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
+                          <div style={{fontSize:11,color:"#9ca3af"}}>{tx.client||tx.date}{tx.invoiceId?` · 📄${tx.invoiceId}`:""}</div>
+                        </div>
+                        <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{fontWeight:700,fontSize:14,color:tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="income"?"+":"–"}{fmt(tx.amount,lang)}</div>
+                          {!tx.paid&&tx.type==="income"&&<div style={{fontSize:10,color:"#d97706",fontWeight:700}}>EN ATTENTE</div>}
+                        </div>
+                        {linkedInv&&<button onClick={()=>setPreviewInvoice(linkedInv)} style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,color:"#1d4ed8",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>🧾 PDF</button>}
+                        <button onClick={()=>setConfirmDelTx(tx)} style={{background:"none",border:"none",color:"#d1d5db",fontSize:18,cursor:"pointer",padding:4,flexShrink:0,lineHeight:1}}>×</button>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+              {confirmDelTx&&(
+                <div onClick={()=>setConfirmDelTx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+                  <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+                    <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>🗑</div>
+                    <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:12,textAlign:"center"}}>Supprimer cette entrée ?</div>
+                    <div style={{background:"#f9fafb",borderRadius:12,padding:"12px 14px",marginBottom:20}}>
+                      <div style={{fontWeight:700,fontSize:14,color:"#111",marginBottom:4}}>{confirmDelTx.desc}</div>
+                      <div style={{fontSize:13,color:"#6b7280"}}>{confirmDelTx.client||confirmDelTx.date}</div>
+                      <div style={{fontWeight:800,fontSize:16,color:confirmDelTx.type==="income"?"#059669":"#dc2626",marginTop:6}}>{confirmDelTx.type==="income"?"+":"–"}{fmt(confirmDelTx.amount,lang)}</div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                      <button onClick={()=>setConfirmDelTx(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+                      <button onClick={()=>{delTx(confirmDelTx.id);setConfirmDelTx(null);}} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Supprimer</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
           const filtered=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(tx=>{
             if(histFilter==="income"&&tx.type!=="income") return false;
@@ -3579,10 +3671,97 @@ export default function App(){
 
         {/* ── RAPPORT ── */}
         {tab==="rapport"&&(()=>{
-          const now=new Date();
-          const [selMonth,setSelMonth]=useState(now.getMonth());
-          const [selYear,setSelYear]=useState(now.getFullYear());
           const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+          const mm=String(rapportMonth+1).padStart(2,"0");
+          const prefix=`${rapportYear}-${mm}`;
+          const mTxs=txs.filter(tx=>tx.date?.startsWith(prefix));
+          const mInvs=invoices.filter(inv=>inv.date?.startsWith(prefix));
+          const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0);
+          const depenses=mTxs.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
+          const benefice=revenus-depenses;
+          const attente=mTxs.filter(tx=>tx.type==="income"&&!tx.paid).reduce((s,tx)=>s+tx.amount,0);
+          const nbInv=mInvs.length;
+          const nbPaid=mInvs.filter(i=>i.payStatus==="paid").length;
+          const today30=new Date(); today30.setDate(today30.getDate()-30);
+          const oldDebts=invoices.filter(inv=>inv.payStatus!=="paid"&&new Date(inv.date)<today30);
+          const exportRapport=()=>{
+            const rows=[[`Rapport ${months[rapportMonth]} ${rapportYear}`],[],["Indicateur","Montant"],["Revenus encaissés",revenus],["Dépenses",depenses],["Bénéfice net",benefice],["À encaisser",attente],[],["Factures émises",nbInv],["Factures payées",nbPaid],["Factures impayées",nbInv-nbPaid]];
+            const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement("a"); a.href=url; a.download=`rapport_${prefix}.csv`; a.click(); URL.revokeObjectURL(url);
+          };
+          return(
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <button onClick={()=>{if(rapportMonth===0){setRapportMonth(11);setRapportYear(y=>y-1);}else setRapportMonth(m=>m-1);}}
+                  style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+                <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:18,color:"#111"}}>{months[rapportMonth]} {rapportYear}</div>
+                <button onClick={()=>{if(rapportMonth===11){setRapportMonth(0);setRapportYear(y=>y+1);}else setRapportMonth(m=>m+1);}}
+                  style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+                <button onClick={exportRapport} style={{padding:"8px 14px",background:"#059669",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+                <div style={{background:"#ecfdf5",borderRadius:14,padding:20,border:"1px solid #a7f3d0"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>REVENUS ENCAISSÉS</div>
+                  <div style={{fontSize:26,fontWeight:900,color:"#059669"}}>{fmt(revenus,lang)}</div>
+                </div>
+                <div style={{background:"#fef2f2",borderRadius:14,padding:20,border:"1px solid #fecaca"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#b91c1c",marginBottom:6}}>DÉPENSES</div>
+                  <div style={{fontSize:26,fontWeight:900,color:"#dc2626"}}>{fmt(depenses,lang)}</div>
+                </div>
+                <div style={{background:benefice>=0?"#eff6ff":"#fff7ed",borderRadius:14,padding:20,border:`1px solid ${benefice>=0?"#bfdbfe":"#fed7aa"}`,gridColumn:"1/-1"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:benefice>=0?"#1d4ed8":"#c2410c",marginBottom:6}}>BÉNÉFICE NET</div>
+                  <div style={{fontSize:32,fontWeight:900,color:benefice>=0?"#2563EB":"#ea580c"}}>{benefice>=0?"+":""}{fmt(benefice,lang)}</div>
+                </div>
+              </div>
+              <div style={S.card({marginBottom:16})}>
+                <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>📊 Factures — {months[rapportMonth]}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+                  {[{l:"Émises",v:nbInv,c:"#374151"},{l:"Payées",v:nbPaid,c:"#059669"},{l:"Impayées",v:nbInv-nbPaid,c:"#dc2626"},{l:"À encaisser",v:fmt(attente,lang),c:"#d97706"}].map(s=>(
+                    <div key={s.l} style={{textAlign:"center",padding:"10px 6px",background:"#f9fafb",borderRadius:10}}>
+                      <div style={{fontWeight:900,fontSize:16,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:9,color:"#6b7280",fontWeight:700,marginTop:2}}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {oldDebts.length>0&&(
+                <div style={{background:"#fef2f2",borderRadius:14,padding:16,border:"1.5px solid #fecaca",marginBottom:16}}>
+                  <div style={{fontWeight:800,fontSize:14,color:"#b91c1c",marginBottom:12}}>⏰ Factures impayées depuis +30 jours ({oldDebts.length})</div>
+                  {oldDebts.map(inv=>{
+                    const days=Math.floor((new Date()-new Date(inv.date))/(1000*60*60*24));
+                    const reste=inv.total-(inv.paidAmount||0);
+                    return(
+                      <div key={inv.id} onClick={()=>setPreviewInvoice(inv)}
+                        style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:10,marginBottom:6,cursor:"pointer",border:"1px solid #fecaca"}}>
+                        <div><div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div><div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {days} jours</div></div>
+                        <div style={{fontWeight:800,fontSize:14,color:"#dc2626"}}>{fmt(reste,lang)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {mInvs.length>0&&(()=>{
+                const clientMap={};
+                mInvs.forEach(inv=>{clientMap[inv.customer]=(clientMap[inv.customer]||0)+inv.total;});
+                const top=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+                return(
+                  <div style={S.card()}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>🏆 Top clients — {months[rapportMonth]}</div>
+                    {top.map(([name,total],i)=>(
+                      <div key={name} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<top.length-1?"1px solid #f3f4f6":"none"}}>
+                        <div style={{width:24,height:24,borderRadius:8,background:["#fbbf24","#94a3b8","#c2853a","#6366f1","#10b981"][i],display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0}}>{i+1}</div>
+                        <div style={{flex:1,fontWeight:600,fontSize:13,color:"#111"}}>{name}</div>
+                        <div style={{fontWeight:800,fontSize:13,color:"#059669"}}>{fmt(total,lang)}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
           const mm=String(selMonth+1).padStart(2,"0");
           const prefix=`${selYear}-${mm}`;
