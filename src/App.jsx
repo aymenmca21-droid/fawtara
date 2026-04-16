@@ -1195,17 +1195,18 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t}
 /* ═══════════════════════════════════════════════
    INVOICE MODAL
 ═══════════════════════════════════════════════ */
-function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings}){
+function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate}){
   const t=T[lang],rtl=lang==="ar";
-  const [customer,setCustomer]=useState(preselectedCustomer||"");
-  const [custInput,setCustInput]=useState(preselectedCustomer||"");
+  const [customer,setCustomer]=useState(duplicate?.customer||preselectedCustomer||"");
+  const [custInput,setCustInput]=useState(duplicate?.customer||preselectedCustomer||"");
   const [showCustDrop,setShowCustDrop]=useState(false);
   const [showNewCust,setShowNewCust]=useState(false);
-  const [lines,setLines]=useState([{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
+  const [lines,setLines]=useState(duplicate?.lines?.map(l=>({...l,id:uid()}))||[{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
   const [payStatus,setPayStatus]=useState("paid");
   const [paidAmt,setPaidAmt]=useState("");
-  const [modePaiement,setModePaiement]=useState("espèces");
+  const [modePaiement,setModePaiement]=useState(duplicate?.modePaiement||"espèces");
   const [echeance,setEcheance]=useState("");
+  const [notes,setNotes]=useState(duplicate?.notes||"");
   const [showMore,setShowMore]=useState(false);
 
   const allCustNames=[...new Set([...customers.map(c=>c.name),...invoices.map(i=>i.customer).filter(Boolean)])];
@@ -1227,13 +1228,16 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 
   const create=()=>{
     if(!canCreate)return;
-    const invId="INV-"+String(Date.now()).slice(-6);
+    const year=new Date().getFullYear();
+    const prefix=bizSettings?.invPrefix||"FAC";
+    const counter=String(bizSettings?.invCounter||1).padStart(4,"0");
+    const invId=`${prefix}-${year}-${counter}`;
     const paidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
     const invoice={
       id:invId, customer:customer.trim(),
       lines:lines.filter(l=>l.name.trim()),
       total, payStatus, paidAmount, date:today(), companyName,
-      modePaiement, echeance,
+      modePaiement, echeance, notes,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
     };
     const txs=[];
@@ -1342,6 +1346,15 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
                   style={S.inp({fontSize:14})}/>
               </div>
             )}
+
+            {/* ملاحظات */}
+            <div style={{marginTop:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>📝 Remarques (optionnel)</div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                placeholder="Notes, conditions, remarques particulières..."
+                rows={2}
+                style={{...S.inp({fontSize:13}),resize:"vertical",minHeight:60}}/>
+            </div>
           </div>
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0}}>
@@ -1724,6 +1737,8 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
   ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
 </div>
 
+${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-left:3px solid #1e293b;border-radius:0 6px 6px 0;font-size:12px;color:#374151"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
+
 ${paidTxs.length>0?`
 <div style="margin-bottom:14px">
   <div style="font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
@@ -1878,15 +1893,26 @@ ${paidTxs.length>0?`
           </div>
         </div>
 
-        {/* Footer — طباعة + تحميل */}
-        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+        {/* Footer — طباعة + تحميل + واتساب */}
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
           <button onClick={printDirect}
-            style={{padding:15,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:14,fontSize:14,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            style={{padding:14,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
             🖨 {t.printInvoice}
           </button>
           <button onClick={printPDF}
-            style={{padding:15,background:"#111",color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            style={{padding:14,background:"#111",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
             ⬇ {t.downloadPDF}
+          </button>
+          <button onClick={()=>{
+            const html=buildHTML(false);
+            const blob=new Blob([html],{type:"text/html"});
+            const url=URL.createObjectURL(blob);
+            const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
+            window.open(`https://wa.me/?text=${msg}`,"_blank");
+            setTimeout(()=>URL.revokeObjectURL(url),5000);
+          }}
+            style={{padding:14,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            📲 WhatsApp
           </button>
         </div>
       </div>
@@ -2219,6 +2245,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
+  const [invPrefix,setInvPrefix]=useState(settings?.invPrefix||"FAC");
   const ok=name.trim().length>0;
 
   const handleLogo=e=>{
@@ -2232,7 +2259,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1});
     onClose();
   };
 
@@ -2263,6 +2290,26 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
             <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{t.companyNameLabel}</div>
             <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.companyNamePh}
               style={{...S.inp({fontSize:16,fontWeight:700,borderColor:ok?"#2563EB":"#e5e7eb"})}}/>
+          </div>
+
+          {/* Préfixe facture */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>🔢 Numérotation des factures</div>
+            <div style={{display:"flex",alignItems:"center",gap:10,background:"#f9fafb",borderRadius:12,padding:"12px 14px",border:"1px solid #e5e7eb"}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:"#6b7280",marginBottom:4}}>Préfixe</div>
+                <input value={invPrefix} onChange={e=>setInvPrefix(e.target.value.toUpperCase())}
+                  placeholder="FAC" maxLength={6}
+                  style={{...S.inp({fontFamily:"monospace",fontWeight:700,fontSize:15})}}/>
+              </div>
+              <div style={{color:"#9ca3af",fontSize:18,fontWeight:300}}>—</div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:10,color:"#6b7280",marginBottom:4}}>Exemple</div>
+                <div style={{fontFamily:"monospace",fontWeight:700,fontSize:14,color:"#2563EB",background:"#eff6ff",padding:"8px 12px",borderRadius:8}}>
+                  {invPrefix||"FAC"}-{new Date().getFullYear()}-{String(settings?.invCounter||1).padStart(4,"0")}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* اللوغو */}
@@ -2690,6 +2737,312 @@ function ReferralPanel({user,lang,onClose}){
 /* ═══════════════════════════════════════════════
    MAIN APP
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   FOURNISSEURS TAB
+═══════════════════════════════════════════════ */
+function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock}){
+  const t=T[lang];
+  const [selected,setSelected]=useState(null);
+  const [showForm,setShowForm]=useState(false);
+  const [editing,setEditing]=useState(null);
+  const [search,setSearch]=useState("");
+  const [showAchat,setShowAchat]=useState(false);
+
+  // إجماليات لكل مورد
+  const enriched=fournisseurs.map(f=>{
+    const fTxs=txs.filter(tx=>tx.fournisseurId===f.id&&tx.type==="expense");
+    const totalAchats=fTxs.reduce((s,tx)=>s+tx.amount,0);
+    const totalPaye=fTxs.filter(tx=>tx.paid).reduce((s,tx)=>s+tx.amount,0);
+    const dette=totalAchats-totalPaye;
+    return{...f,totalAchats,totalPaye,dette,txCount:fTxs.length,fTxs};
+  });
+
+  const filtered=enriched.filter(f=>f.name?.toLowerCase().includes(search.toLowerCase())||f.phone?.includes(search));
+  const totalDette=enriched.reduce((s,f)=>s+f.dette,0);
+  const totalAchats=enriched.reduce((s,f)=>s+f.totalAchats,0);
+
+  if(selected){
+    const f=enriched.find(x=>x.id===selected.id)||selected;
+    return <FournisseurDetail
+      fournisseur={f} txs={f.fTxs||[]} products={products} lang={lang}
+      onBack={()=>setSelected(null)}
+      onEdit={()=>{setEditing(f);setShowForm(true);setSelected(null);}}
+      onDelete={()=>{onDelete(f.id);setSelected(null);}}
+      onAddAchat={(tx)=>{onAddTx(tx);}}
+      onUpdateStock={onUpdateStock}
+    />;
+  }
+
+  return(
+    <div>
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        {[
+          {l:"Fournisseurs",v:fournisseurs.length,bg:"#eff6ff",c:"#1d4ed8",icon:"🏭"},
+          {l:"Total achats",v:fmt(totalAchats,lang),bg:"#fef3c7",c:"#92400e",icon:"🛒"},
+          {l:"Dettes",v:fmt(totalDette,lang),bg:totalDette>0?"#fef2f2":"#ecfdf5",c:totalDette>0?"#b91c1c":"#065f46",icon:"⚠️"},
+        ].map(s=>(
+          <div key={s.l} style={{background:s.bg,borderRadius:14,padding:"12px 10px",textAlign:"center"}}>
+            <div style={{fontSize:16,marginBottom:4}}>{s.icon}</div>
+            <div style={{fontSize:typeof s.v==="number"?20:11,fontWeight:900,color:s.c,lineHeight:1}}>{s.v}</div>
+            <div style={{fontSize:9,fontWeight:700,color:s.c,opacity:.7,marginTop:4,textTransform:"uppercase",letterSpacing:.5}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* البحث + إضافة */}
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <div style={{position:"relative",flex:1}}>
+          <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder="Rechercher un fournisseur..."
+            style={{...S.inp({paddingLeft:36})}}/>
+        </div>
+        <button onClick={()=>{setEditing(null);setShowForm(true);}}
+          style={{padding:"10px 16px",background:"#2563EB",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+          + Nouveau
+        </button>
+      </div>
+
+      {/* قائمة الموردين */}
+      {filtered.length===0?(
+        <div style={{textAlign:"center",padding:"60px 20px"}}>
+          <div style={{fontSize:48,marginBottom:12}}>🏭</div>
+          <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>Aucun fournisseur</div>
+          <button onClick={()=>setShowForm(true)} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Ajouter un fournisseur</button>
+        </div>
+      ):filtered.map(f=>(
+        <div key={f.id} onClick={()=>setSelected(f)}
+          style={{...S.card({marginBottom:10,cursor:"pointer",display:"flex",alignItems:"center",gap:12})}}
+          onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
+          <div style={{width:44,height:44,borderRadius:12,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🏭</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontWeight:700,fontSize:15,color:"#111"}}>{f.name}</div>
+            <div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>
+              {f.phone?`📞 ${f.phone} · `:""}
+              {f.txCount} achat(s)
+            </div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontWeight:800,fontSize:14,color:"#d97706"}}>{fmt(f.totalAchats,lang)}</div>
+            {f.dette>0?(
+              <div style={{fontSize:11,fontWeight:700,color:"#dc2626",marginTop:2}}>Dette: {fmt(f.dette,lang)}</div>
+            ):<div style={{fontSize:11,color:"#10b981",fontWeight:600,marginTop:2}}>✓ Soldé</div>}
+          </div>
+          <div style={{color:"#d1d5db",fontSize:14}}>›</div>
+        </div>
+      ))}
+
+      {/* Modal ajout/modif fournisseur */}
+      {showForm&&(
+        <FournisseurModal
+          existing={editing}
+          onSave={f=>{onSave(f);setShowForm(false);setEditing(null);showToast&&showToast("Fournisseur sauvegardé ✓");}}
+          onClose={()=>{setShowForm(false);setEditing(null);}}
+          lang={lang}
+        />
+      )}
+    </div>
+  );
+}
+
+function FournisseurModal({existing,onSave,onClose,lang}){
+  const [name,setName]=useState(existing?.name||"");
+  const [phone,setPhone]=useState(existing?.phone||"");
+  const [adresse,setAdresse]=useState(existing?.adresse||"");
+  const [nif,setNif]=useState(existing?.nif||"");
+  const [rc,setRc]=useState(existing?.rc||"");
+  const ok=name.trim();
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"0",width:"100%",maxWidth:480,maxHeight:"88svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+        <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{fontWeight:900,fontSize:17,color:"#111"}}>🏭 {existing?"Modifier":"Nouveau fournisseur"}</div>
+          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280"}}>×</button>
+        </div>
+        <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
+          <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder="Nom du fournisseur" style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
+          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Téléphone / WhatsApp" style={S.inp({marginBottom:10})}/>
+          <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse" style={S.inp({marginBottom:10})}/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+            <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="NIF (optionnel)" style={S.inp({fontFamily:"monospace",fontSize:13})}/>
+            <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="RC (optionnel)" style={S.inp({fontFamily:"monospace",fontSize:13})}/>
+          </div>
+        </div>
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
+          <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),rc:rc.trim()});onClose();}}
+            style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock}){
+  const [showAchat,setShowAchat]=useState(false);
+  const [confirmDel,setConfirmDel]=useState(false);
+  const [achatAmt,setAchatAmt]=useState("");
+  const [achatDesc,setAchatDesc]=useState("");
+  const [achatPaid,setAchatPaid]=useState(true);
+  const [achatProd,setAchatProd]=useState("");
+  const [achatQty,setAchatQty]=useState("");
+
+  const totalAchats=txs.reduce((s,tx)=>s+tx.amount,0);
+  const totalPaye=txs.filter(tx=>tx.paid).reduce((s,tx)=>s+tx.amount,0);
+  const dette=totalAchats-totalPaye;
+
+  const submitAchat=()=>{
+    if(!achatAmt||parseFloat(achatAmt)<=0) return;
+    const tx={
+      id:uid(), type:"expense", amount:parseFloat(achatAmt),
+      desc:achatDesc||`Achat — ${fournisseur.name}`,
+      client:fournisseur.name, date:today(), paid:achatPaid,
+      fournisseurId:fournisseur.id,
+    };
+    onAddAchat(tx);
+    // تحديث المخزون إذا اختار منتج
+    if(achatProd&&achatQty&&parseInt(achatQty)>0){
+      const prod=products.find(p=>p.name.toLowerCase()===achatProd.toLowerCase());
+      if(prod) onUpdateStock(prod.id,parseInt(achatQty));
+    }
+    setAchatAmt("");setAchatDesc("");setAchatProd("");setAchatQty("");setShowAchat(false);
+    showToast&&showToast("Achat enregistré ✓");
+  };
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"#f3f4f6",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#374151",cursor:"pointer"}}>← Retour</button>
+        <button onClick={onEdit} style={{background:"#eff6ff",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#1d4ed8",cursor:"pointer"}}>✏ Modifier</button>
+        <button onClick={()=>setConfirmDel(true)} style={{marginLeft:"auto",background:"#fef2f2",border:"1px solid #fecaca",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#dc2626",cursor:"pointer"}}>🗑 Supprimer</button>
+      </div>
+
+      {/* Infos fournisseur */}
+      <div style={S.card({marginBottom:16})}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+          <div style={{width:52,height:52,borderRadius:14,background:"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>🏭</div>
+          <div>
+            <div style={{fontWeight:900,fontSize:18,color:"#111"}}>{fournisseur.name}</div>
+            {fournisseur.phone&&<div style={{fontSize:13,color:"#6b7280",marginTop:2}}>📞 {fournisseur.phone}</div>}
+          </div>
+          {fournisseur.phone&&(
+            <a href={`https://wa.me/${fournisseur.phone.replace(/\D/g,"")}`} target="_blank" rel="noreferrer"
+              style={{marginLeft:"auto",background:"#25D366",color:"#fff",border:"none",padding:"8px 16px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",textDecoration:"none"}}>
+              📲 WhatsApp
+            </a>
+          )}
+        </div>
+        {(fournisseur.adresse||fournisseur.nif||fournisseur.rc)&&(
+          <div style={{fontSize:12,color:"#6b7280",lineHeight:1.8,fontFamily:"monospace",background:"#f9fafb",borderRadius:8,padding:"8px 12px"}}>
+            {fournisseur.adresse&&<div>{fournisseur.adresse}</div>}
+            {fournisseur.nif&&<div>NIF: {fournisseur.nif}</div>}
+            {fournisseur.rc&&<div>RC: {fournisseur.rc}</div>}
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        {[
+          {l:"Total achats",v:fmt(totalAchats,lang),bg:"#fef3c7",c:"#92400e"},
+          {l:"Payé",v:fmt(totalPaye,lang),bg:"#ecfdf5",c:"#065f46"},
+          {l:"Dette",v:fmt(dette,lang),bg:dette>0?"#fef2f2":"#ecfdf5",c:dette>0?"#b91c1c":"#065f46"},
+        ].map(s=>(
+          <div key={s.l} style={{background:s.bg,borderRadius:12,padding:"12px 10px",textAlign:"center"}}>
+            <div style={{fontWeight:900,fontSize:15,color:s.c}}>{s.v}</div>
+            <div style={{fontSize:9,fontWeight:700,color:s.c,opacity:.7,marginTop:4,textTransform:"uppercase"}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* زر إضافة شراء */}
+      <button onClick={()=>setShowAchat(!showAchat)}
+        style={{width:"100%",padding:"12px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:"pointer",marginBottom:14,boxShadow:"0 4px 12px rgba(37,99,235,.3)"}}>
+        🛒 Enregistrer un achat
+      </button>
+
+      {/* فورم الشراء */}
+      {showAchat&&(
+        <div style={{background:"#eff6ff",borderRadius:14,padding:16,marginBottom:16,border:"1.5px solid #bfdbfe",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>🛒 Nouvel achat</div>
+          <input type="number" value={achatAmt} onChange={e=>setAchatAmt(e.target.value)}
+            placeholder="Montant (DA)" style={S.inp({marginBottom:8,fontSize:18,fontWeight:700})} autoFocus/>
+          <input value={achatDesc} onChange={e=>setAchatDesc(e.target.value)}
+            placeholder="Description (optionnel)" style={S.inp({marginBottom:8})}/>
+          {/* ربط بالمخزون */}
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:10}}>
+            <input value={achatProd} onChange={e=>setAchatProd(e.target.value)}
+              placeholder="Produit (pour stock)" style={S.inp({fontSize:13})}
+              list="prod-list"/>
+            <datalist id="prod-list">
+              {products.map(p=><option key={p.id} value={p.name}/>)}
+            </datalist>
+            <input type="number" min="0" value={achatQty} onChange={e=>setAchatQty(e.target.value)}
+              placeholder="Qté" style={S.inp({fontSize:13,textAlign:"center"})}/>
+          </div>
+          {achatProd&&achatQty&&<div style={{fontSize:11,color:"#1d4ed8",marginBottom:8}}>📦 Le stock de "{achatProd}" augmentera de {achatQty}</div>}
+          {/* مدفوع أم لا */}
+          <div style={{display:"flex",gap:8,marginBottom:12}}>
+            {[["Payé",true],["À payer",false]].map(([l,v])=>(
+              <button key={l} onClick={()=>setAchatPaid(v)}
+                style={{flex:1,padding:"8px",borderRadius:10,border:`1.5px solid ${achatPaid===v?"#2563EB":"#e5e7eb"}`,
+                  background:achatPaid===v?"#eff6ff":"#fff",color:achatPaid===v?"#1d4ed8":"#6b7280",
+                  fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:8}}>
+            <button onClick={()=>setShowAchat(false)} style={{padding:"11px",borderRadius:11,border:"1.5px solid #bfdbfe",fontSize:13,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+            <button onClick={submitAchat} disabled={!achatAmt||parseFloat(achatAmt)<=0}
+              style={{padding:"11px",borderRadius:11,border:"none",fontSize:14,fontWeight:800,color:"#fff",
+                background:achatAmt&&parseFloat(achatAmt)>0?"#2563EB":"#e5e7eb",cursor:"pointer"}}>
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* تاريخ المشتريات */}
+      <div style={S.card()}>
+        <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>📋 Historique des achats ({txs.length})</div>
+        {txs.length===0?(
+          <div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af",fontSize:14}}>Aucun achat enregistré</div>
+        ):[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
+          <div key={tx.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
+            <div style={{width:34,height:34,borderRadius:9,background:tx.paid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+              {tx.paid?"✓":"⏳"}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:600,fontSize:13,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
+              <div style={{fontSize:11,color:"#9ca3af"}}>{tx.date}</div>
+            </div>
+            <div style={{fontWeight:700,fontSize:14,color:"#dc2626",flexShrink:0}}>–{fmt(tx.amount,lang)}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* تأكيد الحذف */}
+      {confirmDel&&(
+        <div onClick={()=>setConfirmDel(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{fontSize:40,textAlign:"center",marginBottom:12}}>🗑</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:8,textAlign:"center"}}>Supprimer ce fournisseur ?</div>
+            <div style={{background:"#f9fafb",borderRadius:12,padding:"10px 14px",marginBottom:20,textAlign:"center",fontWeight:700,fontSize:15}}>{fournisseur.name}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <button onClick={()=>setConfirmDel(false)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+              <button onClick={()=>{onDelete();setConfirmDel(false);}} style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App(){
   const [lang,setLang]=useState("fr");
   const [user,setUser]=useState(null);
@@ -2700,13 +3053,14 @@ export default function App(){
   const [products,setProducts]=useState([]);
   const [invoices,setInvoices]=useState([]);
   const [customers,setCustomers]=useState([]);
+  const [fournisseurs,setFournisseurs]=useState([]);
   const [toast,setToast]=useState(null);
   const [previewInvoice,setPreviewInvoice]=useState(null);
   const [selectedCustomer,setSelectedCustomer]=useState(null);
   const [editingCustomer,setEditingCustomer]=useState(null);
   const [invoicePreselect,setInvoicePreselect]=useState(null);
   const [companyName,setCompanyName]=useState("");
-  const [bizSettings,setBizSettings]=useState({nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false});
+  const [bizSettings,setBizSettings]=useState({nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1});
   const [confirmTx,setConfirmTx]=useState(null);
   const [detailTx,setDetailTx]=useState(null);
   const [pendingRef,setPendingRef]=useState(null);
@@ -2714,6 +3068,7 @@ export default function App(){
   const [confirmDelInvoice,setConfirmDelInvoice]=useState(null);
   const [invoiceSearch,setInvoiceSearch]=useState("");
   const [confirmDelTx,setConfirmDelTx]=useState(null);
+  const [duplicateInv,setDuplicateInv]=useState(null);
 
   const t=T[lang],rtl=lang==="ar";
   const effectiveCompanyName=companyName||(user?.shopName)||t.companyName;
@@ -2727,8 +3082,9 @@ export default function App(){
     setProducts(data.products||[]);
     setInvoices(data.invoices||[]);
     setCustomers(data.customers||[]);
+    setFournisseurs(data.fournisseurs||[]);
     setCompanyName(data.companyName||userInfo.shopName||"");
-    setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false});
+    setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1});
     setStarted((data.txs||[]).length>0||(data.invoices||[]).length>0);
     // فحص الإحالات الجديدة
     try{
@@ -2754,6 +3110,7 @@ export default function App(){
       saveUserData(user.username,{
         txs:patch.txs??txs, products:patch.products??products,
         invoices:patch.invoices??invoices, customers:patch.customers??customers,
+        fournisseurs:patch.fournisseurs??fournisseurs,
         companyName:patch.companyName??effectiveCompanyName,
         bizSettings:patch.bizSettings??bizSettings,
       });
@@ -2813,7 +3170,6 @@ export default function App(){
     if(!customers.find(c=>c.name===invoice.customer)){
       cust2=[{id:uid(),name:invoice.customer,phone:""},...customers]; setCustomers(cust2);
     }
-    // تخفيض المخزون تلقائياً
     let prod2=products;
     invoice.lines.forEach(line=>{
       const p=products.find(x=>x.name===line.name&&x.stock!=null);
@@ -2823,7 +3179,11 @@ export default function App(){
       }
     });
     if(prod2!==products) setProducts(prod2);
-    persist({invoices:inv2,txs:tx2,customers:cust2,products:prod2});
+    // زيادة العداد التسلسلي
+    const newCounter=(bizSettings.invCounter||1)+1;
+    const newBiz={...bizSettings,invCounter:newCounter};
+    setBizSettings(newBiz);
+    persist({invoices:inv2,txs:tx2,customers:cust2,products:prod2,bizSettings:newBiz});
     setModal(null); showToast(t.invoiceCreated);
   };
 
@@ -2849,7 +3209,7 @@ export default function App(){
           <div style={{fontSize:11,color:"#9ca3af"}}>{effectiveCompanyName} · @{user?.username}</div>
         </div>
         <div style={{flex:1,padding:"10px 10px",display:"flex",flexDirection:"column",gap:2}}>
-          {[["home","🏠",t.home],["invoices","🧾",t.invoices],["customers","👥",t.customers],["history","📋",t.history]].map(([k,icon,label])=>(
+          {[["home","🏠",t.home],["invoices","🧾",t.invoices],["customers","👥",t.customers],["fournisseurs","🏭","Fournisseurs"],["history","📋",t.history]].map(([k,icon,label])=>(
             <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);}}
               style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?700:400,background:tab===k?"#eff6ff":"transparent",color:tab===k?"#2563EB":"#6b7280",textAlign:"left",width:"100%"}}>
               <span>{icon}</span>{label}
@@ -3005,6 +3365,9 @@ export default function App(){
                   <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.total,lang)}</div>
                   <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
                 </div>
+                <button onClick={e=>{e.stopPropagation();setDuplicateInv(inv);setModal("invoice");}}
+                  title="Dupliquer"
+                  style={{background:"#f0fdf4",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#059669",flexShrink:0}}>⧉</button>
                 <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
                   style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
               </div>
@@ -3040,6 +3403,27 @@ export default function App(){
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
             />
           )
+        )}
+
+        {/* ── FOURNISSEURS ── */}
+        {tab==="fournisseurs"&&(
+          <FournisseursTab
+            fournisseurs={fournisseurs}
+            txs={txs}
+            products={products}
+            lang={lang}
+            onSave={f=>{
+              const f2=fournisseurs.findIndex(x=>x.id===f.id)>=0?fournisseurs.map(x=>x.id===f.id?f:x):[f,...fournisseurs];
+              setFournisseurs(f2);persist({fournisseurs:f2});
+            }}
+            onDelete={id=>{const f2=fournisseurs.filter(x=>x.id!==id);setFournisseurs(f2);persist({fournisseurs:f2});}}
+            onAddTx={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});showToast("Achat enregistré ✓");}}
+            onUpdateStock={(prodId,qty)=>{
+              const p2=products.map(p=>p.id===prodId?{...p,stock:(p.stock||0)+qty}:p);
+              setProducts(p2);persist({products:p2});
+            }}
+            products={products}
+          />
         )}
 
         {/* ── HISTORY ── */}
@@ -3107,7 +3491,7 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
-      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings}/>}
+      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv}/>}
       {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} settings={bizSettings} onSave={(name,s)=>{setCompanyName(name);setBizSettings(s);persist({companyName:name,bizSettings:s});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="newCustomer"&&<CustomerModal onSave={c=>{saveCustomer(c);setModal(null);showToast("Client ajouté ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
