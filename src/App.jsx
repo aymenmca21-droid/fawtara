@@ -2900,17 +2900,19 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   const remLigne=id=>setLignes(l=>l.filter(x=>x.id!==id));
 
   const totalCalc=lignes.reduce((s,l)=>{
-    const qty=parseFloat(l.qty)||0;
+    const qty=parseFloat(l.qty)||1;
     const prix=parseFloat(l.prix)||0;
     return s+qty*prix;
   },0);
 
-  const canSubmit=lignes.some(l=>l.produit.trim()&&parseFloat(l.prix)>0&&parseFloat(l.qty)>0);
+  // يكفي أن يكون هناك منتج بكمية — السعر اختياري
+  const canSubmit=lignes.some(l=>l.produit.trim()&&parseFloat(l.qty)>0);
 
   const submitAchat=()=>{
     if(!canSubmit) return;
-    const validLines=lignes.filter(l=>l.produit.trim()&&parseFloat(l.prix)>0&&parseFloat(l.qty)>0);
-    const montant=validLines.reduce((s,l)=>s+(parseFloat(l.prix)||0)*(parseFloat(l.qty)||0),0);
+    const validLines=lignes.filter(l=>l.produit.trim()&&parseFloat(l.qty)>0);
+    const montant=validLines.reduce((s,l)=>s+(parseFloat(l.prix)||0)*(parseFloat(l.qty)||1),0);
+    if(montant<=0&&totalCalc<=0){alert("Veuillez saisir un prix pour au moins un produit");return;}
     const tx={
       id:uid(), type:"expense",
       amount:montant,
@@ -2920,7 +2922,6 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
       lignes:validLines,
     };
     onAddAchat(tx);
-    // تحديث المخزون لكل منتج
     validLines.forEach(l=>{
       const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
       if(prod&&parseInt(l.qty)>0) onUpdateStock(prod.id,parseInt(l.qty));
@@ -3135,37 +3136,48 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
             <div style={{fontSize:13,color:"#6b7280",textAlign:"center",marginBottom:16}}>{payModal.desc}</div>
 
             <div style={{background:"#fef3c7",borderRadius:10,padding:"10px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>Dette totale</span>
-              <span style={{fontWeight:900,fontSize:16,color:"#d97706"}}>{fmt(payModal.amount,lang)}</span>
+              <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>Reste à payer</span>
+              <span style={{fontWeight:900,fontSize:18,color:"#d97706"}}>{fmt(payModal.amount,lang)}</span>
             </div>
 
-            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase",letterSpacing:.6}}>Montant payé</div>
-            <input type="number" min="1" max={payModal.amount} autoFocus
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase",letterSpacing:.6}}>Montant à payer maintenant</div>
+            <input type="number" min="1" autoFocus
               value={payAmt} onChange={e=>setPayAmt(e.target.value.replace(/^-/,""))}
-              style={S.inp({fontSize:20,fontWeight:800,marginBottom:6,textAlign:"center"})}/>
+              style={S.inp({fontSize:22,fontWeight:800,marginBottom:8,textAlign:"center"})}/>
+
+            {/* أزرار سريعة */}
+            <div style={{display:"flex",gap:6,marginBottom:12}}>
+              {[25,50,75,100].map(pct=>(
+                <button key={pct} onClick={()=>setPayAmt(String(Math.round(payModal.amount*pct/100)))}
+                  style={{flex:1,padding:"6px 0",background:"#f3f4f6",border:"1px solid #e5e7eb",borderRadius:8,fontSize:12,fontWeight:700,color:"#374151",cursor:"pointer"}}>
+                  {pct}%
+                </button>
+              ))}
+            </div>
 
             {parseFloat(payAmt)>0&&parseFloat(payAmt)<payModal.amount&&(
-              <div style={{fontSize:12,color:"#d97706",textAlign:"center",marginBottom:12}}>
-                Reste après paiement : {fmt(payModal.amount-parseFloat(payAmt),lang)}
+              <div style={{fontSize:12,color:"#d97706",textAlign:"center",marginBottom:10,background:"#fffbeb",padding:"6px 10px",borderRadius:8}}>
+                Reste après ce paiement : <strong>{fmt(payModal.amount-parseFloat(payAmt),lang)}</strong>
               </div>
             )}
             {parseFloat(payAmt)>=payModal.amount&&(
-              <div style={{fontSize:12,color:"#059669",textAlign:"center",marginBottom:12,fontWeight:700}}>
+              <div style={{fontSize:12,color:"#059669",textAlign:"center",marginBottom:10,background:"#ecfdf5",padding:"6px 10px",borderRadius:8,fontWeight:700}}>
                 ✓ Dette soldée complètement
               </div>
             )}
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginTop:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginTop:4}}>
               <button onClick={()=>setPayModal(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
               <button onClick={()=>{
-                if(!payAmt||parseFloat(payAmt)<=0) return;
-                onPayDette(payModal.id, parseFloat(payAmt));
+                const amt=parseFloat(payAmt);
+                if(!amt||amt<=0) return;
+                onPayDette(payModal.id, Math.min(amt, payModal.amount));
                 setPayModal(null); setPayAmt("");
               }}
                 disabled={!payAmt||parseFloat(payAmt)<=0}
                 style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",
                   background:payAmt&&parseFloat(payAmt)>0?"#059669":"#e5e7eb",cursor:"pointer"}}>
-                💳 Confirmer le paiement
+                💳 Confirmer
               </button>
             </div>
           </div>
@@ -3744,12 +3756,12 @@ export default function App(){
             onPayDette={(txId,montant,fournisseurId)=>{
               const t2=txs.map(tx=>{
                 if(tx.id!==txId) return tx;
-                const reste=tx.amount-montant;
-                if(reste<=0) return {...tx,paid:true,amount:tx.amount};
-                // دفع جزئي — نقسم المعاملة
-                return {...tx,amount:reste};
+                const reste=Math.max(0, tx.amount - montant);
+                if(reste<=0) return {...tx, paid:true, paidAmount:tx.amount};
+                // دفع جزئي — ينقص المبلغ المتبقي
+                return {...tx, amount:reste, paidAmount:(tx.paidAmount||0)+montant};
               });
-              setTxs(t2);persist({txs:t2});
+              setTxs(t2); persist({txs:t2});
               showToast("Paiement enregistré ✓");
             }}
             products={products}
