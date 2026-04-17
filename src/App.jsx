@@ -3092,34 +3092,50 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
                   💳 Enregistrer un paiement
                 </button>
               )}
-              {hasDetail&&(
-                <button onClick={()=>setSelectedTx(isOpen?null:tx)}
-                  style={{padding:"8px 14px",background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                  {isOpen?"▲ Masquer":"▼ Détails"}
-                </button>
-              )}
+              <button onClick={()=>setSelectedTx(isOpen?null:tx)}
+                style={{padding:"8px 14px",background:isOpen?"#1d4ed8":"#eff6ff",color:isOpen?"#fff":"#1d4ed8",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+                {isOpen?"▲ Masquer":"▼ Détails"}
+              </button>
             </div>
 
-            {/* تفاصيل المنتجات */}
-            {isOpen&&hasDetail&&(
-              <div style={{background:"#f8faff",borderTop:"1px solid #bfdbfe",padding:"10px 14px"}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>Détail des produits</div>
-                {tx.lignes.map((l,i)=>(
-                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:i<tx.lignes.length-1?"1px solid #e0eaff":"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{width:6,height:6,borderRadius:"50%",background:"#2563EB",flexShrink:0}}/>
-                      <span style={{fontWeight:600,fontSize:13,color:"#111"}}>{l.produit}</span>
+            {/* تفاصيل عند الضغط */}
+            {isOpen&&(
+              <div style={{background:"#f8faff",borderTop:"1px solid #bfdbfe",padding:"12px 14px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>Détail de l'achat</div>
+                {hasDetail?(
+                  <>
+                    {tx.lignes.map((l,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:i<tx.lignes.length-1?"1px solid #e0eaff":"none"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{width:6,height:6,borderRadius:"50%",background:"#2563EB",flexShrink:0}}/>
+                          <span style={{fontWeight:600,fontSize:13,color:"#111"}}>{l.produit}</span>
+                          <span style={{fontSize:11,color:"#6b7280"}}>× {l.qty}</span>
+                        </div>
+                        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                          {parseFloat(l.prix)>0&&<span style={{fontSize:12,color:"#6b7280"}}>{fmt(parseFloat(l.prix),lang)} / u.</span>}
+                          <span style={{fontWeight:700,fontSize:13,color:"#1d4ed8"}}>{fmt((parseFloat(l.prix)||0)*(parseFloat(l.qty)||1),lang)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"2px solid #bfdbfe"}}>
+                      <span style={{fontWeight:700,fontSize:13,color:"#374151"}}>Total</span>
+                      <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
                     </div>
-                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                      <span style={{fontSize:12,color:"#6b7280"}}>{l.qty} × {fmt(parseFloat(l.prix)||0,lang)}</span>
-                      <span style={{fontWeight:700,fontSize:13,color:"#1d4ed8"}}>{fmt((parseFloat(l.prix)||0)*(parseFloat(l.qty)||0),lang)}</span>
+                  </>
+                ):(
+                  <div style={{padding:"8px 0"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{width:6,height:6,borderRadius:"50%",background:"#2563EB"}}/>
+                        <span style={{fontWeight:600,fontSize:13,color:"#111"}}>{tx.desc||"Achat"}</span>
+                      </div>
+                      <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
+                    </div>
+                    <div style={{fontSize:11,color:"#9ca3af",marginTop:4,paddingLeft:14}}>
+                      {tx.date} · {tx.paid?"✓ Payé":"⏳ À payer"}
                     </div>
                   </div>
-                ))}
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"2px solid #bfdbfe"}}>
-                  <span style={{fontWeight:700,fontSize:13,color:"#374151"}}>Total</span>
-                  <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -3297,6 +3313,7 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
 
 /* ═══ RAPPORT TAB COMPONENT ═══ */
 function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang}){
+  const [statFilter,setStatFilter]=useState(null); // null | "paid" | "unpaid" | "all"
   const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const mm=String(rapportMonth+1).padStart(2,"0");
   const prefix=`${rapportYear}-${mm}`;
@@ -3336,10 +3353,65 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
       <div style={S.card({marginBottom:16})}>
         <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>📊 Factures — {months[rapportMonth]}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
-          {[{l:"Émises",v:nbInv,c:"#374151"},{l:"Payées",v:nbPaid,c:"#059669"},{l:"Impayées",v:nbInv-nbPaid,c:"#dc2626"},{l:"À encaisser",v:fmt(attente,lang),c:"#d97706"}].map(s=>(
-            <div key={s.l} style={{textAlign:"center",padding:"10px 6px",background:"#f9fafb",borderRadius:10}}><div style={{fontWeight:900,fontSize:16,color:s.c}}>{s.v}</div><div style={{fontSize:9,color:"#6b7280",fontWeight:700,marginTop:2}}>{s.l}</div></div>
+          {[
+            {l:"Émises",v:nbInv,c:"#374151",bg:"#f9fafb",k:"all"},
+            {l:"Payées",v:nbPaid,c:"#059669",bg:"#ecfdf5",k:"paid"},
+            {l:"Impayées",v:nbInv-nbPaid,c:"#dc2626",bg:"#fef2f2",k:"unpaid"},
+            {l:"À encaisser",v:fmt(attente,lang),c:"#d97706",bg:"#fffbeb",k:"attente"},
+          ].map(s=>(
+            <div key={s.l} onClick={()=>setStatFilter(statFilter===s.k?null:s.k)}
+              style={{textAlign:"center",padding:"10px 6px",background:statFilter===s.k?s.c:s.bg,borderRadius:10,cursor:"pointer",border:`2px solid ${statFilter===s.k?s.c:"transparent"}`,transition:"all .15s"}}>
+              <div style={{fontWeight:900,fontSize:16,color:statFilter===s.k?"#fff":s.c}}>{s.v}</div>
+              <div style={{fontSize:9,color:statFilter===s.k?"rgba(255,255,255,.8)":"#6b7280",fontWeight:700,marginTop:2}}>{s.l}</div>
+            </div>
           ))}
         </div>
+
+        {/* قائمة الفواتير المفلترة */}
+        {statFilter&&(()=>{
+          const filtered=mInvs.filter(inv=>{
+            if(statFilter==="paid") return inv.payStatus==="paid";
+            if(statFilter==="unpaid") return inv.payStatus!=="paid";
+            if(statFilter==="attente") return inv.payStatus!=="paid"&&(inv.total-(inv.paidAmount||0))>0;
+            return true; // all
+          });
+          return filtered.length===0?(
+            <div style={{textAlign:"center",padding:"20px 0",color:"#9ca3af",fontSize:13,marginTop:12}}>Aucune facture</div>
+          ):(
+            <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase",letterSpacing:.8,marginBottom:2}}>
+                {statFilter==="paid"?"Factures payées":statFilter==="unpaid"?"Factures impayées":statFilter==="attente"?"À encaisser":"Toutes les factures"} ({filtered.length})
+              </div>
+              {[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(inv=>{
+                const reste=inv.total-(inv.paidAmount||0);
+                const isPaid=inv.payStatus==="paid";
+                return(
+                  <div key={inv.id} onClick={()=>setPreviewInvoice(inv)}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",borderRadius:10,cursor:"pointer",border:"1px solid #e5e7eb",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}
+                    onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"}
+                    onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.04)"}>
+                    <div style={{width:32,height:32,borderRadius:8,background:isPaid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                      {isPaid?"✓":"⏳"}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
+                      <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontWeight:800,fontSize:14,color:isPaid?"#059669":"#dc2626"}}>
+                        {isPaid?fmt(inv.total,lang):fmt(reste,lang)}
+                      </div>
+                      <div style={{fontSize:10,fontWeight:700,color:isPaid?"#059669":inv.payStatus==="partial"?"#d97706":"#dc2626"}}>
+                        {isPaid?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
+                      </div>
+                    </div>
+                    <div style={{color:"#d1d5db",fontSize:12}}>›</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
       {oldDebts.length>0&&(
         <div style={{background:"#fef2f2",borderRadius:14,padding:16,border:"1.5px solid #fecaca",marginBottom:16}}>
