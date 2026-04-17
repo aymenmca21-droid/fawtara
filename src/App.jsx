@@ -1775,6 +1775,101 @@ ${paidTxs.length>0?`
   const printPDF=()=>openInTab(false);
   const printDirect=()=>openInTab(true);
 
+  const printBL=()=>{
+    const blRows=invoice.lines.map(l=>`
+      <tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px">${l.name}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.qty||1}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.unite||"unité"}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">□</td>
+      </tr>`).join("");
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>BL ${invoice.id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:32px}
+  .page{max-width:700px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #1e293b;margin-bottom:20px}
+  .badge{background:#1e293b;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-name{font-size:15px;font-weight:700;color:#1e293b}
+  table{width:100%;border-collapse:collapse;margin-bottom:24px}
+  thead tr{border-bottom:2px solid #1e293b;background:#f8fafc}
+  th{padding:10px 8px;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th:not(:first-child){text-align:center}
+  .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
+  .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:16px;min-height:100px}
+  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:60px}
+  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;font-family:monospace}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body><div class="page">
+
+<div class="header">
+  <div>
+    ${bs?.logo?`<img src="${bs.logo}" style="height:48px;max-width:130px;object-fit:contain;margin-bottom:8px;display:block"/>`:""}
+    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-bottom:4px">${invoice.companyName||"Fawtara"}</div>
+    <div style="font-size:10px;color:#64748b">
+      ${bs?.adresse||""}${bs?.nif?` · NIF: ${bs.nif}`:""}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div class="badge">Bon de Livraison</div>
+    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° BL-${invoice.id}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px">Date : ${invoice.date}</div>
+  </div>
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Expéditeur</div>
+    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
+    ${bs?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${bs.adresse}</div>`:""}
+  </div>
+  <div class="party">
+    <div class="party-label">Destinataire</div>
+    <div class="party-name">${invoice.customer}</div>
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Désignation</th>
+    <th>Quantité</th>
+    <th>Unité</th>
+    <th>Conforme ✓</th>
+  </tr></thead>
+  <tbody>${blRows}</tbody>
+</table>
+
+<div class="sign-section">
+  <div class="sign-box">
+    <div class="sign-label">Expéditeur — Signature & Cachet</div>
+    <div class="sign-line"></div>
+  </div>
+  <div class="sign-box">
+    <div class="sign-label">Récepteur — Signature & Cachet</div>
+    <div class="sign-line"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>${invoice.companyName||"Fawtara"}${bs?.nif?` · NIF: ${bs.nif}`:""}${bs?.rc?` · RC: ${bs.rc}`:""}</span>
+  <span>Document généré par Fawtara</span>
+</div>
+
+</div></body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  };
+
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
@@ -1893,26 +1988,26 @@ ${paidTxs.length>0?`
           </div>
         </div>
 
-        {/* Footer — طباعة + تحميل + واتساب */}
-        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {/* Footer — طباعة + PDF + BL + واتساب */}
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
           <button onClick={printDirect}
-            style={{padding:14,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+            style={{padding:12,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
             🖨 {t.printInvoice}
           </button>
           <button onClick={printPDF}
-            style={{padding:14,background:"#111",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            ⬇ {t.downloadPDF}
+            style={{padding:12,background:"#111",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+            ⬇ PDF
+          </button>
+          <button onClick={printBL}
+            style={{padding:12,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+            🚚 BL
           </button>
           <button onClick={()=>{
-            const html=buildHTML(false);
-            const blob=new Blob([html],{type:"text/html"});
-            const url=URL.createObjectURL(blob);
             const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
             window.open(`https://wa.me/?text=${msg}`,"_blank");
-            setTimeout(()=>URL.revokeObjectURL(url),5000);
           }}
-            style={{padding:14,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-            📲 WhatsApp
+            style={{padding:12,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+            📲 WA
           </button>
         </div>
       </div>
