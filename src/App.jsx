@@ -1996,6 +1996,8 @@ ${paidTxs.length>0?`
     window.open(url,"_blank");
     setTimeout(()=>URL.revokeObjectURL(url),10000);
   };
+
+  return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
         style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"92svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
