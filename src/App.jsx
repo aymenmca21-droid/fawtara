@@ -1560,6 +1560,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 ═══════════════════════════════════════════════ */
 function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC}){
   const t=T[lang], rtl=lang==="ar";
+  const [docType,setDocType]=useState("facture"); // facture | bv
   const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
   const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -2062,10 +2063,19 @@ ${paidTxs.length>0?`
         {/* Header */}
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
-            <div style={{fontWeight:900,fontSize:17,color:"#111"}}>{t.invoiceNo} {invoice.id}</div>
+            <div style={{fontWeight:900,fontSize:17,color:"#111"}}>
+              {docType==="bv"?"🧾 Bon de Vente":"🧾 "+t.invoiceNo} {invoice.id}
+            </div>
             <div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{invoice.customer} · {invoice.date}</div>
           </div>
-          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={()=>setDocType(docType==="bv"?"facture":"bv")}
+              style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #e5e7eb",fontSize:11,fontWeight:700,cursor:"pointer",
+                background:docType==="bv"?"#fef3c7":"#f3f4f6",color:docType==="bv"?"#92400e":"#6b7280"}}>
+              {docType==="bv"?"→ Facture":"→ BV"}
+            </button>
+            <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          </div>
         </div>
 
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
@@ -2193,7 +2203,7 @@ ${paidTxs.length>0?`
               style={{padding:11,background:"#6366f1",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               📋 BC
             </button>
-            <button onClick={printBV}
+            <button onClick={()=>{setDocType("bv");printBV();}}
               style={{padding:11,background:"#f59e0b",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🧾 BV
             </button>
