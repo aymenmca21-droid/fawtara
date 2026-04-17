@@ -1558,7 +1558,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 /* ═══════════════════════════════════════════════
    INVOICE PDF MODAL  — avec historique des paiements
 ═══════════════════════════════════════════════ */
-function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings}){
+function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC}){
   const t=T[lang], rtl=lang==="ar";
   const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
   const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
@@ -1776,7 +1776,11 @@ ${paidTxs.length>0?`
   const printDirect=()=>openInTab(true);
 
   const printBL=()=>{
-    const blRows=invoice.lines.map(l=>`
+    const year=new Date().getFullYear();
+    const blNum=String(bs?.blCounter||1).padStart(4,"0");
+    const blId=`BL-${year}-${blNum}`;
+    // increment counter
+    if(onIncrementBL) onIncrementBL();    const blRows=invoice.lines.map(l=>`
       <tr>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px">${l.name}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.qty||1}</td>
@@ -1819,7 +1823,7 @@ ${paidTxs.length>0?`
   </div>
   <div style="text-align:right">
     <div class="badge">Bon de Livraison</div>
-    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° BL-${invoice.id}</div>
+    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° ${blId}</div>
     <div style="font-size:12px;color:#64748b;margin-top:4px">Date : ${invoice.date}</div>
   </div>
 </div>
@@ -1870,7 +1874,128 @@ ${paidTxs.length>0?`
     setTimeout(()=>URL.revokeObjectURL(url),10000);
   };
 
-  return(
+  const printBC=()=>{
+    const year=new Date().getFullYear();
+    const bcNum=String(bs?.bcCounter||1).padStart(4,"0");
+    const bcId=`BC-${year}-${bcNum}`;
+    if(onIncrementBC) onIncrementBC();
+    const bcRows=invoice.lines.map(l=>`
+      <tr>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px">${l.name}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.qty||1}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.unite||"unité"}</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:600">${(parseFloat(l.price)||0).toLocaleString()} DA</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseInt(l.qty)||1)).toLocaleString()} DA</td>
+      </tr>`).join("");
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>BC ${invoice.id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:32px}
+  .page{max-width:700px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #1e293b;margin-bottom:20px}
+  .badge{background:#2563EB;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-name{font-size:15px;font-weight:700;color:#1e293b}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  thead tr{border-bottom:2px solid #1e293b;background:#f8fafc}
+  th{padding:10px 8px;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th:not(:first-child){text-align:right}
+  th:nth-child(2),th:nth-child(3){text-align:center}
+  .total-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:20px}
+  .total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#64748b}
+  .total-main{font-size:17px;font-weight:900;color:#1e293b;border-top:2px solid #1e293b;margin-top:8px;padding-top:10px;display:flex;justify-content:space-between}
+  .conditions{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#92400e}
+  .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:16px;min-height:90px}
+  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:55px}
+  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;font-family:monospace}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body><div class="page">
+
+<div class="header">
+  <div>
+    ${bs?.logo?`<img src="${bs.logo}" style="height:48px;max-width:130px;object-fit:contain;margin-bottom:8px;display:block"/>`:""}
+    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-bottom:4px">${invoice.companyName||"Fawtara"}</div>
+    <div style="font-size:10px;color:#64748b;font-family:monospace">
+      ${bs?.nif?`NIF: ${bs.nif}`:""} ${bs?.rc?`· RC: ${bs.rc}`:""}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div class="badge">Bon de Commande</div>
+    <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° ${bcId}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px">Date : ${invoice.date}</div>
+    ${invoice.echeance?`<div style="font-size:12px;color:#d97706;margin-top:2px;font-weight:600">Livraison prévue : ${invoice.echeance}</div>`:""}
+  </div>
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Fournisseur</div>
+    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
+    ${bs?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${bs.nif}</div>`:""}
+  </div>
+  <div class="party">
+    <div class="party-label">Acheteur</div>
+    <div class="party-name">${invoice.customer}</div>
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+    ${invoice.customerInfo?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${invoice.customerInfo.nif}</div>`:""}
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Désignation</th>
+    <th style="text-align:center">Qté</th>
+    <th style="text-align:center">Unité</th>
+    <th style="text-align:right">Prix unit. HT</th>
+    <th style="text-align:right">Montant HT</th>
+  </tr></thead>
+  <tbody>${bcRows}</tbody>
+</table>
+
+<div class="total-box">
+  <div class="total-line"><span>Sous-total HT</span><span>${invoice.total.toLocaleString()} DA</span></div>
+  ${bs?.tvaEnabled?`<div class="total-line"><span>TVA ${bs.tvaRate}%</span><span>+ ${Math.round(invoice.total*bs.tvaRate/100).toLocaleString()} DA</span></div>`:""}
+  <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+</div>
+
+<div class="conditions">
+  <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
+  ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
+  ${invoice.notes?`<br><strong>Remarques :</strong> ${invoice.notes}`:""}
+</div>
+
+<div class="sign-section">
+  <div class="sign-box">
+    <div class="sign-label">Acheteur — Signature & Cachet</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Lu et approuvé</div>
+    <div class="sign-line"></div>
+  </div>
+  <div class="sign-box">
+    <div class="sign-label">Vendeur — Signature & Cachet</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px">Bon pour accord</div>
+    <div class="sign-line"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>${invoice.companyName||"Fawtara"}${bs?.nif?` · NIF: ${bs.nif}`:""}${bs?.rc?` · RC: ${bs.rc}`:""}</span>
+  <span>Document généré par Fawtara</span>
+</div>
+
+</div></body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  };
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
         style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"92svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
@@ -1988,27 +2113,35 @@ ${paidTxs.length>0?`
           </div>
         </div>
 
-        {/* Footer — طباعة + PDF + BL + واتساب */}
-        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
-          <button onClick={printDirect}
-            style={{padding:12,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-            🖨 {t.printInvoice}
-          </button>
-          <button onClick={printPDF}
-            style={{padding:12,background:"#111",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-            ⬇ PDF
-          </button>
-          <button onClick={printBL}
-            style={{padding:12,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-            🚚 BL
-          </button>
-          <button onClick={()=>{
-            const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
-            window.open(`https://wa.me/?text=${msg}`,"_blank");
-          }}
-            style={{padding:12,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-            📲 WA
-          </button>
+        {/* Footer — 4 أزرار */}
+        <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <button onClick={printDirect}
+              style={{padding:13,background:"#f3f4f6",color:"#374151",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              🖨 Imprimer
+            </button>
+            <button onClick={printPDF}
+              style={{padding:13,background:"#111",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              ⬇ PDF
+            </button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            <button onClick={printBL}
+              style={{padding:12,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              🚚 BL
+            </button>
+            <button onClick={printBC}
+              style={{padding:12,background:"#6366f1",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              📋 BC
+            </button>
+            <button onClick={()=>{
+              const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
+              window.open(`https://wa.me/?text=${msg}`,"_blank");
+            }}
+              style={{padding:12,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              📲 WhatsApp
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -3550,13 +3683,17 @@ export default function App(){
   const [editingCustomer,setEditingCustomer]=useState(null);
   const [invoicePreselect,setInvoicePreselect]=useState(null);
   const [companyName,setCompanyName]=useState("");
-  const [bizSettings,setBizSettings]=useState({nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1});
+  const [bizSettings,setBizSettings]=useState({nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1,blCounter:1,bcCounter:1});
   const [confirmTx,setConfirmTx]=useState(null);
   const [detailTx,setDetailTx]=useState(null);
   const [pendingRef,setPendingRef]=useState(null);
   const [showRefPanel,setShowRefPanel]=useState(false);
   const [confirmDelInvoice,setConfirmDelInvoice]=useState(null);
   const [invoiceSearch,setInvoiceSearch]=useState("");
+  const [invoiceStatusFilter,setInvoiceStatusFilter]=useState("all"); // all|paid|unpaid|partial
+  const [invoiceDateFrom,setInvoiceDateFrom]=useState("");
+  const [invoiceDateTo,setInvoiceDateTo]=useState("");
+  const [confirmLogout,setConfirmLogout]=useState(false);
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
   // History filters
@@ -3582,7 +3719,7 @@ export default function App(){
     setCustomers(data.customers||[]);
     setFournisseurs(data.fournisseurs||[]);
     setCompanyName(data.companyName||userInfo.shopName||"");
-    setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1});
+    setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1,blCounter:1,bcCounter:1});
     setStarted((data.txs||[]).length>0||(data.invoices||[]).length>0);
     // فحص الإحالات الجديدة
     try{
@@ -3729,7 +3866,7 @@ export default function App(){
           <button onClick={()=>setModal("products")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>📦 {t.manageProducts}</button>
           <button onClick={()=>setModal("settings")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>⚙️ {t.settings}</button>
           <button onClick={()=>setLang(l=>l==="fr"?"ar":"fr")} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#6b7280",width:"100%"}}>🌐 {lang==="fr"?"AR":"FR"}</button>
-          <button onClick={handleLogout} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#ef4444",width:"100%"}}>← Déconnexion</button>
+          <button onClick={()=>setConfirmLogout(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:13,background:"transparent",color:"#ef4444",width:"100%"}}>← Déconnexion</button>
         </div>
       </div>
 
@@ -3824,25 +3961,153 @@ export default function App(){
 
         {/* ── INVOICES ── */}
         {tab==="invoices"&&(()=>{
-          const filtered=invoices.filter(inv=>
-            inv.customer?.toLowerCase().includes(invoiceSearch.toLowerCase())||
-            inv.id?.toLowerCase().includes(invoiceSearch.toLowerCase())
-          );
+          const filtered=invoices.filter(inv=>{
+            const q=invoiceSearch.toLowerCase();
+            if(q&&!inv.customer?.toLowerCase().includes(q)&&!inv.id?.toLowerCase().includes(q)) return false;
+            if(invoiceStatusFilter!=="all"&&inv.payStatus!==invoiceStatusFilter) return false;
+            if(invoiceDateFrom&&inv.date<invoiceDateFrom) return false;
+            if(invoiceDateTo&&inv.date>invoiceDateTo) return false;
+            return true;
+          }).sort((a,b)=>new Date(b.date)-new Date(a.date));
+
           const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
           const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
           const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+          const printList=()=>{
+            const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+            const now=new Date();
+            const periodLabel=invoiceDateFrom||invoiceDateTo
+              ?`${invoiceDateFrom||"…"} → ${invoiceDateTo||"…"}`
+              :`${months[now.getMonth()]} ${now.getFullYear()}`;
+            const totalAll=filtered.reduce((s,i)=>s+i.total,0);
+            const totalPaid=filtered.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
+            const totalUnpaid=filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+            const rows=filtered.map((inv,i)=>`
+              <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+                <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
+                <td style="padding:8px 10px;font-size:12px;font-weight:600">${inv.customer}</td>
+                <td style="padding:8px 10px;font-size:12px;color:#64748b">${inv.date}</td>
+                <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
+                <td style="padding:8px 10px;font-size:11px;text-align:center">
+                  <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:${sb[inv.payStatus]};color:${sc[inv.payStatus]}">
+                    ${inv.payStatus==="paid"?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
+                  </span>
+                </td>
+                <td style="padding:8px 10px;font-size:12px;text-align:right;color:${inv.payStatus==="paid"?"#059669":"#dc2626"};font-weight:700">
+                  ${inv.payStatus==="paid"?"—":(inv.total-(inv.paidAmount||0)).toLocaleString()+" DA"}
+                </td>
+              </tr>`).join("");
+            const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Liste Factures</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;padding:32px;color:#1e293b}
+  .page{max-width:900px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #1e293b}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  thead tr{background:#1e293b;color:#fff}
+  th{padding:10px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;text-align:left;font-weight:700}
+  th:nth-child(4),th:nth-child(6){text-align:right}
+  th:nth-child(5){text-align:center}
+  .summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+  .sum-box{padding:14px;border-radius:8px;border:1px solid #e2e8f0}
+  .sum-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .sum-value{font-size:20px;font-weight:900}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body><div class="page">
+<div class="header">
+  <div>
+    <div style="font-size:20px;font-weight:900">${effectiveCompanyName||"Fawtara"}</div>
+    <div style="font-size:13px;color:#64748b;margin-top:4px">Liste des factures — ${periodLabel}</div>
+    ${invoiceStatusFilter!=="all"?`<div style="font-size:12px;color:#2563EB;margin-top:2px">Filtre: ${invoiceStatusFilter==="paid"?"Payées":invoiceStatusFilter==="unpaid"?"Impayées":"Partielles"}</div>`:""}
+  </div>
+  <div style="text-align:right;font-size:12px;color:#64748b">
+    <div>${filtered.length} facture(s)</div>
+    <div style="margin-top:4px">${new Date().toLocaleDateString("fr-DZ")}</div>
+  </div>
+</div>
+<div class="summary">
+  <div class="sum-box" style="background:#eff6ff"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#2563EB">${totalAll.toLocaleString()} DA</div></div>
+  <div class="sum-box" style="background:#ecfdf5"><div class="sum-label">Total encaissé</div><div class="sum-value" style="color:#059669">${totalPaid.toLocaleString()} DA</div></div>
+  <div class="sum-box" style="background:#fef2f2"><div class="sum-label">Reste à encaisser</div><div class="sum-value" style="color:#dc2626">${totalUnpaid.toLocaleString()} DA</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>N° Facture</th><th>Client</th><th>Date</th>
+    <th style="text-align:right">Montant</th><th style="text-align:center">Statut</th>
+    <th style="text-align:right">Reste</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div style="text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px">Document généré par Fawtara · ${new Date().toLocaleDateString("fr-DZ")}</div>
+</div></body></html>`;
+            const blob=new Blob([html],{type:"text/html"});
+            const url=URL.createObjectURL(blob);
+            window.open(url,"_blank");
+            setTimeout(()=>URL.revokeObjectURL(url),10000);
+          };
+
           return(
           <div>
-            {invoices.length>0&&(
-              <div style={{position:"relative",marginBottom:16}}>
+            {/* فلاتر */}
+            <div style={S.card({marginBottom:12})}>
+              {/* بحث */}
+              <div style={{position:"relative",marginBottom:10}}>
                 <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:14,color:"#9ca3af"}}>🔍</span>
                 <input value={invoiceSearch} onChange={e=>setInvoiceSearch(e.target.value)}
-                  placeholder="Rechercher par client ou N° facture..."
-                  style={{...S.inp({paddingLeft:36,borderRadius:12})}}/>
-                {invoiceSearch&&<button onClick={()=>setInvoiceSearch("")}
-                  style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#9ca3af"}}>×</button>}
+                  placeholder="Client ou N° facture..."
+                  style={{...S.inp({paddingLeft:36})}}/>
+                {invoiceSearch&&<button onClick={()=>setInvoiceSearch("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#9ca3af"}}>×</button>}
+              </div>
+              {/* فلتر الحالة */}
+              <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+                {[["all","Tout"],["paid","✓ Payées"],["partial","⏳ Partielles"],["unpaid","✗ Impayées"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>setInvoiceStatusFilter(k)}
+                    style={{padding:"6px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+                      background:invoiceStatusFilter===k?"#2563EB":"#f3f4f6",color:invoiceStatusFilter===k?"#fff":"#6b7280"}}>
+                    {l}
+                  </button>
+                ))}
+                <button onClick={printList}
+                  style={{marginLeft:"auto",padding:"6px 14px",background:"#6366f1",color:"#fff",border:"none",borderRadius:20,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  🖨 Imprimer liste
+                </button>
+              </div>
+              {/* فلتر التاريخ */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div><div style={{fontSize:10,color:"#9ca3af",marginBottom:4,fontWeight:600}}>Du</div><input type="date" value={invoiceDateFrom} onChange={e=>setInvoiceDateFrom(e.target.value)} style={S.inp({fontSize:13})}/></div>
+                <div><div style={{fontSize:10,color:"#9ca3af",marginBottom:4,fontWeight:600}}>Au</div><input type="date" value={invoiceDateTo} onChange={e=>setInvoiceDateTo(e.target.value)} style={S.inp({fontSize:13})}/></div>
+              </div>
+              {(invoiceDateFrom||invoiceDateTo||invoiceStatusFilter!=="all")&&(
+                <button onClick={()=>{setInvoiceDateFrom("");setInvoiceDateTo("");setInvoiceStatusFilter("all");}}
+                  style={{marginTop:8,fontSize:11,color:"#6b7280",background:"none",border:"none",cursor:"pointer",padding:0}}>
+                  × Effacer les filtres
+                </button>
+              )}
+            </div>
+
+            {/* إحصائيات سريعة */}
+            {filtered.length>0&&(
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+                <div style={{background:"#eff6ff",borderRadius:10,padding:"10px",textAlign:"center"}}>
+                  <div style={{fontWeight:900,fontSize:15,color:"#2563EB"}}>{filtered.length}</div>
+                  <div style={{fontSize:9,color:"#1d4ed8",fontWeight:700,marginTop:2}}>FACTURES</div>
+                </div>
+                <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px",textAlign:"center"}}>
+                  <div style={{fontWeight:900,fontSize:13,color:"#059669"}}>{fmt(filtered.reduce((s,i)=>s+i.total,0),lang)}</div>
+                  <div style={{fontSize:9,color:"#065f46",fontWeight:700,marginTop:2}}>TOTAL</div>
+                </div>
+                <div style={{background:"#fef2f2",borderRadius:10,padding:"10px",textAlign:"center"}}>
+                  <div style={{fontWeight:900,fontSize:13,color:"#dc2626"}}>{fmt(filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0),lang)}</div>
+                  <div style={{fontSize:9,color:"#b91c1c",fontWeight:700,marginTop:2}}>RESTE</div>
+                </div>
               </div>
             )}
+
+            {/* قائمة الفواتير */}
             {invoices.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:12}}>🧾</div>
@@ -3850,7 +4115,7 @@ export default function App(){
                 <button onClick={()=>setModal("invoice")} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
               </div>
             ):filtered.length===0?(
-              <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat pour "{invoiceSearch}"</div>
+              <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat</div>
             ):filtered.map(inv=>(
               <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
@@ -3967,6 +4232,21 @@ export default function App(){
         <button onClick={()=>setModal("income")} style={{flex:"0 0 52px",padding:"14px 0",background:"#ecfdf5",border:"1.5px solid #a7f3d0",borderRadius:14,fontSize:20,cursor:"pointer"}}>+</button>
       </div>
 
+      {/* تأكيد الخروج */}
+      {confirmLogout&&(
+        <div onClick={()=>setConfirmLogout(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,backdropFilter:"blur(4px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:28,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)",textAlign:"center"}}>
+            <div style={{fontSize:44,marginBottom:12}}>🚪</div>
+            <div style={{fontWeight:900,fontSize:17,color:"#111",marginBottom:8}}>Déconnexion ?</div>
+            <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>Toutes vos données sont sauvegardées automatiquement.</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <button onClick={()=>setConfirmLogout(false)} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+              <button onClick={()=>{setConfirmLogout(false);handleLogout();}} style={{padding:14,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#ef4444",cursor:"pointer"}}>Déconnexion</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv}/>}
@@ -3991,8 +4271,8 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
