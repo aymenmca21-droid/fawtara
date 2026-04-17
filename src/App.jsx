@@ -1997,6 +1997,63 @@ ${paidTxs.length>0?`
     setTimeout(()=>URL.revokeObjectURL(url),10000);
   };
 
+  const printBV=()=>{
+    const bvRows=invoice.lines.map(l=>{
+      const qty=parseInt(l.qty)||1;
+      const prix=parseFloat(l.price)||0;
+      return`<tr>
+        <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9">${l.name}</td>
+        <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:center">${qty}</td>
+        <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right">${prix.toLocaleString()} DA</td>
+        <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700">${(qty*prix).toLocaleString()} DA</td>
+      </tr>`;
+    }).join("");
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>BV ${invoice.id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;padding:24px;max-width:380px;margin:0 auto;color:#1e293b}
+  .top{text-align:center;padding-bottom:14px;border-bottom:2px solid #1e293b;margin-bottom:14px}
+  .company{font-size:20px;font-weight:900}
+  .sub{font-size:11px;color:#64748b;margin-top:3px;line-height:1.6}
+  .meta{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px}
+  th{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:6px 8px;border-bottom:2px solid #1e293b;text-align:left}
+  th:not(:first-child){text-align:right} th:nth-child(2){text-align:center}
+  .total-section{border-top:2px solid #1e293b;padding-top:10px;margin-bottom:16px}
+  .trow{display:flex;justify-content:space-between;padding:3px 8px;font-size:13px;color:#64748b}
+  .tmain{display:flex;justify-content:space-between;padding:8px;font-size:18px;font-weight:900;border-top:1px solid #e2e8f0;margin-top:4px}
+  .footer{text-align:center;font-size:12px;color:#94a3b8;border-top:1px dashed #e2e8f0;padding-top:12px}
+  @media print{body{padding:16px;max-width:100%}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body>
+<div class="top">
+  ${bs?.logo?`<img src="${bs.logo}" style="height:50px;object-fit:contain;margin-bottom:6px;display:block;margin:0 auto 6px"/>`:""  }
+  <div class="company">${invoice.companyName||"Fawtara"}</div>
+  <div class="sub">${bs?.adresse||""}${bs?.activite?`<br>${bs.activite}`:""}</div>
+</div>
+<div class="meta">
+  <span><strong>Client:</strong> ${invoice.customer}</span>
+  <span>${invoice.date}</span>
+</div>
+<table>
+  <thead><tr><th>Article</th><th style="text-align:center">Qté</th><th style="text-align:right">Prix</th><th style="text-align:right">Total</th></tr></thead>
+  <tbody>${bvRows}</tbody>
+</table>
+<div class="total-section">
+  ${bs?.tvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${bs.tvaRate}%</span><span>+${Math.round(invoice.total*(bs.tvaRate||19)/100).toLocaleString()} DA</span></div>`:""}
+  ${bs?.timbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
+  <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString()} DA</span></div>
+</div>
+<div class="footer">Merci pour votre confiance 🙏<br><span style="font-size:10px">Non fiscal · ${invoice.id}</span></div>
+</body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  };
+
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
@@ -2127,21 +2184,25 @@ ${paidTxs.length>0?`
               ⬇ PDF
             </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
             <button onClick={printBL}
-              style={{padding:12,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              style={{padding:11,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🚚 BL
             </button>
             <button onClick={printBC}
-              style={{padding:12,background:"#6366f1",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
+              style={{padding:11,background:"#6366f1",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               📋 BC
+            </button>
+            <button onClick={printBV}
+              style={{padding:11,background:"#f59e0b",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+              🧾 BV
             </button>
             <button onClick={()=>{
               const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
               window.open(`https://wa.me/?text=${msg}`,"_blank");
             }}
-              style={{padding:12,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-              📲 WhatsApp
+              style={{padding:11,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+              📲 WA
             </button>
           </div>
         </div>
