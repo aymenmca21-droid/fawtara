@@ -2740,7 +2740,7 @@ function ReferralPanel({user,lang,onClose}){
 /* ═══════════════════════════════════════════════
    FOURNISSEURS TAB
 ═══════════════════════════════════════════════ */
-function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock}){
+function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette}){
   const t=T[lang];
   const [selected,setSelected]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -2770,6 +2770,7 @@ function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx
       onDelete={()=>{onDelete(f.id);setSelected(null);}}
       onAddAchat={(tx)=>{onAddTx(tx);}}
       onUpdateStock={onUpdateStock}
+      onPayDette={(txId,montant)=>onPayDette(txId,montant,f.id)}
     />;
   }
 
@@ -2880,35 +2881,52 @@ function FournisseurModal({existing,onSave,onClose,lang}){
   );
 }
 
-function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock}){
+function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette}){
   const [showAchat,setShowAchat]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
-  const [achatAmt,setAchatAmt]=useState("");
-  const [achatDesc,setAchatDesc]=useState("");
   const [achatPaid,setAchatPaid]=useState(true);
-  const [achatProd,setAchatProd]=useState("");
-  const [achatQty,setAchatQty]=useState("");
+  const [achatDesc,setAchatDesc]=useState("");
+  const [lignes,setLignes]=useState([{id:uid(),produit:"",qty:"",prix:""}]);
+  const [selectedTx,setSelectedTx]=useState(null);
+  const [payModal,setPayModal]=useState(null); // tx à payer
+  const [payAmt,setPayAmt]=useState("");
 
   const totalAchats=txs.reduce((s,tx)=>s+tx.amount,0);
   const totalPaye=txs.filter(tx=>tx.paid).reduce((s,tx)=>s+tx.amount,0);
   const dette=totalAchats-totalPaye;
 
+  const addLigne=()=>setLignes(l=>[...l,{id:uid(),produit:"",qty:"",prix:""}]);
+  const updLigne=(id,f,v)=>setLignes(l=>l.map(x=>x.id===id?{...x,[f]:v}:x));
+  const remLigne=id=>setLignes(l=>l.filter(x=>x.id!==id));
+
+  const totalCalc=lignes.reduce((s,l)=>{
+    const qty=parseFloat(l.qty)||0;
+    const prix=parseFloat(l.prix)||0;
+    return s+qty*prix;
+  },0);
+
+  const canSubmit=lignes.some(l=>l.produit.trim()&&parseFloat(l.prix)>0&&parseFloat(l.qty)>0);
+
   const submitAchat=()=>{
-    if(!achatAmt||parseFloat(achatAmt)<=0) return;
+    if(!canSubmit) return;
+    const validLines=lignes.filter(l=>l.produit.trim()&&parseFloat(l.prix)>0&&parseFloat(l.qty)>0);
+    const montant=validLines.reduce((s,l)=>s+(parseFloat(l.prix)||0)*(parseFloat(l.qty)||0),0);
     const tx={
-      id:uid(), type:"expense", amount:parseFloat(achatAmt),
-      desc:achatDesc||`Achat — ${fournisseur.name}`,
+      id:uid(), type:"expense",
+      amount:montant,
+      desc:achatDesc||validLines.map(l=>l.produit).join(", "),
       client:fournisseur.name, date:today(), paid:achatPaid,
       fournisseurId:fournisseur.id,
+      lignes:validLines,
     };
     onAddAchat(tx);
-    // تحديث المخزون إذا اختار منتج
-    if(achatProd&&achatQty&&parseInt(achatQty)>0){
-      const prod=products.find(p=>p.name.toLowerCase()===achatProd.toLowerCase());
-      if(prod) onUpdateStock(prod.id,parseInt(achatQty));
-    }
-    setAchatAmt("");setAchatDesc("");setAchatProd("");setAchatQty("");setShowAchat(false);
-    showToast&&showToast("Achat enregistré ✓");
+    // تحديث المخزون لكل منتج
+    validLines.forEach(l=>{
+      const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
+      if(prod&&parseInt(l.qty)>0) onUpdateStock(prod.id,parseInt(l.qty));
+    });
+    setLignes([{id:uid(),produit:"",qty:"",prix:""}]);
+    setAchatDesc(""); setShowAchat(false);
   };
 
   return(
@@ -2960,70 +2978,199 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
 
       {/* زر إضافة شراء */}
       <button onClick={()=>setShowAchat(!showAchat)}
-        style={{width:"100%",padding:"12px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:"pointer",marginBottom:14,boxShadow:"0 4px 12px rgba(37,99,235,.3)"}}>
-        🛒 Enregistrer un achat
+        style={{width:"100%",padding:"12px",background:showAchat?"#e5e7eb":"#2563EB",color:showAchat?"#374151":"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:"pointer",marginBottom:14,boxShadow:showAchat?"none":"0 4px 12px rgba(37,99,235,.3)"}}>
+        {showAchat?"✕ Annuler":"🛒 Enregistrer un achat"}
       </button>
 
-      {/* فورم الشراء */}
+      {/* فورم الشراء — متعدد المنتجات */}
       {showAchat&&(
         <div style={{background:"#eff6ff",borderRadius:14,padding:16,marginBottom:16,border:"1.5px solid #bfdbfe",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
           <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>🛒 Nouvel achat</div>
-          <input type="number" min="1" value={achatAmt} onChange={e=>setAchatAmt(e.target.value.replace(/^-/,""))}
-            placeholder="Montant (DA)" style={S.inp({marginBottom:8,fontSize:18,fontWeight:700})} autoFocus/>
-          <input value={achatDesc} onChange={e=>setAchatDesc(e.target.value)}
-            placeholder="Description (optionnel)" style={S.inp({marginBottom:8})}/>
-          {/* ربط بالمخزون */}
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:10}}>
-            <input value={achatProd} onChange={e=>setAchatProd(e.target.value)}
-              placeholder="Produit (pour stock)" style={S.inp({fontSize:13})}
-              list="prod-list"/>
-            <datalist id="prod-list">
-              {products.map(p=><option key={p.id} value={p.name}/>)}
-            </datalist>
-            <input type="number" min="0" value={achatQty} onChange={e=>setAchatQty(e.target.value)}
-              placeholder="Qté" style={S.inp({fontSize:13,textAlign:"center"})}/>
+
+          {/* رأس الجدول */}
+          <div style={{display:"grid",gridTemplateColumns:"2fr 60px 80px 24px",gap:6,marginBottom:6}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase"}}>Produit</div>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase",textAlign:"center"}}>Qté</div>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",textTransform:"uppercase",textAlign:"right"}}>Prix unit.</div>
+            <div/>
           </div>
-          {achatProd&&achatQty&&<div style={{fontSize:11,color:"#1d4ed8",marginBottom:8}}>📦 Le stock de "{achatProd}" augmentera de {achatQty}</div>}
+
+          {/* صفوف المنتجات */}
+          {lignes.map((l,i)=>(
+            <div key={l.id} style={{marginBottom:6}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 60px 80px 24px",gap:6,alignItems:"center"}}>
+                <div style={{position:"relative"}}>
+                  <input value={l.produit} onChange={e=>updLigne(l.id,"produit",e.target.value)}
+                    placeholder="Nom du produit..." list={`prod-list-${l.id}`}
+                    style={{...S.inp({fontSize:13}),width:"100%"}}/>
+                  <datalist id={`prod-list-${l.id}`}>
+                    {products.map(p=><option key={p.id} value={p.name}/>)}
+                  </datalist>
+                </div>
+                <input type="number" min="1" value={l.qty} onChange={e=>updLigne(l.id,"qty",e.target.value)}
+                  placeholder="1" style={{...S.inp({fontSize:13,textAlign:"center"}),width:"100%"}}/>
+                <input type="number" min="0" value={l.prix} onChange={e=>updLigne(l.id,"prix",e.target.value)}
+                  placeholder="0" style={{...S.inp({fontSize:13,textAlign:"right"}),width:"100%"}}/>
+                {lignes.length>1
+                  ?<button onClick={()=>remLigne(l.id)} style={{background:"none",border:"none",color:"#fca5a5",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                  :<div/>}
+              </div>
+              {l.produit&&l.qty&&l.prix&&(
+                <div style={{fontSize:10,color:"#1d4ed8",textAlign:"right",marginTop:2,paddingRight:30}}>
+                  = {fmt((parseFloat(l.prix)||0)*(parseFloat(l.qty)||0),lang)}
+                  {products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase())&&` · stock +${l.qty}`}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <button onClick={addLigne}
+            style={{width:"100%",padding:"8px",background:"#fff",border:"1.5px dashed #bfdbfe",borderRadius:8,fontSize:12,fontWeight:600,color:"#1d4ed8",cursor:"pointer",marginBottom:12,marginTop:4}}>
+            + Ajouter un produit
+          </button>
+
+          {/* ملاحظة */}
+          <input value={achatDesc} onChange={e=>setAchatDesc(e.target.value)}
+            placeholder="Remarque (optionnel)" style={S.inp({marginBottom:10,fontSize:13})}/>
+
           {/* مدفوع أم لا */}
           <div style={{display:"flex",gap:8,marginBottom:12}}>
-            {[["Payé",true],["À payer",false]].map(([l,v])=>(
-              <button key={l} onClick={()=>setAchatPaid(v)}
+            {[["Payé",true],["À payer",false]].map(([lb,v])=>(
+              <button key={lb} onClick={()=>setAchatPaid(v)}
                 style={{flex:1,padding:"8px",borderRadius:10,border:`1.5px solid ${achatPaid===v?"#2563EB":"#e5e7eb"}`,
                   background:achatPaid===v?"#eff6ff":"#fff",color:achatPaid===v?"#1d4ed8":"#6b7280",
                   fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                {l}
+                {lb}
               </button>
             ))}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:8}}>
-            <button onClick={()=>setShowAchat(false)} style={{padding:"11px",borderRadius:11,border:"1.5px solid #bfdbfe",fontSize:13,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
-            <button onClick={submitAchat} disabled={!achatAmt||parseFloat(achatAmt)<=0}
-              style={{padding:"11px",borderRadius:11,border:"none",fontSize:14,fontWeight:800,color:"#fff",
-                background:achatAmt&&parseFloat(achatAmt)>0?"#2563EB":"#e5e7eb",cursor:"pointer"}}>
+
+          {/* إجمالي + تسجيل */}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {totalCalc>0&&<div style={{flex:1,fontWeight:900,fontSize:16,color:"#1d4ed8"}}>Total: {fmt(totalCalc,lang)}</div>}
+            <button onClick={submitAchat} disabled={!canSubmit}
+              style={{flex:canSubmit?2:1,padding:"12px",borderRadius:11,border:"none",fontSize:14,fontWeight:800,color:"#fff",
+                background:canSubmit?"#2563EB":"#e5e7eb",cursor:canSubmit?"pointer":"default"}}>
               Enregistrer
             </button>
           </div>
         </div>
       )}
 
-      {/* تاريخ المشتريات */}
+      {/* تاريخ المشتريات — قابل للضغط */}
       <div style={S.card()}>
         <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>📋 Historique des achats ({txs.length})</div>
         {txs.length===0?(
           <div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af",fontSize:14}}>Aucun achat enregistré</div>
-        ):[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>(
-          <div key={tx.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
-            <div style={{width:34,height:34,borderRadius:9,background:tx.paid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
-              {tx.paid?"✓":"⏳"}
+        ):[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(tx=>{
+          const hasDetail=tx.lignes&&tx.lignes.length>0;
+          const isOpen=selectedTx?.id===tx.id;
+          return(
+          <div key={tx.id} style={{borderRadius:10,marginBottom:6,border:`1.5px solid ${!tx.paid?"#fde68a":isOpen?"#bfdbfe":"#f3f4f6"}`,background:!tx.paid?"#fffbeb":isOpen?"#eff6ff":"#fff",overflow:"hidden"}}>
+
+            {/* صف رئيسي */}
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 12px"}}>
+              <div style={{width:36,height:36,borderRadius:10,background:tx.paid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                {tx.paid?"✓":"⏳"}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
+                <div style={{fontSize:11,color:"#9ca3af",marginTop:2}}>{tx.date}{hasDetail?` · ${tx.lignes.length} article(s)`:""}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontWeight:800,fontSize:15,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</div>
+                <div style={{fontSize:10,color:tx.paid?"#059669":"#d97706",fontWeight:700,marginTop:1}}>{tx.paid?"✓ Payé":"⏳ À payer"}</div>
+              </div>
             </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontWeight:600,fontSize:13,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
-              <div style={{fontSize:11,color:"#9ca3af"}}>{tx.date}</div>
+
+            {/* أزرار الإجراء */}
+            <div style={{display:"flex",gap:6,padding:"0 12px 10px"}}>
+              {!tx.paid&&(
+                <button onClick={()=>{setPayModal(tx);setPayAmt(String(tx.amount));}}
+                  style={{flex:1,padding:"8px 0",background:"#059669",color:"#fff",border:"none",borderRadius:8,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  💳 Enregistrer un paiement
+                </button>
+              )}
+              {hasDetail&&(
+                <button onClick={()=>setSelectedTx(isOpen?null:tx)}
+                  style={{padding:"8px 14px",background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                  {isOpen?"▲ Masquer":"▼ Détails"}
+                </button>
+              )}
             </div>
-            <div style={{fontWeight:700,fontSize:14,color:"#dc2626",flexShrink:0}}>–{fmt(tx.amount,lang)}</div>
+
+            {/* تفاصيل المنتجات */}
+            {isOpen&&hasDetail&&(
+              <div style={{background:"#f8faff",borderTop:"1px solid #bfdbfe",padding:"10px 14px"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:8,textTransform:"uppercase",letterSpacing:.8}}>Détail des produits</div>
+                {tx.lignes.map((l,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:i<tx.lignes.length-1?"1px solid #e0eaff":"none"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:6,height:6,borderRadius:"50%",background:"#2563EB",flexShrink:0}}/>
+                      <span style={{fontWeight:600,fontSize:13,color:"#111"}}>{l.produit}</span>
+                    </div>
+                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                      <span style={{fontSize:12,color:"#6b7280"}}>{l.qty} × {fmt(parseFloat(l.prix)||0,lang)}</span>
+                      <span style={{fontWeight:700,fontSize:13,color:"#1d4ed8"}}>{fmt((parseFloat(l.prix)||0)*(parseFloat(l.qty)||0),lang)}</span>
+                    </div>
+                  </div>
+                ))}
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:8,paddingTop:8,borderTop:"2px solid #bfdbfe"}}>
+                  <span style={{fontWeight:700,fontSize:13,color:"#374151"}}>Total</span>
+                  <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
+
+      {/* Modal دفع الدين */}
+      {payModal&&(
+        <div onClick={()=>setPayModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:340,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{fontSize:28,textAlign:"center",marginBottom:8}}>💳</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#111",marginBottom:4,textAlign:"center"}}>Paiement fournisseur</div>
+            <div style={{fontSize:13,color:"#6b7280",textAlign:"center",marginBottom:16}}>{payModal.desc}</div>
+
+            <div style={{background:"#fef3c7",borderRadius:10,padding:"10px 14px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:12,color:"#92400e",fontWeight:600}}>Dette totale</span>
+              <span style={{fontWeight:900,fontSize:16,color:"#d97706"}}>{fmt(payModal.amount,lang)}</span>
+            </div>
+
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase",letterSpacing:.6}}>Montant payé</div>
+            <input type="number" min="1" max={payModal.amount} autoFocus
+              value={payAmt} onChange={e=>setPayAmt(e.target.value.replace(/^-/,""))}
+              style={S.inp({fontSize:20,fontWeight:800,marginBottom:6,textAlign:"center"})}/>
+
+            {parseFloat(payAmt)>0&&parseFloat(payAmt)<payModal.amount&&(
+              <div style={{fontSize:12,color:"#d97706",textAlign:"center",marginBottom:12}}>
+                Reste après paiement : {fmt(payModal.amount-parseFloat(payAmt),lang)}
+              </div>
+            )}
+            {parseFloat(payAmt)>=payModal.amount&&(
+              <div style={{fontSize:12,color:"#059669",textAlign:"center",marginBottom:12,fontWeight:700}}>
+                ✓ Dette soldée complètement
+              </div>
+            )}
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,marginTop:8}}>
+              <button onClick={()=>setPayModal(null)} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+              <button onClick={()=>{
+                if(!payAmt||parseFloat(payAmt)<=0) return;
+                onPayDette(payModal.id, parseFloat(payAmt));
+                setPayModal(null); setPayAmt("");
+              }}
+                disabled={!payAmt||parseFloat(payAmt)<=0}
+                style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",
+                  background:payAmt&&parseFloat(payAmt)>0?"#059669":"#e5e7eb",cursor:"pointer"}}>
+                💳 Confirmer le paiement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* تأكيد الحذف */}
       {confirmDel&&(
@@ -3593,6 +3740,17 @@ export default function App(){
             onUpdateStock={(prodId,qty)=>{
               const p2=products.map(p=>p.id===prodId?{...p,stock:(p.stock||0)+qty}:p);
               setProducts(p2);persist({products:p2});
+            }}
+            onPayDette={(txId,montant,fournisseurId)=>{
+              const t2=txs.map(tx=>{
+                if(tx.id!==txId) return tx;
+                const reste=tx.amount-montant;
+                if(reste<=0) return {...tx,paid:true,amount:tx.amount};
+                // دفع جزئي — نقسم المعاملة
+                return {...tx,amount:reste};
+              });
+              setTxs(t2);persist({txs:t2});
+              showToast("Paiement enregistré ✓");
             }}
             products={products}
           />
