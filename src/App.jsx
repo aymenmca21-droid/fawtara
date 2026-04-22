@@ -1188,8 +1188,8 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
             </div>
           )}
         </div>
-        <input type="number" min="0.001" step="0.001" value={line.qty} onChange={e=>onUpdate("qty",e.target.value)} style={{...iS,width:"100%",textAlign:"center"}}/>
-        <input type="number" value={line.price} onChange={e=>onUpdate("price",e.target.value)} style={{...iS,width:"100%",textAlign:"right"}}/>
+        <input type="text" inputMode="decimal" value={line.qty} onChange={e=>onUpdate("qty",e.target.value.replace(/[^0-9.]/g,""))} style={{...iS,width:"100%",textAlign:"center"}}/>
+        <input type="text" inputMode="decimal" value={line.price} onChange={e=>onUpdate("price",e.target.value.replace(/[^0-9.]/g,""))} style={{...iS,width:"100%",textAlign:"right"}}/>
         {canRemove&&<button onClick={onRemove} style={{background:"none",border:"none",color:"#fca5a5",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}>×</button>}
       </div>
 
@@ -1350,7 +1350,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
                 <button key={s} onClick={()=>setPayStatus(s)} style={{padding:"10px 4px",borderRadius:10,border:`1.5px solid ${payStatus===s?border:"#e5e7eb"}`,background:payStatus===s?bg:"#fff",fontSize:12,fontWeight:700,color:payStatus===s?tc:"#9ca3af",cursor:"pointer"}}>{t[s]}</button>
               ))}
             </div>
-            {payStatus==="partial"&&<div style={{marginTop:10}}><input type="number" placeholder={t.paidAmount} value={paidAmt} onChange={e=>setPaidAmt(e.target.value)} style={S.inp({fontSize:16,fontWeight:700})}/>{paidAmt&&total>0&&<div style={{fontSize:12,color:"#9ca3af",marginTop:4}}>Reste: {fmt(total-(parseFloat(paidAmt)||0),lang)}</div>}</div>}
+            {payStatus==="partial"&&<div style={{marginTop:10}}><input type="text" inputMode="decimal" placeholder={t.paidAmount} value={paidAmt} onChange={e=>setPaidAmt(e.target.value.replace(/[^0-9.]/g,""))} style={S.inp({fontSize:16,fontWeight:700})}/>{paidAmt&&total>0&&<div style={{fontSize:12,color:"#9ca3af",marginTop:4}}>Reste: {fmt(total-(parseFloat(paidAmt)||0),lang)}</div>}</div>}
           </div>
 
           {/* Mode de paiement + Échéance */}
@@ -1474,7 +1474,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
             </div>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:8}}>
               <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.productName} style={S.inp()}/>
-              <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="Prix (DA)" style={S.inp()}/>
+              <input type="text" inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value.replace(/[^0-9.]/g,""))} placeholder="Prix (DA)" style={S.inp()}/>
             </div>
             {/* Stock */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
@@ -3499,7 +3499,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
                     {products.map(p=><option key={p.id} value={p.name}/>)}
                   </datalist>
                 </div>
-                <input type="number" min="1" value={l.qty} onChange={e=>updLigne(l.id,"qty",e.target.value)}
+                <input type="text" inputMode="decimal" value={l.qty} onChange={e=>updLigne(l.id,"qty",e.target.value.replace(/[^0-9.]/g,""))}
                   placeholder="1" style={{...S.inp({fontSize:13,textAlign:"center"}),width:"100%"}}/>
                 <input type="number" min="0" value={l.prix} onChange={e=>updLigne(l.id,"prix",e.target.value)}
                   placeholder="0" style={{...S.inp({fontSize:13,textAlign:"right"}),width:"100%"}}/>
@@ -3649,7 +3649,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
 
             <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase",letterSpacing:.6}}>Montant à payer maintenant</div>
             <input type="number" min="1" autoFocus
-              value={payAmt} onChange={e=>setPayAmt(e.target.value.replace(/^-/,""))}
+              value={payAmt} onChange={e=>setPayAmt(e.target.value.replace(/[^0-9.]/g,""))}
               style={S.inp({fontSize:22,fontWeight:800,marginBottom:8,textAlign:"center"})}/>
 
             {/* أزرار سريعة */}
