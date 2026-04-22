@@ -423,7 +423,10 @@ const EMPTY_DATA=()=>({txs:[],products:[],invoices:[],customers:[],companyName:"
 ═══════════════════════════════════════════════ */
 const fmt=(n,lang)=>{
   const num=Math.abs(n||0);
-  const formatted=num.toLocaleString("fr-DZ",{maximumFractionDigits:2});
+  // إذا كان الرقم صحيحاً نعرضه بدون فاصلة، وإلا نعرض رقمين عشريين
+  const isInt=Number.isInteger(num)||(Math.round(num*100)/100===Math.round(num));
+  const decimals=isInt?0:2;
+  const formatted=num.toLocaleString("fr-DZ",{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
   return formatted+" DA";
 };
 const today=()=>new Date().toISOString().split("T")[0];
@@ -1217,7 +1220,7 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
             </div>
           )}
         </div>
-        {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>= {fmt((parseFloat(line.price)||0)*(parseFloat(line.qty)||0),lang)}</div>}
+        {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>= {fmt((parseFloat(line.price)||0)*(parseFloat(line.qty)||1),lang)}</div>}
       </div>
     </div>
   );
