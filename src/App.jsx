@@ -421,7 +421,11 @@ const EMPTY_DATA=()=>({txs:[],products:[],invoices:[],customers:[],companyName:"
 /* ═══════════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════════ */
-const fmt=(n,lang)=>new Intl.NumberFormat(lang==="ar"?"ar-DZ":"fr-DZ",{maximumFractionDigits:0}).format(Math.abs(n||0))+" DA";
+const fmt=(n,lang)=>{
+  const num=Math.abs(n||0);
+  const formatted=num.toLocaleString("fr-DZ",{maximumFractionDigits:2});
+  return formatted+" DA";
+};
 const today=()=>new Date().toISOString().split("T")[0];
 const uid=()=>Date.now()+Math.random().toString(36).slice(2,6);
 const S={ // shared inline styles
