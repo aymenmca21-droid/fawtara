@@ -1157,11 +1157,16 @@ function CustomerModal({existing,onSave,onClose,lang}){
 /* ═══════════════════════════════════════════════
    LINE ROW
 ═══════════════════════════════════════════════ */
-function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t}){
+function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,customUnites}){
   const [showDrop,setShowDrop]=useState(false);
+  const [showUniteDrop,setShowUniteDrop]=useState(false);
   const [search,setSearch]=useState("");
   const filtered=products.filter(p=>p.name.toLowerCase().includes((search||line.name||"").toLowerCase())).slice(0,6);
   const iS={fontSize:14,padding:"8px 10px",border:"1.5px solid #e5e7eb",borderRadius:9,outline:"none",background:"#fff",boxSizing:"border-box"};
+
+  const defaultUnites=["unité","pièce","kg","g","litre","ml","m","m²","m³","carton","sac","boîte","palette","heure","jour","forfait"];
+  const allUnites=[...new Set([...defaultUnites,...(customUnites||[])])];
+
   return(
     <div style={{marginBottom:8}}>
       <div style={{display:"grid",gridTemplateColumns:"1fr 52px 80px auto",gap:6,alignItems:"center"}}>
@@ -1183,11 +1188,33 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t}
             </div>
           )}
         </div>
-        <input type="number" min="1" value={line.qty} onChange={e=>onUpdate("qty",e.target.value)} style={{...iS,width:"100%",textAlign:"center"}}/>
+        <input type="number" min="0.001" step="0.001" value={line.qty} onChange={e=>onUpdate("qty",e.target.value)} style={{...iS,width:"100%",textAlign:"center"}}/>
         <input type="number" value={line.price} onChange={e=>onUpdate("price",e.target.value)} style={{...iS,width:"100%",textAlign:"right"}}/>
         {canRemove&&<button onClick={onRemove} style={{background:"none",border:"none",color:"#fca5a5",fontSize:18,cursor:"pointer",padding:0,lineHeight:1}}>×</button>}
       </div>
-      {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",textAlign:"right",marginTop:2,paddingRight:canRemove?28:4}}>= {fmt((parseFloat(line.price)||0)*(parseInt(line.qty)||0),lang)}</div>}
+
+      {/* Unité selector */}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4,paddingRight:canRemove?28:4}}>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setShowUniteDrop(!showUniteDrop)}
+            style={{padding:"4px 10px",borderRadius:8,border:"1.5px solid #e5e7eb",background:"#f9fafb",fontSize:11,fontWeight:600,color:"#374151",cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            📦 {line.unite||"unité"} ▾
+          </button>
+          {showUniteDrop&&(
+            <div style={{position:"absolute",top:"100%",left:0,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,zIndex:60,boxShadow:"0 8px 24px rgba(0,0,0,.14)",marginTop:3,padding:8,display:"flex",flexWrap:"wrap",gap:4,width:240}}>
+              {allUnites.map(u=>(
+                <button key={u} onMouseDown={e=>{e.preventDefault();onUpdate("unite",u);setShowUniteDrop(false);}}
+                  style={{padding:"4px 10px",borderRadius:6,border:`1.5px solid ${(line.unite||"unité")===u?"#2563EB":"#e5e7eb"}`,
+                    background:(line.unite||"unité")===u?"#eff6ff":"#fff",
+                    fontSize:11,fontWeight:600,color:(line.unite||"unité")===u?"#1d4ed8":"#374151",cursor:"pointer"}}>
+                  {u}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>= {fmt((parseFloat(line.price)||0)*(parseFloat(line.qty)||0),lang)}</div>}
+      </div>
     </div>
   );
 }
@@ -1217,7 +1244,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const usedProdIds=[...new Set(custInvs.flatMap(i=>i.lines.map(l=>l.productId)).filter(Boolean))];
   const suggested=usedProdIds.map(id=>products.find(p=>p.id===id)).filter(Boolean).slice(0,4);
 
-  const lineTotal=l=>(parseFloat(l.price)||0)*(parseInt(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
+  const lineTotal=l=>(parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
   const owingAmt=payStatus==="unpaid"?total:payStatus==="partial"?total-(parseFloat(paidAmt)||0):0;
 
@@ -1309,6 +1336,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
             {lines.map((line,idx)=>(
               <LineRow key={line.id} line={line} products={products} onSetProduct={p=>setLP(line.id,p)}
                 onUpdate={(f,v)=>updL(line.id,f,v)} onRemove={()=>setLines(p=>p.filter(l=>l.id!==line.id))}
+                customUnites={bizSettings?.customUnites||[]}
                 canRemove={lines.length>1} lang={lang} t={t} autoFocus={idx===lines.length-1&&idx>0}/>
             ))}
             <button onClick={addLine} style={{width:"100%",padding:10,background:"#f9fafb",border:"1.5px dashed #e5e7eb",borderRadius:10,fontSize:14,fontWeight:600,color:"#6b7280",cursor:"pointer",marginTop:4}}>{t.addProduct}</button>
@@ -1598,7 +1626,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   const buildHTML=(autoPrint=false)=>{
     const rows=invoice.lines.map(l=>{
       const pu=parseFloat(l.price)||0;
-      const qty=parseInt(l.qty)||1;
+      const qty=parseFloat(l.qty)||1;
       const rem=parseFloat(l.remise)||0;
       const montant=pu*qty*(1-rem/100);
       return `<tr>
@@ -1886,7 +1914,7 @@ ${paidTxs.length>0?`
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.qty||1}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.unite||"unité"}</td>
         <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:600">${(parseFloat(l.price)||0).toLocaleString()} DA</td>
-        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseInt(l.qty)||1)).toLocaleString()} DA</td>
+        <td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseFloat(l.qty)||1)).toLocaleString()} DA</td>
       </tr>`).join("");
     const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>BC ${invoice.id}</title>
@@ -2000,7 +2028,7 @@ ${paidTxs.length>0?`
 
   const printBV=()=>{
     const bvRows=invoice.lines.map(l=>{
-      const qty=parseInt(l.qty)||1;
+      const qty=parseFloat(l.qty)||1;
       const prix=parseFloat(l.price)||0;
       return`<tr>
         <td style="padding:6px 8px;font-size:13px;border-bottom:1px solid #f1f5f9">${l.name}</td>
@@ -2087,7 +2115,7 @@ ${paidTxs.length>0?`
             {invoice.lines.map((l,i)=>(
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #e5e7eb",fontSize:13}}>
                 <span style={{color:"#374151"}}>{l.name} <span style={{color:"#9ca3af"}}>×{l.qty||1}</span></span>
-                <span style={{fontWeight:700,color:"#111"}}>{fmt((parseFloat(l.price)||0)*(parseInt(l.qty)||1),lang)}</span>
+                <span style={{fontWeight:700,color:"#111"}}>{fmt((parseFloat(l.price)||0)*(parseFloat(l.qty)||1),lang)}</span>
               </div>
             ))}
             <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0 0",fontWeight:900,fontSize:17,borderTop:"2px solid #111",marginTop:8}}>
@@ -2232,7 +2260,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   const totalPaid=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
   const debt=totalSpent-totalPaid;
   const boughtMap={};
-  custInvs.forEach(inv=>inv.lines.forEach(l=>{if(!boughtMap[l.name])boughtMap[l.name]=0;boughtMap[l.name]+=(parseInt(l.qty)||1);}));
+  custInvs.forEach(inv=>inv.lines.forEach(l=>{if(!boughtMap[l.name])boughtMap[l.name]=0;boughtMap[l.name]+=(parseFloat(l.qty)||1);}));
   const boughtItems=Object.entries(boughtMap).sort((a,b)=>b[1]-a[1]);
   const lastDate=custInvs[0]?.date||"—";
   const invoiceCount=custInvs.length;
@@ -2343,7 +2371,156 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
       <div style={S.card()}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
           <div style={{fontSize:12,fontWeight:700,color:"#374151"}}>🧾 {t.purchaseHistory}</div>
-          <button onClick={()=>onNewInvoice(customer.name)} style={{padding:"6px 12px",background:"#2563EB",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
+          <div style={{display:"flex",gap:6}}>
+            {custInvs.length>0&&(
+              <button onClick={()=>{
+                const sc2={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
+                const sb2={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
+                const totalAll=custInvs.reduce((s,i)=>s+i.total,0);
+                const totalPaid=custInvs.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
+                const totalReste=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+                const rows=[...custInvs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((inv,i)=>`
+                  <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+                    <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
+                    <td style="padding:8px 10px;font-size:12px;color:#64748b">${inv.date}</td>
+                    <td style="padding:8px 10px;font-size:12px">${inv.lines.map(l=>l.name).slice(0,2).join(", ")}${inv.lines.length>2?"...":""}</td>
+                    <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
+                    <td style="padding:8px 10px;font-size:11px;text-align:center">
+                      <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:${sb2[inv.payStatus]||"#f3f4f6"};color:${sc2[inv.payStatus]||"#374151"}">
+                        ${inv.payStatus==="paid"?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
+                      </span>
+                    </td>
+                    <td style="padding:8px 10px;font-size:12px;text-align:right;color:${inv.payStatus==="paid"?"#059669":"#dc2626"};font-weight:700">
+                      ${inv.payStatus==="paid"?"—":(inv.total-(inv.paidAmount||0)).toLocaleString()+" DA"}
+                    </td>
+                  </tr>`).join("");
+                const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Relevé — ${customer.name}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;padding:32px;color:#1e293b}
+  .page{max-width:860px;margin:0 auto}
+  .header{padding-bottom:16px;border-bottom:3px solid #1e293b;margin-bottom:20px;display:flex;justify-content:space-between}
+  .summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+  .sum-box{padding:14px;border-radius:8px;border:1px solid #e2e8f0}
+  .sum-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .sum-value{font-size:20px;font-weight:900}
+  table{width:100%;border-collapse:collapse}
+  thead tr{background:#1e293b;color:#fff}
+  th{padding:10px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th:nth-child(4),th:nth-child(6){text-align:right} th:nth-child(5){text-align:center}
+  .footer{margin-top:24px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body><div class="page">
+<div class="header">
+  <div>
+    <div style="font-size:20px;font-weight:900">Relevé de compte</div>
+    <div style="font-size:16px;font-weight:700;color:#2563EB;margin-top:4px">${customer.name}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:2px">${custInvs.length} facture(s) · ${new Date().toLocaleDateString("fr-DZ")}${customer.phone?" · "+customer.phone:""}</div>
+  </div>
+</div>
+<div class="summary">
+  <div class="sum-box" style="background:#eff6ff"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#2563EB">${totalAll.toLocaleString()} DA</div></div>
+  <div class="sum-box" style="background:#ecfdf5"><div class="sum-label">Total payé</div><div class="sum-value" style="color:#059669">${totalPaid.toLocaleString()} DA</div></div>
+  <div class="sum-box" style="background:${totalReste>0?"#fef2f2":"#ecfdf5"}"><div class="sum-label">Reste à payer</div><div class="sum-value" style="color:${totalReste>0?"#dc2626":"#059669"}">${totalReste>0?totalReste.toLocaleString()+" DA":"✓ Soldé"}</div></div>
+</div>
+<table>
+  <thead><tr><th>N° Facture</th><th>Date</th><th>Articles</th><th style="text-align:right">Montant</th><th style="text-align:center">Statut</th><th style="text-align:right">Reste</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">Document généré par Fawtara</div>
+</div></body></html>`;
+                const blob=new Blob([html],{type:"text/html"});
+                const url=URL.createObjectURL(blob);
+                window.open(url,"_blank");
+                setTimeout(()=>URL.revokeObjectURL(url),10000);
+              }}
+                style={{padding:"6px 12px",background:"#6366f1",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                🖨 Relevé
+              </button>
+            )}
+            {custInvs.length>0&&(
+              <button onClick={()=>{
+                // نبني كل الفواتير في HTML واحد
+                const bs2={}; // bizSettings غير متاح هنا — نستخدم ما في الفاتورة
+                const allPages=custInvs.map((inv,idx)=>{
+                  const rows=inv.lines.map(l=>`
+                    <tr>
+                      <td style="padding:9px 8px;border-bottom:1px solid #e2e8f0;font-size:13px">${l.name}</td>
+                      <td style="padding:9px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.qty||1}</td>
+                      <td style="padding:9px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:center">${l.unite||"unité"}</td>
+                      <td style="padding:9px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right">${(parseFloat(l.price)||0).toLocaleString()} DA</td>
+                      <td style="padding:9px 8px;border-bottom:1px solid #e2e8f0;font-size:13px;text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseFloat(l.qty)||1)).toLocaleString()} DA</td>
+                    </tr>`).join("");
+                  const statusColor=inv.payStatus==="paid"?"#059669":inv.payStatus==="partial"?"#d97706":"#dc2626";
+                  const statusLabel=inv.payStatus==="paid"?"✓ Payé":inv.payStatus==="partial"?"⏳ Partiel":"✗ Impayé";
+                  return `
+                  <div class="invoice-page" style="${idx>0?"page-break-before:always;":""}padding:32px">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #1e293b;margin-bottom:20px">
+                      <div>
+                        <div style="font-size:18px;font-weight:900">${inv.companyName||"Fawtara"}</div>
+                      </div>
+                      <div style="text-align:right">
+                        <div style="font-size:22px;font-weight:900;letter-spacing:-1px">FACTURE</div>
+                        <div style="font-size:13px;font-family:monospace;color:#64748b">N° ${inv.id}</div>
+                        <div style="font-size:12px;color:#64748b">${inv.date}</div>
+                        <div style="margin-top:6px;padding:3px 12px;border-radius:4px;border:1.5px solid ${statusColor};color:${statusColor};font-weight:700;font-size:11px;display:inline-block">${statusLabel}</div>
+                      </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+                      <div style="padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
+                        <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Acheteur</div>
+                        <div style="font-size:15px;font-weight:700">${inv.customer}</div>
+                        ${inv.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b">${inv.customerInfo.adresse}</div>`:""}
+                      </div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+                      <thead><tr style="border-bottom:2px solid #1e293b">
+                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:left">Désignation</th>
+                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:center">Qté</th>
+                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:center">Unité</th>
+                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:right">Prix unit.</th>
+                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:right">Total</th>
+                      </tr></thead>
+                      <tbody>${rows}</tbody>
+                    </table>
+                    <div style="border:1.5px solid #e2e8f0;border-radius:6px;padding:14px 18px;margin-bottom:16px">
+                      <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:900;border-top:2px solid #1e293b;padding-top:10px">
+                        <span>Total à payer</span>
+                        <span>${inv.total.toLocaleString()} DA</span>
+                      </div>
+                    </div>
+                    <div style="text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px">
+                      ${inv.companyName||"Fawtara"} · Document généré par Fawtara · Facture ${idx+1}/${custInvs.length}
+                    </div>
+                  </div>`;
+                }).join("");
+
+                const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Factures — ${customer.name}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;color:#1e293b;background:#fff}
+  @media print{
+    .invoice-page{page-break-inside:avoid}
+    @page{margin:15mm}
+  }
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body>${allPages}</body></html>`;
+                const blob=new Blob([html],{type:"text/html"});
+                const url=URL.createObjectURL(blob);
+                window.open(url,"_blank");
+                setTimeout(()=>URL.revokeObjectURL(url),15000);
+              }}
+                style={{padding:"6px 12px",background:"#0ea5e9",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                🖨 Toutes ({custInvs.length})
+              </button>
+            )}
+            <button onClick={()=>onNewInvoice(customer.name)} style={{padding:"6px 12px",background:"#2563EB",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
+          </div>
         </div>
         {custInvs.length===0?(
           <div style={{textAlign:"center",padding:"24px 0",color:"#9ca3af",fontSize:14}}>{t.noInvoices}</div>
@@ -2547,6 +2724,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
   const [invPrefix,setInvPrefix]=useState(settings?.invPrefix||"FAC");
+  const [customUnites,setCustomUnites]=useState((settings?.customUnites||[]).join(", "));
   const ok=name.trim().length>0;
 
   const handleLogo=e=>{
@@ -2560,7 +2738,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
     onClose();
   };
 
@@ -2685,7 +2863,19 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
             </div>
           </div>
 
-          {/* TVA */}
+          {/* Unités personnalisées */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>📦 Unités personnalisées</div>
+            <div style={{background:"#f9fafb",borderRadius:12,padding:"12px 14px",border:"1px solid #e5e7eb"}}>
+              <div style={{fontSize:11,color:"#6b7280",marginBottom:8}}>
+                Unités disponibles par défaut : unité, kg, g, litre, m, m², carton, sac, boîte...
+              </div>
+              <input value={customUnites} onChange={e=>setCustomUnites(e.target.value)}
+                placeholder="Ex: quintal, tonne, rouleau, bobine"
+                style={S.inp({fontSize:13})}/>
+              <div style={{fontSize:10,color:"#9ca3af",marginTop:5}}>Séparées par des virgules — apparaissent dans le menu Unité des factures</div>
+            </div>
+          </div>
           <div style={{background:"#f9fafb",borderRadius:14,padding:14,marginBottom:14,border:"1px solid #e5e7eb"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:tvaEnabled?12:0}}>
               <div>
@@ -3225,7 +3415,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
     onAddAchat(tx);
     validLines.forEach(l=>{
       const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
-      if(prod&&parseInt(l.qty)>0) onUpdateStock(prod.id,parseInt(l.qty));
+      if(prod&&parseFloat(l.qty)>0) onUpdateStock(prod.id,parseFloat(l.qty));
     });
     setLignes([{id:uid(),produit:"",qty:"",prix:""}]);
     setAchatDesc(""); setShowAchat(false);
@@ -3882,7 +4072,7 @@ export default function App(){
     invoice.lines.forEach(line=>{
       const p=products.find(x=>x.name===line.name&&x.stock!=null);
       if(p){
-        const newStock=Math.max(0,p.stock-(parseInt(line.qty)||1));
+        const newStock=Math.max(0,p.stock-(parseFloat(line.qty)||1));
         prod2=prod2.map(x=>x.id===p.id?{...x,stock:newStock}:x);
       }
     });
