@@ -2264,7 +2264,7 @@ ${paidTxs.length>0?`
 /* ═══════════════════════════════════════════════
    CUSTOMER DETAIL VIEW
 ═══════════════════════════════════════════════ */
-function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,onOpenInvoice,onAddVersement,lang}){
+function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,onOpenInvoice,onAddVersement,lang,versements}){
   const t=T[lang],rtl=lang==="ar";
   const custInvs=invoices.filter(i=>i.customer===customer.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custTxs=txs.filter(x=>x.client===customer.name&&x.type==="income").sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -2398,9 +2398,15 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
               <button onClick={()=>{
                 const sc2={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
                 const sb2={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
-                const totalAll=custInvs.reduce((s,i)=>s+i.total,0);
-                const totalPaid=custInvs.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
-                const totalReste=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+                const custVers=(versements||[]).filter(v=>v.entityName===customer.name&&v.entityType==="client").sort((a,b)=>new Date(b.date)-new Date(a.date));
+                const totalVersements=custVers.reduce((s,v)=>s+v.montant,0);
+                const versRows=custVers.map((v,i)=>`
+                  <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+                    <td style="padding:8px 10px;font-size:12px;color:#64748b">${v.date}</td>
+                    <td style="padding:8px 10px;font-size:12px;font-weight:600">${v.mode}</td>
+                    <td style="padding:8px 10px;font-size:12px;color:#6b7280">${v.note||"—"}</td>
+                    <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700;color:#059669">+${v.montant.toLocaleString()} DA</td>
+                  </tr>`).join("");
                 const rows=[...custInvs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((inv,i)=>`
                   <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                     <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
@@ -2446,12 +2452,27 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
 <div class="summary">
   <div class="sum-box" style="background:#eff6ff"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#2563EB">${totalAll.toLocaleString()} DA</div></div>
   <div class="sum-box" style="background:#ecfdf5"><div class="sum-label">Total payé</div><div class="sum-value" style="color:#059669">${totalPaid.toLocaleString()} DA</div></div>
+  ${totalVersements>0?`<div class="sum-box" style="background:#f0fdf4"><div class="sum-label">Versements (${custVers.length})</div><div class="sum-value" style="color:#16a34a">+${totalVersements.toLocaleString()} DA</div></div>`:""}
   <div class="sum-box" style="background:${totalReste>0?"#fef2f2":"#ecfdf5"}"><div class="sum-label">Reste à payer</div><div class="sum-value" style="color:${totalReste>0?"#dc2626":"#059669"}">${totalReste>0?totalReste.toLocaleString()+" DA":"✓ Soldé"}</div></div>
 </div>
 <table>
   <thead><tr><th>N° Facture</th><th>Date</th><th>Articles</th><th style="text-align:right">Montant</th><th style="text-align:center">Statut</th><th style="text-align:right">Reste</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>
+${custVers.length>0?`
+<div style="margin-top:24px">
+  <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1e293b">💰 Versements reçus</div>
+  <table>
+    <thead><tr style="background:#059669;color:#fff">
+      <th>Date</th><th>Mode</th><th>Note</th><th style="text-align:right">Montant</th>
+    </tr></thead>
+    <tbody>${versRows}</tbody>
+    <tfoot><tr>
+      <td colspan="3" style="padding:8px 10px;font-weight:700;font-size:12px">Total versements</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:900;color:#059669;font-size:14px">+${totalVersements.toLocaleString()} DA</td>
+    </tr></tfoot>
+  </table>
+</div>`:""}
 <div class="footer">Document généré par Fawtara</div>
 </div></body></html>`;
                 const blob=new Blob([html],{type:"text/html"});
@@ -4538,6 +4559,7 @@ export default function App(){
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
               onOpenInvoice={inv=>setPreviewInvoice(inv)}
               onAddVersement={v=>{const v2=[v,...versements];setVersements(v2);persist({versements:v2});showToast("Versement enregistré ✓");}}
+              versements={versements}
             />
           ):(
             <CustomersTab
