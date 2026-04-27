@@ -1229,18 +1229,19 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
 /* ═══════════════════════════════════════════════
    INVOICE MODAL
 ═══════════════════════════════════════════════ */
-function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate}){
+function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate,editing}){
   const t=T[lang],rtl=lang==="ar";
-  const [customer,setCustomer]=useState(duplicate?.customer||preselectedCustomer||"");
-  const [custInput,setCustInput]=useState(duplicate?.customer||preselectedCustomer||"");
+  const src=editing||duplicate;
+  const [customer,setCustomer]=useState(src?.customer||preselectedCustomer||"");
+  const [custInput,setCustInput]=useState(src?.customer||preselectedCustomer||"");
   const [showCustDrop,setShowCustDrop]=useState(false);
   const [showNewCust,setShowNewCust]=useState(false);
-  const [lines,setLines]=useState(duplicate?.lines?.map(l=>({...l,id:uid()}))||[{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
-  const [payStatus,setPayStatus]=useState("paid");
-  const [paidAmt,setPaidAmt]=useState("");
-  const [modePaiement,setModePaiement]=useState(duplicate?.modePaiement||"espèces");
-  const [echeance,setEcheance]=useState("");
-  const [notes,setNotes]=useState(duplicate?.notes||"");
+  const [lines,setLines]=useState(src?.lines?.map(l=>({...l,id:uid()}))||[{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
+  const [payStatus,setPayStatus]=useState(editing?.payStatus||"paid");
+  const [paidAmt,setPaidAmt]=useState(editing?.paidAmount?String(editing.paidAmount):"");
+  const [modePaiement,setModePaiement]=useState(src?.modePaiement||"espèces");
+  const [echeance,setEcheance]=useState(editing?.echeance||"");
+  const [notes,setNotes]=useState(src?.notes||"");
   const [showMore,setShowMore]=useState(false);
 
   const allCustNames=[...new Set([...customers.map(c=>c.name),...invoices.map(i=>i.customer).filter(Boolean)])];
@@ -1293,7 +1294,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
         style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"92svh",display:"flex",flexDirection:"column",animation:"up .25s cubic-bezier(.22,1,.36,1)"}}>
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div><div style={{fontWeight:900,fontSize:17,color:"#111"}}>{t.newInvoice}</div><div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{customer||t.selectCustomer}</div></div>
+          <div><div style={{fontWeight:900,fontSize:17,color:"#111"}}>{editing?"✏️ Modifier la facture":t.newInvoice}</div><div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{customer||t.selectCustomer}</div></div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>{stepDot()}<button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
@@ -1593,7 +1594,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 /* ═══════════════════════════════════════════════
    INVOICE PDF MODAL  — avec historique des paiements
 ═══════════════════════════════════════════════ */
-function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC}){
+function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC, onEdit}){
   const t=T[lang], rtl=lang==="ar";
   const [docType,setDocType]=useState("facture"); // facture | bv
   const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
@@ -2104,6 +2105,10 @@ ${paidTxs.length>0?`
             <div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{invoice.customer} · {invoice.date}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {onEdit&&<button onClick={onEdit}
+              style={{padding:"6px 12px",borderRadius:8,border:"1.5px solid #e5e7eb",fontSize:12,fontWeight:700,cursor:"pointer",background:"#fffbeb",color:"#92400e"}}>
+              ✏️ Modifier
+            </button>}
             <button onClick={()=>setDocType(docType==="bv"?"facture":"bv")}
               style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #e5e7eb",fontSize:11,fontWeight:700,cursor:"pointer",
                 background:docType==="bv"?"#fef3c7":"#f3f4f6",color:docType==="bv"?"#92400e":"#6b7280"}}>
@@ -2259,7 +2264,7 @@ ${paidTxs.length>0?`
 /* ═══════════════════════════════════════════════
    CUSTOMER DETAIL VIEW
 ═══════════════════════════════════════════════ */
-function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,onOpenInvoice,lang}){
+function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,onNewInvoice,onOpenInvoice,onAddVersement,lang}){
   const t=T[lang],rtl=lang==="ar";
   const custInvs=invoices.filter(i=>i.customer===customer.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custTxs=txs.filter(x=>x.client===customer.name&&x.type==="income").sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -2273,6 +2278,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   const invoiceCount=custInvs.length;
 
   const [confirmDelete,setConfirmDelete]=useState(false);
+  const [showVersement,setShowVersement]=useState(false);
 
   // insights
   const insights=[];
@@ -2289,11 +2295,20 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   return(
     <div dir={rtl?"rtl":"ltr"} style={{paddingBottom:100}}>
       {/* Toolbar */}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
         <button onClick={onBack} style={{background:"#f3f4f6",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#374151",cursor:"pointer"}}>{t.backToList}</button>
         <button onClick={()=>onEdit(customer)} style={{background:"#eff6ff",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#1d4ed8",cursor:"pointer"}}>✏ {t.editCustomer}</button>
+        <button onClick={()=>setShowVersement(true)}
+          style={{background:"#ecfdf5",border:"1px solid #a7f3d0",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#059669",cursor:"pointer"}}>
+          💰 Versement
+        </button>
         <button onClick={()=>setConfirmDelete(true)} style={{marginLeft:"auto",background:"#fef2f2",border:"1px solid #fecaca",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#dc2626",cursor:"pointer"}}>🗑 {t.deleteCustomer}</button>
       </div>
+      {showVersement&&<VersementModal
+        entityName={customer.name} entityType="client"
+        onSave={v=>{onAddVersement(v);setShowVersement(false);}}
+        onClose={()=>setShowVersement(false)} lang={lang}
+      />}
 
       {/* نافذة تأكيد الحذف */}
       {confirmDelete&&(
@@ -3238,7 +3253,7 @@ function ReferralPanel({user,lang,onClose}){
 /* ═══════════════════════════════════════════════
    FOURNISSEURS TAB
 ═══════════════════════════════════════════════ */
-function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette}){
+function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette,onAddVersement}){
   const t=T[lang];
   const [selected,setSelected]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -3269,6 +3284,7 @@ function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx
       onAddAchat={(tx)=>{onAddTx(tx);}}
       onUpdateStock={onUpdateStock}
       onPayDette={(txId,montant)=>onPayDette(txId,montant,f.id)}
+      onAddVersement={v=>onAddVersement&&onAddVersement(v)}
     />;
   }
 
@@ -3379,7 +3395,7 @@ function FournisseurModal({existing,onSave,onClose,lang}){
   );
 }
 
-function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette}){
+function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette,onAddVersement}){
   const [showAchat,setShowAchat]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [achatPaid,setAchatPaid]=useState(true);
@@ -3388,6 +3404,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   const [selectedTx,setSelectedTx]=useState(null);
   const [payModal,setPayModal]=useState(null); // tx à payer
   const [payAmt,setPayAmt]=useState("");
+  const [showVersement,setShowVersement]=useState(false);
 
   const totalAchats=txs.reduce((s,tx)=>s+tx.amount,0);
   const totalPaye=txs.filter(tx=>tx.paid).reduce((s,tx)=>s+tx.amount,0);
@@ -3431,11 +3448,20 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   return(
     <div>
       {/* Header */}
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,flexWrap:"wrap"}}>
         <button onClick={onBack} style={{background:"#f3f4f6",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#374151",cursor:"pointer"}}>← Retour</button>
         <button onClick={onEdit} style={{background:"#eff6ff",border:"none",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#1d4ed8",cursor:"pointer"}}>✏ Modifier</button>
+        <button onClick={()=>setShowVersement(true)}
+          style={{background:"#ecfdf5",border:"1px solid #a7f3d0",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#059669",cursor:"pointer"}}>
+          💰 Versement
+        </button>
         <button onClick={()=>setConfirmDel(true)} style={{marginLeft:"auto",background:"#fef2f2",border:"1px solid #fecaca",padding:"8px 14px",borderRadius:10,fontSize:13,fontWeight:700,color:"#dc2626",cursor:"pointer"}}>🗑 Supprimer</button>
       </div>
+      {showVersement&&<VersementModal
+        entityName={fournisseur.name} entityType="fournisseur"
+        onSave={v=>{if(onAddVersement)onAddVersement(v);setShowVersement(false);}}
+        onClose={()=>setShowVersement(false)} lang={lang}
+      />}
 
       {/* Infos fournisseur */}
       <div style={S.card({marginBottom:16})}>
@@ -3718,7 +3744,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
 
 
 /* ═══ HISTORY TAB COMPONENT ═══ */
-function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,dateTo,setDateTo,histSearch,setHistSearch,confirmDelTx,setConfirmDelTx,delTx,setPreviewInvoice,lang}){
+function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,dateTo,setDateTo,histSearch,setHistSearch,confirmDelTx,setConfirmDelTx,delTx,setPreviewInvoice,lang,versements}){
   const filtered=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date)).filter(tx=>{
     if(histFilter==="income"&&tx.type!=="income") return false;
     if(histFilter==="expense"&&tx.type!=="expense") return false;
@@ -3788,6 +3814,27 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
           })
         }
       </div>
+
+      {/* Versements section */}
+      {versements&&versements.length>0&&(
+        <div style={S.card({marginTop:16})}>
+          <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>💰 Versements ({versements.length})</div>
+          {[...versements].sort((a,b)=>new Date(b.date)-new Date(a.date))
+            .filter(v=>!histSearch||v.entityName?.toLowerCase().includes(histSearch.toLowerCase()))
+            .filter(v=>!dateFrom||v.date>=dateFrom)
+            .filter(v=>!dateTo||v.date<=dateTo)
+            .map(v=>(
+            <div key={v.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #f9fafb"}}>
+              <div style={{width:34,height:34,borderRadius:9,background:"#ecfdf5",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>💰</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:13,color:"#111"}}>{v.entityName}</div>
+                <div style={{fontSize:11,color:"#9ca3af"}}>{v.date} · {v.mode}{v.note?` · ${v.note}`:""}</div>
+              </div>
+              <div style={{fontWeight:700,fontSize:14,color:"#059669",flexShrink:0}}>+{fmt(v.montant,lang)}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {confirmDelTx&&(
         <div onClick={()=>setConfirmDelTx(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
           <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:24,width:"100%",maxWidth:320,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
@@ -3810,16 +3857,18 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
 }
 
 /* ═══ RAPPORT TAB COMPONENT ═══ */
-function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang}){
-  const [statFilter,setStatFilter]=useState(null); // null | "paid" | "unpaid" | "all"
+function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements}){
+  const [statFilter,setStatFilter]=useState(null);
   const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const mm=String(rapportMonth+1).padStart(2,"0");
   const prefix=`${rapportYear}-${mm}`;
   const mTxs=txs.filter(tx=>tx.date?.startsWith(prefix));
   const mInvs=invoices.filter(inv=>inv.date?.startsWith(prefix));
+  const mVers=(versements||[]).filter(v=>v.date?.startsWith(prefix));
+  const totalVersements=mVers.reduce((s,v)=>s+v.montant,0);
   const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0);
   const depenses=mTxs.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
-  const benefice=revenus-depenses;
+  const benefice=revenus+totalVersements-depenses;
   const attente=mTxs.filter(tx=>tx.type==="income"&&!tx.paid).reduce((s,tx)=>s+tx.amount,0);
   const nbInv=mInvs.length;
   const nbPaid=mInvs.filter(i=>i.payStatus==="paid").length;
@@ -3846,6 +3895,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         <div style={{background:"#ecfdf5",borderRadius:14,padding:20,border:"1px solid #a7f3d0"}}><div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>REVENUS ENCAISSÉS</div><div style={{fontSize:26,fontWeight:900,color:"#059669"}}>{fmt(revenus,lang)}</div></div>
         <div style={{background:"#fef2f2",borderRadius:14,padding:20,border:"1px solid #fecaca"}}><div style={{fontSize:11,fontWeight:700,color:"#b91c1c",marginBottom:6}}>DÉPENSES</div><div style={{fontSize:26,fontWeight:900,color:"#dc2626"}}>{fmt(depenses,lang)}</div></div>
+        {totalVersements>0&&<div style={{background:"#f0fdf4",borderRadius:14,padding:20,border:"1px solid #86efac"}}><div style={{fontSize:11,fontWeight:700,color:"#166534",marginBottom:6}}>💰 VERSEMENTS ({mVers.length})</div><div style={{fontSize:26,fontWeight:900,color:"#16a34a"}}>+{fmt(totalVersements,lang)}</div></div>}
         <div style={{background:benefice>=0?"#eff6ff":"#fff7ed",borderRadius:14,padding:20,border:`1px solid ${benefice>=0?"#bfdbfe":"#fed7aa"}`,gridColumn:"1/-1"}}><div style={{fontSize:11,fontWeight:700,color:benefice>=0?"#1d4ed8":"#c2410c",marginBottom:6}}>BÉNÉFICE NET</div><div style={{fontSize:32,fontWeight:900,color:benefice>=0?"#2563EB":"#ea580c"}}>{benefice>=0?"+":""}{fmt(benefice,lang)}</div></div>
       </div>
       <div style={S.card({marginBottom:16})}>
@@ -3936,6 +3986,56 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
     </div>
   );
 }
+/* ═══ VERSEMENT MODAL ═══ */
+function VersementModal({entityName,entityType,onSave,onClose,lang}){
+  const [montant,setMontant]=useState("");
+  const [note,setNote]=useState("");
+  const [mode,setMode]=useState("espèces");
+  const ok=parseFloat(montant)>0;
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,backdropFilter:"blur(6px)",padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:0,width:"100%",maxWidth:380,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)",overflow:"hidden"}}>
+        <div style={{background:"linear-gradient(135deg,#059669,#10b981)",padding:"20px 24px"}}>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.7)",fontWeight:600,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>
+            {entityType==="client"?"Versement client":"Versement fournisseur"}
+          </div>
+          <div style={{fontSize:20,fontWeight:900,color:"#fff"}}>{entityName}</div>
+        </div>
+        <div style={{padding:"20px 24px"}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase"}}>Montant</div>
+          <input type="text" inputMode="decimal" autoFocus value={montant}
+            onChange={e=>setMontant(e.target.value.replace(/[^0-9.]/g,""))}
+            placeholder="0 DA"
+            style={{...S.inp({fontSize:24,fontWeight:900,textAlign:"center",marginBottom:12,borderColor:ok?"#059669":"#e5e7eb"})}}/>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase"}}>Mode</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+            {["espèces","chèque","virement","CCP","carte"].map(m=>(
+              <button key={m} onClick={()=>setMode(m)}
+                style={{padding:"6px 12px",borderRadius:20,border:`1.5px solid ${mode===m?"#059669":"#e5e7eb"}`,
+                  background:mode===m?"#ecfdf5":"#fff",color:mode===m?"#059669":"#6b7280",
+                  fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                {m}
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6,textTransform:"uppercase"}}>Note (optionnel)</div>
+          <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Ex: acompte, règlement facture..."
+            style={S.inp({marginBottom:20,fontSize:13})}/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:10}}>
+            <button onClick={onClose} style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>Annuler</button>
+            <button onClick={()=>{if(!ok)return;onSave({id:uid(),entityName,entityType,montant:parseFloat(montant),mode,note,date:today()});onClose();}}
+              disabled={!ok}
+              style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",
+                background:ok?"#059669":"#e5e7eb",cursor:ok?"pointer":"default"}}>
+              ✓ Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
   const [lang,setLang]=useState("fr");
   const [user,setUser]=useState(null);
@@ -3964,8 +4064,10 @@ export default function App(){
   const [invoiceDateFrom,setInvoiceDateFrom]=useState("");
   const [invoiceDateTo,setInvoiceDateTo]=useState("");
   const [confirmLogout,setConfirmLogout]=useState(false);
+  const [versements,setVersements]=useState([]);
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
+  const [editingInvoice,setEditingInvoice]=useState(null);
   // History filters
   const [histFilter,setHistFilter]=useState("all");
   const [dateFrom,setDateFrom]=useState("");
@@ -3988,6 +4090,7 @@ export default function App(){
     setInvoices(data.invoices||[]);
     setCustomers(data.customers||[]);
     setFournisseurs(data.fournisseurs||[]);
+    setVersements(data.versements||[]);
     setCompanyName(data.companyName||userInfo.shopName||"");
     setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1,blCounter:1,bcCounter:1});
     setStarted((data.txs||[]).length>0||(data.invoices||[]).length>0);
@@ -4016,6 +4119,7 @@ export default function App(){
         txs:patch.txs??txs, products:patch.products??products,
         invoices:patch.invoices??invoices, customers:patch.customers??customers,
         fournisseurs:patch.fournisseurs??fournisseurs,
+        versements:patch.versements??versements,
         companyName:patch.companyName??effectiveCompanyName,
         bizSettings:patch.bizSettings??bizSettings,
       });
@@ -4066,6 +4170,16 @@ export default function App(){
       setTxs(d.txs);setProducts(d.products);setCustomers(d.customers);setInvoices(d.invoices);
       persist(d);
     } else setModal(choice);
+  };
+
+  const handleEditInvoice=(updatedInvoice)=>{
+    const inv2=invoices.map(i=>i.id===updatedInvoice.id?updatedInvoice:i);
+    setInvoices(inv2);
+    persist({invoices:inv2});
+    setEditingInvoice(null);
+    setPreviewInvoice(null);
+    setDetailTx(null);
+    showToast("Facture modifiée ✓");
   };
 
   const handleInvoiceCreated=(invoice,newTxs)=>{
@@ -4423,6 +4537,7 @@ export default function App(){
               onDelete={id=>{delCustomer(id);showToast(t.deleteCustomer+" ✓");}}
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
               onOpenInvoice={inv=>setPreviewInvoice(inv)}
+              onAddVersement={v=>{const v2=[v,...versements];setVersements(v2);persist({versements:v2});showToast("Versement enregistré ✓");}}
             />
           ):(
             <CustomersTab
@@ -4460,12 +4575,12 @@ export default function App(){
                 if(tx.id!==txId) return tx;
                 const reste=Math.max(0, tx.amount - montant);
                 if(reste<=0) return {...tx, paid:true, paidAmount:tx.amount};
-                // دفع جزئي — ينقص المبلغ المتبقي
                 return {...tx, amount:reste, paidAmount:(tx.paidAmount||0)+montant};
               });
               setTxs(t2); persist({txs:t2});
               showToast("Paiement enregistré ✓");
             }}
+            onAddVersement={v=>{const v2=[v,...versements];setVersements(v2);persist({versements:v2});showToast("Versement enregistré ✓");}}
             products={products}
           />
         )}
@@ -4480,6 +4595,7 @@ export default function App(){
             histSearch={histSearch} setHistSearch={setHistSearch}
             confirmDelTx={confirmDelTx} setConfirmDelTx={setConfirmDelTx}
             delTx={delTx} setPreviewInvoice={setPreviewInvoice}
+            versements={versements}
           />
         )}
 
@@ -4490,6 +4606,7 @@ export default function App(){
             rapportMonth={rapportMonth} setRapportMonth={setRapportMonth}
             rapportYear={rapportYear} setRapportYear={setRapportYear}
             setPreviewInvoice={setPreviewInvoice}
+            versements={versements}
           />
         )}
       </div>{/* end CONTENT */}
@@ -4519,6 +4636,21 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
+      {editingInvoice&&<InvoiceModal
+        products={products} customers={customers} invoices={invoices}
+        onClose={()=>setEditingInvoice(null)}
+        onCreated={(updInv,newTxs)=>{
+          // تعديل — نحدّث الفاتورة الموجودة
+          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
+          setInvoices(inv2);
+          persist({invoices:inv2});
+          setEditingInvoice(null);
+          showToast("Facture modifiée ✓");
+        }}
+        lang={lang} companyName={effectiveCompanyName}
+        bizSettings={bizSettings}
+        editing={editingInvoice}
+      />}
       {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv}/>}
       {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} settings={bizSettings} onSave={(name,s)=>{setCompanyName(name);setBizSettings(s);persist({companyName:name,bizSettings:s});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
@@ -4541,8 +4673,8 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
