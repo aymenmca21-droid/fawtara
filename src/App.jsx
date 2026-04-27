@@ -1266,12 +1266,14 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     const year=new Date().getFullYear();
     const prefix=bizSettings?.invPrefix||"FAC";
     const counter=String(bizSettings?.invCounter||1).padStart(4,"0");
-    const invId=`${prefix}-${year}-${counter}`;
+    // عند التعديل نحتفظ بالرقم القديم، عند الإنشاء نُنشئ رقماً جديداً
+    const invId=editing?editing.id:`${prefix}-${year}-${counter}`;
+    const invoiceDate=editing?editing.date:today();
     const paidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
     const invoice={
       id:invId, customer:customer.trim(),
       lines:lines.filter(l=>l.name.trim()),
-      total, payStatus, paidAmount, date:today(), companyName,
+      total, payStatus, paidAmount, date:invoiceDate, companyName,
       modePaiement, echeance, notes,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
     };
@@ -1395,7 +1397,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0}}>
           <button onClick={create} disabled={!canCreate} style={{width:"100%",padding:15,background:canCreate?"#2563EB":"#e5e7eb",color:canCreate?"#fff":"#9ca3af",border:"none",borderRadius:14,fontSize:16,fontWeight:800,cursor:canCreate?"pointer":"default",boxShadow:canCreate?"0 8px 20px rgba(37,99,235,.35)":"none"}}>
-            {t.createInvoice}{total>0?` · ${fmt(total,lang)}`:""}
+            {editing?"✏️ Modifier la facture":t.createInvoice}{total>0?` · ${fmt(total,lang)}`:""}
           </button>
         </div>
       </div>
@@ -4665,11 +4667,11 @@ export default function App(){
         products={products} customers={customers} invoices={invoices}
         onClose={()=>setEditingInvoice(null)}
         onCreated={(updInv,newTxs)=>{
-          // تعديل — نحدّث الفاتورة الموجودة
-          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
+          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id,date:editingInvoice.date}:i);
           setInvoices(inv2);
           persist({invoices:inv2});
           setEditingInvoice(null);
+          setPreviewInvoice(null);
           showToast("Facture modifiée ✓");
         }}
         lang={lang} companyName={effectiveCompanyName}
