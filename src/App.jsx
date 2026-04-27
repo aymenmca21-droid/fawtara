@@ -2400,6 +2400,9 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                 const sb2={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
                 const custVers=(versements||[]).filter(v=>v.entityName===customer.name&&v.entityType==="client").sort((a,b)=>new Date(b.date)-new Date(a.date));
                 const totalVersements=custVers.reduce((s,v)=>s+v.montant,0);
+                const totalAll=custInvs.reduce((s,i)=>s+i.total,0);
+                const totalPaid=custInvs.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
+                const totalReste=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
                 const versRows=custVers.map((v,i)=>`
                   <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                     <td style="padding:8px 10px;font-size:12px;color:#64748b">${v.date}</td>
