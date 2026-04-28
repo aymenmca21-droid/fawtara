@@ -2270,9 +2270,11 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   const t=T[lang],rtl=lang==="ar";
   const custInvs=invoices.filter(i=>i.customer===customer.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custTxs=txs.filter(x=>x.client===customer.name&&x.type==="income").sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const custVersements=(versements||[]).filter(v=>v.entityName===customer.name&&v.entityType==="client");
   const totalSpent=custInvs.reduce((s,i)=>s+i.total,0);
   const totalPaid=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
-  const debt=totalSpent-totalPaid;
+  const totalVers=custVersements.reduce((s,v)=>s+v.montant,0);
+  const debt=Math.max(0,totalSpent-totalPaid-totalVers);
   const boughtMap={};
   custInvs.forEach(inv=>inv.lines.forEach(l=>{if(!boughtMap[l.name])boughtMap[l.name]=0;boughtMap[l.name]+=(parseFloat(l.qty)||1);}));
   const boughtItems=Object.entries(boughtMap).sort((a,b)=>b[1]-a[1]);
@@ -2601,7 +2603,7 @@ ${custVers.length>0?`
 /* ═══════════════════════════════════════════════
    CUSTOMERS TAB
 ═══════════════════════════════════════════════ */
-function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onNewCustomer,onNewInvoice}){
+function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onNewCustomer,onNewInvoice,versements}){
   const t=T[lang],rtl=lang==="ar";
   const [sort,setSort]=useState("spent");
   const [search,setSearch]=useState("");
@@ -2611,10 +2613,11 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
     const custInvs=invoices.filter(i=>i.customer===c.name);
     const totalSpent=custInvs.reduce((s,i)=>s+i.total,0);
     const totalPaid=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
-    const debt=totalSpent-totalPaid;
+    const totalVers=(versements||[]).filter(v=>v.entityName===c.name&&v.entityType==="client").reduce((s,v)=>s+v.montant,0);
+    const debt=Math.max(0,totalSpent-totalPaid-totalVers);
     const lastDate=custInvs.sort((a,b)=>new Date(b.date)-new Date(a.date))[0]?.date||null;
     return{...c,totalSpent,totalPaid,debt,lastDate,invoiceCount:custInvs.length};
-  }),[customers,invoices]);
+  }),[customers,invoices,versements]);
 
   const sorted=[...enriched].sort((a,b)=>{
     if(sort==="spent") return b.totalSpent-a.totalSpent;
@@ -4573,6 +4576,7 @@ export default function App(){
               txs={txs}
               products={products}
               lang={lang}
+              versements={versements}
               onSelectCustomer={c=>setSelectedCustomer(c)}
               onNewCustomer={()=>setModal("newCustomer")}
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
