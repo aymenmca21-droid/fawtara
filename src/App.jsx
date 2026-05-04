@@ -1164,11 +1164,18 @@ function CustomerModal({existing,onSave,onClose,lang}){
 /* ═══════════════════════════════════════════════
    LINE ROW
 ═══════════════════════════════════════════════ */
-function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,customUnites}){
+function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,customUnites,bizSettings}){
   const [showDrop,setShowDrop]=useState(false);
   const [showUniteDrop,setShowUniteDrop]=useState(false);
   const [search,setSearch]=useState("");
-  const filtered=products.filter(p=>p.name.toLowerCase().includes((search||line.name||"").toLowerCase())).slice(0,6);
+  const [filterFam,setFilterFam]=useState("");
+  const familles=bizSettings?.familles||[];
+  const filtered=products.filter(p=>{
+    const q=(search||line.name||"").toLowerCase();
+    if(q&&!p.name.toLowerCase().includes(q)) return false;
+    if(filterFam&&p.famille!==filterFam) return false;
+    return true;
+  }).slice(0,8);
   const iS={fontSize:14,padding:"8px 10px",border:"1.5px solid #e5e7eb",borderRadius:9,outline:"none",background:"#fff",boxSizing:"border-box"};
 
   const defaultUnites=["unité","pièce","kg","g","litre","ml","m","m²","m³","carton","sac","boîte","palette","heure","jour","forfait"];
@@ -1181,17 +1188,36 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
           <input value={line.name||(search)} onChange={e=>{setSearch(e.target.value);onUpdate("name",e.target.value);setShowDrop(true);}}
             onFocus={()=>setShowDrop(true)} onBlur={()=>setShowDrop(false)}
             placeholder="Produit..." style={{...iS,width:"100%",fontWeight:line.name?600:400}}/>
-          {showDrop&&filtered.length>0&&(
-            <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,zIndex:60,boxShadow:"0 8px 24px rgba(0,0,0,.14)",marginTop:3,overflow:"hidden",maxHeight:180,overflowY:"auto"}}>
+          {showDrop&&(filtered.length>0||familles.length>0)&&(
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,zIndex:60,boxShadow:"0 8px 24px rgba(0,0,0,.14)",marginTop:3,overflow:"hidden",maxHeight:220,overflowY:"auto"}}>
+              {/* فلتر الفامي */}
+              {familles.length>0&&(
+                <div style={{display:"flex",gap:4,padding:"6px 8px",borderBottom:"1px solid #f3f4f6",flexWrap:"wrap"}}>
+                  <button onMouseDown={e=>{e.preventDefault();setFilterFam("");}}
+                    style={{padding:"2px 8px",borderRadius:20,border:"none",fontSize:10,fontWeight:700,cursor:"pointer",
+                      background:!filterFam?"#6366f1":"#f3f4f6",color:!filterFam?"#fff":"#6b7280"}}>Tous</button>
+                  {familles.map(f=>(
+                    <button key={f.name} onMouseDown={e=>{e.preventDefault();setFilterFam(f.name);}}
+                      style={{padding:"2px 8px",borderRadius:20,border:"none",fontSize:10,fontWeight:700,cursor:"pointer",
+                        background:filterFam===f.name?"#6366f1":"#f3f4f6",color:filterFam===f.name?"#fff":"#6b7280"}}>
+                      🗂 {f.name}
+                    </button>
+                  ))}
+                </div>
+              )}
               {filtered.map(p=>(
                 <div key={p.id}
-                  onMouseDown={e=>{e.preventDefault();onSetProduct(p);setSearch("");setShowDrop(false);}}
+                  onMouseDown={e=>{e.preventDefault();onSetProduct(p);setSearch("");setShowDrop(false);setFilterFam("");}}
                   style={{padding:"9px 12px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid #f9fafb"}}
                   onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                  <span style={{fontSize:13,fontWeight:600,color:"#111"}}>{p.name}</span>
+                  <div>
+                    <span style={{fontSize:13,fontWeight:600,color:"#111"}}>{p.name}</span>
+                    {p.famille&&<span style={{fontSize:10,color:"#6366f1",marginLeft:6}}>🗂 {p.famille}{p.sousFamille?` › ${p.sousFamille}`:""}</span>}
+                  </div>
                   <span style={{fontSize:12,color:"#2563EB",fontWeight:700}}>{fmt(p.price,lang)}</span>
                 </div>
               ))}
+              {filtered.length===0&&<div style={{padding:"12px",fontSize:12,color:"#9ca3af",textAlign:"center"}}>Aucun produit trouvé</div>}
             </div>
           )}
         </div>
@@ -1229,7 +1255,7 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
 /* ═══════════════════════════════════════════════
    INVOICE MODAL
 ═══════════════════════════════════════════════ */
-function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate,editing}){
+function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate,editing,versements}){
   const t=T[lang],rtl=lang==="ar";
   const src=editing||duplicate;
   const [customer,setCustomer]=useState(src?.customer||preselectedCustomer||"");
@@ -1243,6 +1269,8 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const [echeance,setEcheance]=useState(editing?.echeance||"");
   const [notes,setNotes]=useState(src?.notes||"");
   const [showMore,setShowMore]=useState(false);
+  const [showAdvancePrompt,setShowAdvancePrompt]=useState(false);
+  const [advanceUsed,setAdvanceUsed]=useState(false);
 
   const allCustNames=[...new Set([...customers.map(c=>c.name),...invoices.map(i=>i.customer).filter(Boolean)])];
   const filtered=allCustNames.filter(c=>c.toLowerCase().includes(custInput.toLowerCase())).slice(0,6);
@@ -1251,6 +1279,13 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const custInvs=invoices.filter(i=>i.customer===customer);
   const usedProdIds=[...new Set(custInvs.flatMap(i=>i.lines.map(l=>l.productId)).filter(Boolean))];
   const suggested=usedProdIds.map(id=>products.find(p=>p.id===id)).filter(Boolean).slice(0,4);
+
+  // حساب التسبيق المتاح للزبون
+  const custVers=(versements||[]).filter(v=>v.entityName===customer&&v.entityType==="client");
+  const totalVers=custVers.reduce((s,v)=>s+v.montant,0);
+  const totalPaidInv=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
+  const totalInv=custInvs.reduce((s,i)=>s+i.total,0);
+  const advanceAvailable=Math.max(0, totalVers-(totalInv-totalPaidInv));
 
   const lineTotal=l=>(parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
@@ -1261,20 +1296,42 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const updL=(lid,f,v)=>setLines(p=>p.map(l=>l.id===lid?{...l,[f]:v}:l));
   const canCreate=customer.trim()&&lines.some(l=>l.name.trim()&&parseFloat(l.price)>0);
 
-  const create=()=>{
+  const create=(useAdvance=false)=>{
     if(!canCreate)return;
+    // إذا كان هناك تسبيق متاح ولم يسأل بعد — اسأل
+    if(!editing&&!advanceUsed&&advanceAvailable>0&&!useAdvance){
+      setShowAdvancePrompt(true);
+      return;
+    }
     const year=new Date().getFullYear();
     const prefix=bizSettings?.invPrefix||"FAC";
     const counter=String(bizSettings?.invCounter||1).padStart(4,"0");
-    // عند التعديل نحتفظ بالرقم القديم، عند الإنشاء نُنشئ رقماً جديداً
     const invId=editing?editing.id:`${prefix}-${year}-${counter}`;
     const invoiceDate=editing?editing.date:today();
-    const paidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
+
+    let finalPayStatus=payStatus;
+    let finalPaidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
+
+    // استخدام التسبيق
+    if(useAdvance&&advanceAvailable>0){
+      if(advanceAvailable>=total){
+        // التسبيق يغطي الفاتورة كلها
+        finalPayStatus="paid";
+        finalPaidAmount=total;
+      } else {
+        // التسبيق جزئي
+        finalPayStatus="partial";
+        finalPaidAmount=advanceAvailable;
+      }
+    }
+
+    const paidAmount=finalPaidAmount;
     const invoice={
       id:invId, customer:customer.trim(),
       lines:lines.filter(l=>l.name.trim()),
-      total, payStatus, paidAmount, date:invoiceDate, companyName,
+      total, payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
       modePaiement, echeance, notes,
+      advanceUsed:useAdvance?Math.min(advanceAvailable,total):0,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
     };
     const txs=[];
@@ -1342,11 +1399,22 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
           </div>
           {/* Lines */}
           <div style={{marginBottom:16}}>
+            {/* بانر التسبيق */}
+            {!editing&&advanceAvailable>0&&(
+              <div style={{marginBottom:12,padding:"10px 14px",background:"linear-gradient(135deg,#ecfdf5,#d1fae5)",border:"1.5px solid #6ee7b7",borderRadius:12,display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:20}}>💰</div>
+                <div>
+                  <div style={{fontWeight:700,fontSize:12,color:"#065f46"}}>تسبيق متاح</div>
+                  <div style={{fontSize:13,color:"#059669",fontWeight:800}}>{fmt(advanceAvailable,lang)}</div>
+                </div>
+              </div>
+            )}
             <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>{t.products}</div>
             {lines.map((line,idx)=>(
               <LineRow key={line.id} line={line} products={products} onSetProduct={p=>setLP(line.id,p)}
                 onUpdate={(f,v)=>updL(line.id,f,v)} onRemove={()=>setLines(p=>p.filter(l=>l.id!==line.id))}
                 customUnites={bizSettings?.customUnites||[]}
+                bizSettings={bizSettings}
                 canRemove={lines.length>1} lang={lang} t={t} autoFocus={idx===lines.length-1&&idx>0}/>
             ))}
             <button onClick={addLine} style={{width:"100%",padding:10,background:"#f9fafb",border:"1.5px dashed #e5e7eb",borderRadius:10,fontSize:14,fontWeight:600,color:"#6b7280",cursor:"pointer",marginTop:4}}>{t.addProduct}</button>
@@ -1402,6 +1470,40 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
         </div>
       </div>
       {showNewCust&&<CustomerModal onSave={c=>{setCustomer(c.name);setCustInput(c.name);onCreated&&false;}}  onClose={()=>setShowNewCust(false)} lang={lang}/>}
+
+      {/* prompt استخدام التسبيق */}
+      {showAdvancePrompt&&(
+        <div onClick={()=>setShowAdvancePrompt(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:28,width:"100%",maxWidth:360,boxShadow:"0 24px 64px rgba(0,0,0,.25)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{fontSize:44,textAlign:"center",marginBottom:12}}>💰</div>
+            <div style={{fontWeight:900,fontSize:16,color:"#111",textAlign:"center",marginBottom:8}}>
+              {customer} لديه تسبيق
+            </div>
+            <div style={{background:"#ecfdf5",borderRadius:10,padding:"12px 16px",textAlign:"center",marginBottom:12}}>
+              <div style={{fontSize:13,color:"#6b7280",marginBottom:4}}>المبلغ المتاح</div>
+              <div style={{fontSize:24,fontWeight:900,color:"#059669"}}>{fmt(advanceAvailable,lang)}</div>
+            </div>
+            <div style={{fontSize:13,color:"#6b7280",textAlign:"center",marginBottom:20,lineHeight:1.6}}>
+              {advanceAvailable>=total
+                ?<>يغطي الفاتورة كاملة <strong style={{color:"#059669"}}>({fmt(total,lang)})</strong>
+                  {advanceAvailable>total&&<><br/>يبقى <strong style={{color:"#2563EB"}}>{fmt(advanceAvailable-total,lang)}</strong> للفاتورة القادمة</>}
+                </>
+                :<>يغطي جزئياً — يبقى <strong style={{color:"#dc2626"}}>{fmt(total-advanceAvailable,lang)}</strong> للدفع</>
+              }
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <button onClick={()=>{setShowAdvancePrompt(false);create(false);}}
+                style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:13,fontWeight:700,color:"#6b7280",background:"#fff",cursor:"pointer"}}>
+                ✗ Ne pas utiliser
+              </button>
+              <button onClick={()=>{setShowAdvancePrompt(false);create(true);}}
+                style={{padding:13,borderRadius:12,border:"none",fontSize:13,fontWeight:800,color:"#fff",background:"#059669",cursor:"pointer"}}>
+                ✓ Utiliser le تسبيق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1409,20 +1511,38 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 /* ═══════════════════════════════════════════════
    PRODUCTS MODAL
 ═══════════════════════════════════════════════ */
-function ProductsModal({products,onSave,onDelete,onClose,lang}){
+function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSaveBizSettings}){
   const t=T[lang],rtl=lang==="ar";
   const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
+  const [famille,setFamille]=useState("");
+  const [sousFamille,setSousFamille]=useState("");
   const [filter,setFilter]=useState("all");
-  const [confirmDel,setConfirmDel]=useState(null); // المنتج المراد حذفه
+  const [filterFam,setFilterFam]=useState("all");
+  const [confirmDel,setConfirmDel]=useState(null);
+  const [showFamManager,setShowFamManager]=useState(false);
+  const [newFam,setNewFam]=useState("");
+  const [newSousFam,setNewSousFam]=useState("");
+  const [selectedFamForSub,setSelectedFamForSub]=useState("");
+
+  // familles stockées dans bizSettings
+  const familles=bizSettings?.familles||[];
+
   const ok=name.trim()&&parseFloat(price)>0;
   const submit=()=>{
     if(!ok)return;
     const stockVal=stock?parseInt(stock):0;
     const alertVal=alertThreshold?parseInt(alertThreshold):5;
-    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stockVal,alertThreshold:alertVal});
-    setName("");setPrice("");setStock("");setAlertThreshold("5");setEditing(null);
+    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null});
+    setName("");setPrice("");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
   };
-  const startEdit=p=>{setEditing(p.id);setName(p.name);setPrice(String(p.price));setStock(p.stock!=null?String(p.stock):"0");setAlertThreshold(p.alertThreshold!=null?String(p.alertThreshold):"5");};
+  const startEdit=p=>{
+    setEditing(p.id);setName(p.name);setPrice(String(p.price));
+    setStock(p.stock!=null?String(p.stock):"0");setAlertThreshold(p.alertThreshold!=null?String(p.alertThreshold):"5");
+    setFamille(p.famille||"");setSousFamille(p.sousFamille||"");
+  };
+
+  const selectedFamObj=familles.find(f=>f.name===famille);
+  const sousFamilles=selectedFamObj?.sousFamilles||[];
 
   const withStock=products.filter(p=>p.stock!=null);
   const outOfStock=withStock.filter(p=>p.stock===0);
@@ -1431,6 +1551,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
   const filtered=products.filter(p=>{
     if(filter==="out") return p.stock===0;
     if(filter==="low") return p.stock!=null&&p.stock>0&&p.stock<=(p.alertThreshold??5);
+    if(filterFam!=="all") return p.famille===filterFam;
     return true;
   });
 
@@ -1448,10 +1569,79 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{fontWeight:900,fontSize:17,color:"#111"}}>📦 {t.manageProducts}</div>
-          <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>setShowFamManager(!showFamManager)}
+              style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #e5e7eb",fontSize:11,fontWeight:700,cursor:"pointer",
+                background:showFamManager?"#eff6ff":"#f9fafb",color:showFamManager?"#2563EB":"#6b7280"}}>
+              🗂 Familles
+            </button>
+            <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          </div>
         </div>
 
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
+
+          {/* ── Gestionnaire Familles ── */}
+          {showFamManager&&(
+            <div style={{background:"#f8fafc",borderRadius:14,padding:14,marginBottom:16,border:"1.5px solid #e2e8f0"}}>
+              <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:10}}>🗂 Gérer les familles</div>
+              {/* Ajouter famille */}
+              <div style={{display:"flex",gap:6,marginBottom:10}}>
+                <input value={newFam} onChange={e=>setNewFam(e.target.value)} placeholder="Nouvelle famille..."
+                  style={S.inp({flex:1,fontSize:13})}/>
+                <button onClick={()=>{
+                  if(!newFam.trim())return;
+                  const f2=[...familles,{name:newFam.trim(),sousFamilles:[]}];
+                  onSaveBizSettings({...bizSettings,familles:f2});
+                  setNewFam("");
+                }} style={{padding:"8px 14px",background:"#2563EB",color:"#fff",border:"none",borderRadius:9,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+              </div>
+              {/* Liste familles */}
+              {familles.map(f=>(
+                <div key={f.name} style={{background:"#fff",borderRadius:10,padding:"10px 12px",marginBottom:8,border:"1px solid #e5e7eb"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                    <div style={{fontWeight:700,fontSize:13,color:"#111"}}>📁 {f.name}</div>
+                    <button onClick={()=>{
+                      const f2=familles.filter(x=>x.name!==f.name);
+                      onSaveBizSettings({...bizSettings,familles:f2});
+                    }} style={{background:"#fef2f2",border:"none",padding:"3px 8px",borderRadius:6,fontSize:11,color:"#dc2626",cursor:"pointer"}}>× Supprimer</button>
+                  </div>
+                  {/* Sous-familles */}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
+                    {f.sousFamilles.map(sf=>(
+                      <span key={sf} style={{padding:"2px 8px",background:"#eff6ff",borderRadius:20,fontSize:11,color:"#2563EB",display:"flex",alignItems:"center",gap:4}}>
+                        {sf}
+                        <button onClick={()=>{
+                          const f2=familles.map(x=>x.name===f.name?{...x,sousFamilles:x.sousFamilles.filter(s=>s!==sf)}:x);
+                          onSaveBizSettings({...bizSettings,familles:f2});
+                        }} style={{background:"none",border:"none",cursor:"pointer",color:"#6b7280",fontSize:12,padding:0}}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                  {/* Ajouter sous-famille */}
+                  {selectedFamForSub===f.name?(
+                    <div style={{display:"flex",gap:4}}>
+                      <input value={newSousFam} onChange={e=>setNewSousFam(e.target.value)} placeholder="Sous-famille..."
+                        style={S.inp({flex:1,fontSize:12})} autoFocus/>
+                      <button onClick={()=>{
+                        if(!newSousFam.trim())return;
+                        const f2=familles.map(x=>x.name===f.name?{...x,sousFamilles:[...x.sousFamilles,newSousFam.trim()]}:x);
+                        onSaveBizSettings({...bizSettings,familles:f2});
+                        setNewSousFam("");setSelectedFamForSub("");
+                      }} style={{padding:"6px 10px",background:"#2563EB",color:"#fff",border:"none",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
+                      <button onClick={()=>setSelectedFamForSub("")} style={{padding:"6px 8px",background:"#f3f4f6",border:"none",borderRadius:7,fontSize:11,cursor:"pointer"}}>×</button>
+                    </div>
+                  ):(
+                    <button onClick={()=>setSelectedFamForSub(f.name)}
+                      style={{fontSize:11,color:"#2563EB",background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>
+                      + Sous-famille
+                    </button>
+                  )}
+                </div>
+              ))}
+              {familles.length===0&&<div style={{fontSize:12,color:"#9ca3af",textAlign:"center",padding:"8px 0"}}>Aucune famille créée</div>}
+            </div>
+          )}
 
           {/* alertes stock */}
           {(outOfStock.length>0||lowStock.length>0)&&(
@@ -1486,6 +1676,31 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
               <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.productName} style={S.inp()}/>
               <input type="text" inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value.replace(/[^0-9.]/g,""))} placeholder="Prix (DA)" style={S.inp()}/>
             </div>
+
+            {/* Famille (optionnel) */}
+            {familles.length>0&&(
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>🗂 Famille (optionnel)</div>
+                  <select value={famille} onChange={e=>{setFamille(e.target.value);setSousFamille("");}}
+                    style={{...S.inp({fontSize:13}),width:"100%"}}>
+                    <option value="">— Aucune —</option>
+                    {familles.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}
+                  </select>
+                </div>
+                {famille&&sousFamilles.length>0&&(
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>📂 Sous-famille</div>
+                    <select value={sousFamille} onChange={e=>setSousFamille(e.target.value)}
+                      style={{...S.inp({fontSize:13}),width:"100%"}}>
+                      <option value="">— Aucune —</option>
+                      {sousFamilles.map(sf=><option key={sf} value={sf}>{sf}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Stock */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
               <div>
@@ -1516,7 +1731,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
               </div>
             </div>
             <div style={{display:"flex",gap:8}}>
-              {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}}>{t.cancel}</button>}
+              {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");setFamille("");setSousFamille("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}}>{t.cancel}</button>}
               <button onClick={submit} disabled={!ok} style={{flex:2,padding:10,background:ok?"#2563EB":"#e5e7eb",border:"none",borderRadius:10,fontSize:14,fontWeight:700,color:ok?"#fff":"#9ca3af",cursor:ok?"pointer":"default"}}>
                 {editing?"✓ Enregistrer":t.addNewProduct}
               </button>
@@ -1525,14 +1740,32 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
 
           {/* filtres */}
           {products.length>0&&(
-            <div style={{display:"flex",gap:6,marginBottom:12}}>
-              {[["all","Tous"],["low","⚠ Stock faible"],["out","🚨 Épuisé"]].map(([k,l])=>(
-                <button key={k} onClick={()=>setFilter(k)}
-                  style={{padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
-                    background:filter===k?"#2563EB":"#f3f4f6",color:filter===k?"#fff":"#6b7280"}}>
-                  {l}
-                </button>
-              ))}
+            <div style={{marginBottom:12}}>
+              <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap"}}>
+                {[["all","Tous"],["low","⚠ Stock faible"],["out","🚨 Épuisé"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>{setFilter(k);setFilterFam("all");}}
+                    style={{padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                      background:filter===k&&filterFam==="all"?"#2563EB":"#f3f4f6",color:filter===k&&filterFam==="all"?"#fff":"#6b7280"}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {familles.length>0&&(
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  <button onClick={()=>setFilterFam("all")}
+                    style={{padding:"4px 10px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                      background:filterFam==="all"?"#6366f1":"#f3f4f6",color:filterFam==="all"?"#fff":"#6b7280"}}>
+                    Toutes familles
+                  </button>
+                  {familles.map(f=>(
+                    <button key={f.name} onClick={()=>{setFilterFam(f.name);setFilter("all");}}
+                      style={{padding:"4px 10px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                        background:filterFam===f.name?"#6366f1":"#f3f4f6",color:filterFam===f.name?"#fff":"#6b7280"}}>
+                      🗂 {f.name} ({products.filter(p=>p.famille===f.name).length})
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1547,7 +1780,10 @@ function ProductsModal({products,onSave,onDelete,onClose,lang}){
                 border:`1px solid ${sc&&p.stock===0?"#fecaca":sc&&p.stock<=5?"#fde68a":"#e5e7eb"}`}}>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div>
-                  <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{fmt(p.price,lang)}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap"}}>
+                    <span style={{fontSize:12,color:"#6b7280"}}>{fmt(p.price,lang)}</span>
+                    {p.famille&&<span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"#ede9fe",padding:"1px 7px",borderRadius:20}}>🗂 {p.famille}{p.sousFamille?` › ${p.sousFamille}`:""}</span>}
+                  </div>
                 </div>
                 {/* badge stock */}
                 {sc&&(
@@ -2406,7 +2642,8 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                 const totalVersements=custVers.reduce((s,v)=>s+v.montant,0);
                 const totalAll=custInvs.reduce((s,i)=>s+i.total,0);
                 const totalPaid=custInvs.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
-                const totalReste=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+                const resteFactures=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+                const totalReste=Math.max(0, resteFactures-totalVersements);
                 const versRows=custVers.map((v,i)=>`
                   <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                     <td style="padding:8px 10px;font-size:12px;color:#64748b">${v.date}</td>
@@ -4682,8 +4919,8 @@ export default function App(){
         bizSettings={bizSettings}
         editing={editingInvoice}
       />}
-      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv}/>}
-      {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang}/>}
+      {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv} versements={versements}/>}
+      {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang} bizSettings={bizSettings} onSaveBizSettings={bs=>{setBizSettings(bs);persist({bizSettings:bs});}}/>}
       {modal==="settings"&&<SettingsModal companyName={effectiveCompanyName} settings={bizSettings} onSave={(name,s)=>{setCompanyName(name);setBizSettings(s);persist({companyName:name,bizSettings:s});showToast(t.settingsSaved);}} onClose={()=>setModal(null)} lang={lang}/>}
       {modal==="newCustomer"&&<CustomerModal onSave={c=>{saveCustomer(c);setModal(null);showToast("Client ajouté ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
       {editingCustomer&&<CustomerModal existing={editingCustomer} onSave={c=>{saveCustomer(c);setEditingCustomer(null);setSelectedCustomer(c);showToast("Client modifié ✓");}} onClose={()=>setEditingCustomer(null)} lang={lang}/>}
