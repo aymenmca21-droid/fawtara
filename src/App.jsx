@@ -4441,7 +4441,18 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
           {oldDebts.map(inv=>{
             const days=Math.floor((new Date()-new Date(inv.date))/(1000*60*60*24));
             const reste=inv.total-(inv.paidAmount||0);
-            return(<div key={inv.id} onClick={()=>setPreviewInvoice(inv)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:10,marginBottom:6,cursor:"pointer",border:"1px solid #fecaca"}}><div><div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div><div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {days} jours</div></div><div style={{fontWeight:800,fontSize:14,color:"#dc2626"}}>{fmt(reste,lang)}</div></div>);
+            return(
+              <div key={inv.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:10,marginBottom:6,border:"1px solid #fecaca"}}>
+                <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,cursor:"pointer"}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
+                  <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {days} jours</div>
+                </div>
+                <div onClick={()=>setPreviewInvoice(inv)} style={{fontWeight:800,fontSize:14,color:"#dc2626",cursor:"pointer",marginRight:8}}>{fmt(reste,lang)}</div>
+                <button onClick={()=>onEditInvoice(inv)}
+                  style={{background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer",color:"#92400e",flexShrink:0}}
+                  title="Modifier">✏️</button>
+              </div>
+            );
           })}
         </div>
       )}
