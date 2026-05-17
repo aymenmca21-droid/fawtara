@@ -4298,7 +4298,7 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
 }
 
 /* ═══ RAPPORT TAB COMPONENT ═══ */
-function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements,products}){
+function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements,products,onEditInvoice}){
   const [statFilter,setStatFilter]=useState(null);
   const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const mm=String(rapportMonth+1).padStart(2,"0");
@@ -4406,18 +4406,18 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                 const reste=inv.total-(inv.paidAmount||0);
                 const isPaid=inv.payStatus==="paid";
                 return(
-                  <div key={inv.id} onClick={()=>setPreviewInvoice(inv)}
-                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",borderRadius:10,cursor:"pointer",border:"1px solid #e5e7eb",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}
+                  <div key={inv.id}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",borderRadius:10,border:"1px solid #e5e7eb",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}
                     onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"}
                     onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.04)"}>
-                    <div style={{width:32,height:32,borderRadius:8,background:isPaid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
+                    <div onClick={()=>setPreviewInvoice(inv)} style={{width:32,height:32,borderRadius:8,background:isPaid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0,cursor:"pointer"}}>
                       {isPaid?"✓":"⏳"}
                     </div>
-                    <div style={{flex:1,minWidth:0}}>
+                    <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
                       <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
                       <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                     </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
+                    <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                       <div style={{fontWeight:800,fontSize:14,color:isPaid?"#059669":"#dc2626"}}>
                         {isPaid?fmt(inv.total,lang):fmt(reste,lang)}
                       </div>
@@ -4425,7 +4425,9 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                         {isPaid?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
                       </div>
                     </div>
-                    <div style={{color:"#d1d5db",fontSize:12}}>›</div>
+                    <button onClick={()=>onEditInvoice(inv)}
+                      style={{background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer",color:"#92400e",flexShrink:0}}
+                      title="Modifier">✏️</button>
                   </div>
                 );
               })}
@@ -5124,6 +5126,7 @@ export default function App(){
             setPreviewInvoice={setPreviewInvoice}
             versements={versements}
             products={products}
+            onEditInvoice={inv=>{setEditingInvoice(inv);}}
           />
         )}
       </div>{/* end CONTENT */}
