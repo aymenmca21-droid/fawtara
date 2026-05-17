@@ -1172,7 +1172,7 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
   const familles=bizSettings?.familles||[];
   const filtered=products.filter(p=>{
     const q=(search||line.name||"").toLowerCase();
-    if(q&&!p.name.toLowerCase().includes(q)) return false;
+    if(q&&!p.name.toLowerCase().includes(q)&&!p.ref?.toLowerCase().includes(q)&&!p.autoCode?.toLowerCase().includes(q)) return false;
     if(filterFam&&p.famille!==filterFam) return false;
     return true;
   }).slice(0,8);
@@ -1212,9 +1212,16 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
                   onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
                   <div>
                     <span style={{fontSize:13,fontWeight:600,color:"#111"}}>{p.name}</span>
-                    {p.famille&&<span style={{fontSize:10,color:"#6366f1",marginLeft:6}}>🗂 {p.famille}{p.sousFamille?` › ${p.sousFamille}`:""}</span>}
+                    <div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap"}}>
+                      {p.autoCode&&<span style={{fontSize:9,color:"#6366f1",fontFamily:"monospace",background:"#ede9fe",padding:"0 5px",borderRadius:4}}>{p.autoCode}</span>}
+                      {p.ref&&<span style={{fontSize:9,color:"#0369a1",fontFamily:"monospace",background:"#e0f2fe",padding:"0 5px",borderRadius:4}}>{p.ref}</span>}
+                      {p.famille&&<span style={{fontSize:9,color:"#6366f1"}}>🗂 {p.famille}{p.sousFamille?` › ${p.sousFamille}`:""}</span>}
+                    </div>
                   </div>
-                  <span style={{fontSize:12,color:"#2563EB",fontWeight:700}}>{fmt(p.price,lang)}</span>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:12,color:"#2563EB",fontWeight:700}}>{fmt(p.price,lang)}</div>
+                    {p.prixAchat&&<div style={{fontSize:10,color:"#9ca3af"}}>Achat: {fmt(p.prixAchat,lang)}</div>}
+                  </div>
                 </div>
               ))}
               {filtered.length===0&&<div style={{padding:"12px",fontSize:12,color:"#9ca3af",textAlign:"center"}}>Aucun produit trouvé</div>}
@@ -1246,7 +1253,20 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
             </div>
           )}
         </div>
-        {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",marginLeft:"auto"}}>= {fmt((parseFloat(line.price)||0)*(parseFloat(line.qty)||1),lang)}</div>}
+        {line.name&&line.price&&<div style={{fontSize:11,color:"#9ca3af",marginLeft:"auto",display:"flex",gap:6,alignItems:"center"}}>
+          = {fmt((parseFloat(line.price)||0)*(parseFloat(line.qty)||1),lang)}
+          {(()=>{
+            const prod=products?.find(p=>p.name===line.name||p.id===line.productId);
+            if(!prod?.prixAchat||!parseFloat(line.price)) return null;
+            const m=Math.round((parseFloat(line.price)-prod.prixAchat)/prod.prixAchat*100);
+            const prixDiff=parseFloat(line.price)!==prod.price;
+            return(
+              <span style={{fontSize:10,fontWeight:700,color:m>=0?"#059669":"#dc2626",background:m>=0?"#ecfdf5":"#fef2f2",padding:"1px 6px",borderRadius:10}}>
+                {m>0?"+":""}{m}%{prixDiff?" ✏️":""}
+              </span>
+            );
+          })()}
+        </div>}
       </div>
     </div>
   );
@@ -1285,14 +1305,16 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const totalVers=custVers.reduce((s,v)=>s+v.montant,0);
   const totalPaidInv=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
   const totalInv=custInvs.reduce((s,i)=>s+i.total,0);
-  const advanceAvailable=Math.max(0, totalVers-(totalInv-totalPaidInv));
+  // التسبيق المتاح = مجموع الـ versements - الديون الصافية
+  const detteSansVers=Math.max(0,totalInv-totalPaidInv);
+  const advanceAvailable=Math.max(0, totalVers-detteSansVers);
 
   const lineTotal=l=>(parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
   const owingAmt=payStatus==="unpaid"?total:payStatus==="partial"?total-(parseFloat(paidAmt)||0):0;
 
   const addLine=()=>setLines(p=>[...p,{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
-  const setLP=(lid,prod)=>setLines(p=>p.map(l=>l.id===lid?{...l,productId:prod.id,name:prod.name,price:prod.price}:l));
+  const setLP=(lid,prod)=>setLines(p=>p.map(l=>l.id===lid?{...l,productId:prod.id,name:prod.name,price:prod.price}:l)); // price = prix de vente
   const updL=(lid,f,v)=>setLines(p=>p.map(l=>l.id===lid?{...l,[f]:v}:l));
   const canCreate=customer.trim()&&lines.some(l=>l.name.trim()&&parseFloat(l.price)>0);
 
@@ -1415,6 +1437,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
                 onUpdate={(f,v)=>updL(line.id,f,v)} onRemove={()=>setLines(p=>p.filter(l=>l.id!==line.id))}
                 customUnites={bizSettings?.customUnites||[]}
                 bizSettings={bizSettings}
+                products2={products}
                 canRemove={lines.length>1} lang={lang} t={t} autoFocus={idx===lines.length-1&&idx>0}/>
             ))}
             <button onClick={addLine} style={{width:"100%",padding:10,background:"#f9fafb",border:"1.5px dashed #e5e7eb",borderRadius:10,fontSize:14,fontWeight:600,color:"#6b7280",cursor:"pointer",marginTop:4}}>{t.addProduct}</button>
@@ -1513,7 +1536,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 ═══════════════════════════════════════════════ */
 function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSaveBizSettings}){
   const t=T[lang],rtl=lang==="ar";
-  const [name,setName]=useState(""), [price,setPrice]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
+  const [name,setName]=useState(""), [price,setPrice]=useState(""), [prixAchat,setPrixAchat]=useState(""), [code,setCode]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
   const [famille,setFamille]=useState("");
   const [sousFamille,setSousFamille]=useState("");
   const [filter,setFilter]=useState("all");
@@ -1528,15 +1551,17 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
   const familles=bizSettings?.familles||[];
 
   const ok=name.trim()&&parseFloat(price)>0;
+  const marge=prixAchat&&parseFloat(prixAchat)>0?Math.round((parseFloat(price)-parseFloat(prixAchat))/parseFloat(prixAchat)*100):null;
   const submit=()=>{
     if(!ok)return;
     const stockVal=stock?parseInt(stock):0;
     const alertVal=alertThreshold?parseInt(alertThreshold):5;
-    onSave({id:editing||uid(),name:name.trim(),price:parseFloat(price),stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null});
-    setName("");setPrice("");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
+    onSave({id:editing||uid(),name:name.trim(),code:code.trim()||null,price:parseFloat(price),prixAchat:prixAchat?parseFloat(prixAchat):null,stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null});
+    setName("");setPrice("");setPrixAchat("");setCode("");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
   };
   const startEdit=p=>{
     setEditing(p.id);setName(p.name);setPrice(String(p.price));
+    setPrixAchat(p.prixAchat?String(p.prixAchat):"");setCode(p.code||"");
     setStock(p.stock!=null?String(p.stock):"0");setAlertThreshold(p.alertThreshold!=null?String(p.alertThreshold):"5");
     setFamille(p.famille||"");setSousFamille(p.sousFamille||"");
   };
@@ -1571,8 +1596,10 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
           <div style={{fontWeight:900,fontSize:17,color:"#111"}}>📦 {t.manageProducts}</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
             <button onClick={()=>setShowFamManager(!showFamManager)}
-              style={{padding:"5px 10px",borderRadius:8,border:"1.5px solid #e5e7eb",fontSize:11,fontWeight:700,cursor:"pointer",
-                background:showFamManager?"#eff6ff":"#f9fafb",color:showFamManager?"#2563EB":"#6b7280"}}>
+              style={{padding:"6px 14px",borderRadius:10,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",
+                background:showFamManager?"#4f46e5":"linear-gradient(135deg,#6366f1,#8b5cf6)",
+                color:"#fff",boxShadow:showFamManager?"none":"0 2px 8px rgba(99,102,241,.4)",
+                display:"flex",alignItems:"center",gap:5}}>
               🗂 Familles
             </button>
             <button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
@@ -1672,10 +1699,25 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
             <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.6,marginBottom:10}}>
               {editing?"Modifier le produit":"Nouveau produit"}
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:8}}>
-              <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.productName} style={S.inp()}/>
-              <input type="text" inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value.replace(/[^0-9.]/g,""))} placeholder="Prix (DA)" style={S.inp()}/>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>💰 Prix d'achat (DA)</div>
+                <input type="text" inputMode="decimal" value={prixAchat} onChange={e=>setPrixAchat(e.target.value.replace(/[^0-9.]/g,""))} placeholder="0"
+                  style={S.inp({fontSize:15,fontWeight:700,borderColor:"#fde68a"})}/>
+              </div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>🏷 Prix de vente (DA)</div>
+                <input type="text" inputMode="decimal" value={price} onChange={e=>setPrice(e.target.value.replace(/[^0-9.]/g,""))} placeholder="0"
+                  style={S.inp({fontSize:15,fontWeight:700,borderColor:"#bfdbfe"})}/>
+              </div>
             </div>
+            {marge!==null&&(
+              <div style={{background:marge>0?"#ecfdf5":"#fef2f2",borderRadius:8,padding:"6px 12px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:12,color:"#6b7280"}}>Marge bénéficiaire</span>
+                <span style={{fontWeight:800,fontSize:14,color:marge>0?"#059669":"#dc2626"}}>{marge>0?"+":""}{marge}%</span>
+              </div>
+            )}
 
             {/* Famille (optionnel) */}
             {familles.length>0&&(
@@ -1731,7 +1773,7 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
               </div>
             </div>
             <div style={{display:"flex",gap:8}}>
-              {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");setFamille("");setSousFamille("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}}>{t.cancel}</button>}
+              {editing&&<button onClick={()=>{setEditing(null);setName("");setPrice("");setStock("");setFamille("");setSousFamille("");}} style={{flex:1,padding:10,background:"#fff",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:13,fontWeight:600,color:"#6b7280",cursor:"pointer"}} onClick={()=>{setEditing(null);setName("");setPrice("");setPrixAchat("");setStock("");setFamille("");setSousFamille("");}}>{t.cancel}</button>}
               <button onClick={submit} disabled={!ok} style={{flex:2,padding:10,background:ok?"#2563EB":"#e5e7eb",border:"none",borderRadius:10,fontSize:14,fontWeight:700,color:ok?"#fff":"#9ca3af",cursor:ok?"pointer":"default"}}>
                 {editing?"✓ Enregistrer":t.addNewProduct}
               </button>
@@ -1779,9 +1821,17 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
                 background:sc&&p.stock===0?"#fef2f2":sc&&p.stock<=5?"#fffbeb":"#f9fafb",
                 border:`1px solid ${sc&&p.stock===0?"#fecaca":sc&&p.stock<=5?"#fde68a":"#e5e7eb"}`}}>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:2}}>
+                      {p.autoCode&&<span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"#ede9fe",padding:"1px 7px",borderRadius:6,fontFamily:"monospace"}}>{p.autoCode}</span>}
+                      {p.ref&&<span style={{fontSize:10,fontWeight:700,color:"#0369a1",background:"#e0f2fe",padding:"1px 7px",borderRadius:6,fontFamily:"monospace"}}>{p.ref}</span>}
+                    </div>
+                  </div>
                   <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2,flexWrap:"wrap"}}>
-                    <span style={{fontSize:12,color:"#6b7280"}}>{fmt(p.price,lang)}</span>
+                    {p.prixAchat&&<span style={{fontSize:11,color:"#9ca3af"}}>Achat: {fmt(p.prixAchat,lang)}</span>}
+                    <span style={{fontSize:12,color:"#2563EB",fontWeight:700}}>Vente: {fmt(p.price,lang)}</span>
+                    {p.prixAchat&&p.price>p.prixAchat&&<span style={{fontSize:10,fontWeight:700,color:"#059669",background:"#ecfdf5",padding:"1px 7px",borderRadius:20}}>+{Math.round((p.price-p.prixAchat)/p.prixAchat*100)}%</span>}
                     {p.famille&&<span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"#ede9fe",padding:"1px 7px",borderRadius:20}}>🗂 {p.famille}{p.sousFamille?` › ${p.sousFamille}`:""}</span>}
                   </div>
                 </div>
@@ -1875,8 +1925,11 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
       const qty=parseFloat(l.qty)||1;
       const rem=parseFloat(l.remise)||0;
       const montant=pu*qty*(1-rem/100);
+      // البحث عن الكودين من قائمة المنتجات
+      const prod=bs?._products?.find?.(p=>p.name===l.name||p.id===l.productId);
+      const codeLabel=[l.autoCode||prod?.autoCode,l.ref||prod?.ref].filter(Boolean).join(" · ");
       return `<tr>
-        <td>${l.name}</td>
+        <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#94a3b8;font-family:monospace">${codeLabel}</span>`:""}</td>
         <td style="text-align:center">${qty}</td>
         <td style="text-align:center;font-size:11px;color:#64748b">${l.unite||"unité"}</td>
         <td style="text-align:right">${pu.toLocaleString()} DA</td>
@@ -3519,7 +3572,7 @@ function ReferralPanel({user,lang,onClose}){
 /* ═══════════════════════════════════════════════
    FOURNISSEURS TAB
 ═══════════════════════════════════════════════ */
-function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette,onAddVersement}){
+function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette,onAddVersement,onCreateProduct}){
   const t=T[lang];
   const [selected,setSelected]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -3551,6 +3604,7 @@ function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx
       onUpdateStock={onUpdateStock}
       onPayDette={(txId,montant)=>onPayDette(txId,montant,f.id)}
       onAddVersement={v=>onAddVersement&&onAddVersement(v)}
+      onCreateProduct={onCreateProduct}
     />;
   }
 
@@ -3661,7 +3715,7 @@ function FournisseurModal({existing,onSave,onClose,lang}){
   );
 }
 
-function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette,onAddVersement}){
+function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette,onAddVersement,onCreateProduct}){
   const [showAchat,setShowAchat]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [achatPaid,setAchatPaid]=useState(true);
@@ -3703,9 +3757,23 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
       lignes:validLines,
     };
     onAddAchat(tx);
+    // تحديث أو إنشاء المنتجات تلقائياً
     validLines.forEach(l=>{
       const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
-      if(prod&&parseFloat(l.qty)>0) onUpdateStock(prod.id,parseFloat(l.qty));
+      const qty=parseFloat(l.qty)||0;
+      const prixAchat=parseFloat(l.prix)||null;
+      if(prod){
+        // المنتج موجود — زد المخزون وحدّث سعر الشراء
+        onUpdateStock(prod.id, qty, prixAchat);
+      } else if(qty>0){
+        // المنتج غير موجود — أنشئه تلقائياً
+        onCreateProduct({
+          id:uid(), name:l.produit.trim(),
+          price:prixAchat||0, prixAchat:prixAchat,
+          stock:qty, alertThreshold:5,
+          famille:null, sousFamille:null
+        });
+      }
     });
     setLignes([{id:uid(),produit:"",qty:"",prix:""}]);
     setAchatDesc(""); setShowAchat(false);
@@ -3911,6 +3979,113 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
                       <span style={{fontWeight:700,fontSize:13,color:"#374151"}}>Total</span>
                       <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
                     </div>
+                    {/* زر Bon d'Entrée */}
+                    <button onClick={()=>{
+                      const rows=tx.lignes.map((l,i)=>`
+                        <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
+                          <td style="padding:10px 12px;font-size:13px;font-weight:600">${l.produit}</td>
+                          <td style="padding:10px 12px;font-size:13px;text-align:center">${l.qty}</td>
+                          <td style="padding:10px 12px;font-size:13px;text-align:center">${l.unite||"unité"}</td>
+                          <td style="padding:10px 12px;font-size:13px;text-align:right">${parseFloat(l.prix)>0?fmt(parseFloat(l.prix),lang):"—"}</td>
+                          <td style="padding:10px 12px;font-size:13px;text-align:right;font-weight:700">${parseFloat(l.prix)>0?fmt((parseFloat(l.prix)||0)*(parseFloat(l.qty)||1),lang):"—"}</td>
+                          <td style="padding:10px 12px;text-align:center"><div style="width:20px;height:20px;border:2px solid #94a3b8;border-radius:4px;display:inline-block"></div></td>
+                        </tr>`).join("");
+                      const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Bon d'Entrée</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;padding:32px;color:#1e293b}
+  .page{max-width:800px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #1e293b;margin-bottom:20px}
+  .badge{background:#0ea5e9;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
+  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-name{font-size:15px;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  thead tr{background:#1e293b;color:#fff}
+  th{padding:10px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th:not(:first-child){text-align:right} th:nth-child(2),th:nth-child(3),th:nth-child(6){text-align:center}
+  .total-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+  .sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
+  .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:14px;min-height:80px}
+  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:50px}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body><div class="page">
+
+<div class="header">
+  <div>
+    <div style="font-size:18px;font-weight:900;margin-bottom:4px">BON D'ENTRÉE</div>
+    <div style="font-size:13px;color:#64748b;font-family:monospace">N° BE-${tx.date?.replace(/-/g,"")}-${tx.id?.slice(-4)||"0001"}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:2px">Date : ${tx.date}</div>
+  </div>
+  <div class="badge">Bon d'Entrée</div>
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Fournisseur</div>
+    <div class="party-name">${fournisseur.name}</div>
+    ${fournisseur.phone?`<div style="font-size:12px;color:#64748b;margin-top:3px">📞 ${fournisseur.phone}</div>`:""}
+    ${fournisseur.adresse?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${fournisseur.adresse}</div>`:""}
+  </div>
+  <div class="party">
+    <div class="party-label">Réceptionné par</div>
+    <div class="party-name">${tx.companyName||"Notre société"}</div>
+    <div style="font-size:12px;color:#64748b;margin-top:3px">Date de réception : ${tx.date}</div>
+    <div style="font-size:11px;color:${tx.paid?"#059669":"#d97706"};font-weight:700;margin-top:4px">${tx.paid?"✓ Payé":"⏳ À payer"}</div>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Désignation</th>
+    <th style="text-align:center">Qté reçue</th>
+    <th style="text-align:center">Unité</th>
+    <th style="text-align:right">Prix unit.</th>
+    <th style="text-align:right">Montant</th>
+    <th style="text-align:center">Conforme ✓</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="total-box">
+  <span style="font-weight:700;font-size:14px;color:#374151">Total marchandises reçues</span>
+  <span style="font-weight:900;font-size:20px;color:#dc2626">${fmt(tx.amount,lang)}</span>
+</div>
+
+<div class="sign-section">
+  <div class="sign-box">
+    <div class="sign-label">Livreur / Fournisseur</div>
+    <div style="font-size:11px;color:#94a3b8">Signature & Cachet</div>
+    <div class="sign-line"></div>
+  </div>
+  <div class="sign-box">
+    <div class="sign-label">Réceptionnaire</div>
+    <div style="font-size:11px;color:#94a3b8">Signature & Cachet</div>
+    <div class="sign-line"></div>
+  </div>
+  <div class="sign-box">
+    <div class="sign-label">Responsable</div>
+    <div style="font-size:11px;color:#94a3b8">Visa & Approbation</div>
+    <div class="sign-line"></div>
+  </div>
+</div>
+
+<div class="footer">Document généré par Fawtara · Bon d'Entrée N° BE-${tx.date?.replace(/-/g,"")}-${tx.id?.slice(-4)||"0001"}</div>
+</div></body></html>`;
+                      const blob=new Blob([html],{type:"text/html"});
+                      const url=URL.createObjectURL(blob);
+                      window.open(url,"_blank");
+                      setTimeout(()=>URL.revokeObjectURL(url),10000);
+                    }}
+                      style={{marginTop:12,width:"100%",padding:"10px 0",background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                      📥 Imprimer Bon d'Entrée
+                    </button>
                   </>
                 ):(
                   <div style={{padding:"8px 0"}}>
@@ -4123,7 +4298,7 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
 }
 
 /* ═══ RAPPORT TAB COMPONENT ═══ */
-function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements}){
+function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements,products}){
   const [statFilter,setStatFilter]=useState(null);
   const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const mm=String(rapportMonth+1).padStart(2,"0");
@@ -4134,7 +4309,23 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
   const totalVersements=mVers.reduce((s,v)=>s+v.montant,0);
   const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0);
   const depenses=mTxs.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
-  const benefice=revenus+totalVersements-depenses;
+  const benefice=revenus-depenses;
+
+  // حساب هامش الربح من أسعار الفواتير الفعلية مقارنة بأسعار الشراء
+  let totalVente=0, totalAchatCorrespondant=0;
+  mInvs.forEach(inv=>{
+    inv.lines.forEach(l=>{
+      const qty=parseFloat(l.qty)||1;
+      const prixVente=parseFloat(l.price)||0; // السعر الفعلي في الفاتورة
+      const prod=products?.find(p=>p.name===l.name||p.id===l.productId);
+      const prixAchat=prod?.prixAchat||0;
+      totalVente+=prixVente*qty;
+      if(prixAchat>0) totalAchatCorrespondant+=prixAchat*qty;
+    });
+  });
+  const margeGlobale=totalAchatCorrespondant>0
+    ?Math.round((totalVente-totalAchatCorrespondant)/totalAchatCorrespondant*100)
+    :null;
   const attente=mTxs.filter(tx=>tx.type==="income"&&!tx.paid).reduce((s,tx)=>s+tx.amount,0);
   const nbInv=mInvs.length;
   const nbPaid=mInvs.filter(i=>i.payStatus==="paid").length;
@@ -4162,7 +4353,22 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
         <div style={{background:"#ecfdf5",borderRadius:14,padding:20,border:"1px solid #a7f3d0"}}><div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>REVENUS ENCAISSÉS</div><div style={{fontSize:26,fontWeight:900,color:"#059669"}}>{fmt(revenus,lang)}</div></div>
         <div style={{background:"#fef2f2",borderRadius:14,padding:20,border:"1px solid #fecaca"}}><div style={{fontSize:11,fontWeight:700,color:"#b91c1c",marginBottom:6}}>DÉPENSES</div><div style={{fontSize:26,fontWeight:900,color:"#dc2626"}}>{fmt(depenses,lang)}</div></div>
         {totalVersements>0&&<div style={{background:"#f0fdf4",borderRadius:14,padding:20,border:"1px solid #86efac"}}><div style={{fontSize:11,fontWeight:700,color:"#166534",marginBottom:6}}>💰 VERSEMENTS ({mVers.length})</div><div style={{fontSize:26,fontWeight:900,color:"#16a34a"}}>+{fmt(totalVersements,lang)}</div></div>}
-        <div style={{background:benefice>=0?"#eff6ff":"#fff7ed",borderRadius:14,padding:20,border:`1px solid ${benefice>=0?"#bfdbfe":"#fed7aa"}`,gridColumn:"1/-1"}}><div style={{fontSize:11,fontWeight:700,color:benefice>=0?"#1d4ed8":"#c2410c",marginBottom:6}}>BÉNÉFICE NET</div><div style={{fontSize:32,fontWeight:900,color:benefice>=0?"#2563EB":"#ea580c"}}>{benefice>=0?"+":""}{fmt(benefice,lang)}</div></div>
+        <div style={{background:benefice>=0?"#eff6ff":"#fff7ed",borderRadius:14,padding:20,border:`1px solid ${benefice>=0?"#bfdbfe":"#fed7aa"}`,gridColumn:"1/-1"}}>
+          <div style={{fontSize:11,fontWeight:700,color:benefice>=0?"#1d4ed8":"#c2410c",marginBottom:6}}>BÉNÉFICE NET</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:12}}>
+            <div style={{fontSize:32,fontWeight:900,color:benefice>=0?"#2563EB":"#ea580c"}}>{benefice>=0?"+":""}{fmt(benefice,lang)}</div>
+            {margeGlobale!==null&&(
+              <div style={{fontSize:14,fontWeight:700,color:margeGlobale>0?"#059669":"#dc2626",background:margeGlobale>0?"#ecfdf5":"#fef2f2",padding:"3px 10px",borderRadius:20}}>
+                Marge {margeGlobale>0?"+":""}{margeGlobale}%
+              </div>
+            )}
+          </div>
+          {margeGlobale!==null&&(
+            <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>
+              Vente réelle: {fmt(totalVente,lang)} · Coût achat: {fmt(totalAchatCorrespondant,lang)}
+            </div>
+          )}
+        </div>
       </div>
       <div style={S.card({marginBottom:16})}>
         <div style={{fontSize:12,fontWeight:700,color:"#374151",marginBottom:12}}>📊 Factures — {months[rapportMonth]}</div>
@@ -4404,6 +4610,7 @@ export default function App(){
   const delTx=id=>{const t2=txs.filter(x=>x.id!==id);setTxs(t2);persist({txs:t2});};
 
   const handleAddPayment=(newTx,invoiceId)=>{
+    // 1. حدّث الـ txs
     setTxs(prev=>{
       const unpaidTx=prev.find(x=>x.invoiceId===invoiceId&&!x.paid&&x.type==="income");
       let updated=prev;
@@ -4411,7 +4618,19 @@ export default function App(){
         const reste=unpaidTx.amount-newTx.amount;
         updated=reste<=0?prev.filter(x=>x.id!==unpaidTx.id):prev.map(x=>x.id===unpaidTx.id?{...x,amount:reste}:x);
       }
-      const t2=[newTx,...updated]; persist({txs:t2}); return t2;
+      const t2=[newTx,...updated];
+      // 2. حدّث الفاتورة بالتوازي
+      setInvoices(prevInv=>{
+        const inv2=prevInv.map(inv=>{
+          if(inv.id!==invoiceId) return inv;
+          const newPaid=(inv.paidAmount||0)+newTx.amount;
+          const payStatus=newPaid>=inv.total?"paid":"partial";
+          return {...inv,paidAmount:newPaid,payStatus};
+        });
+        persist({txs:t2,invoices:inv2});
+        return inv2;
+      });
+      return t2;
     });
     showToast(t.paymentSaved);
   };
@@ -4419,10 +4638,22 @@ export default function App(){
   const saveProduct=p=>{const p2=products.findIndex(x=>x.id===p.id)>=0?products.map(x=>x.id===p.id?p:x):[p,...products];setProducts(p2);persist({products:p2});};
   const delProduct=id=>{const p2=products.filter(x=>x.id!==id);setProducts(p2);persist({products:p2});};
   const delInvoice=id=>{
+    const inv=invoices.find(x=>x.id===id);
     const inv2=invoices.filter(x=>x.id!==id);
     const tx2=txs.filter(x=>x.invoiceId!==id);
+    // إعادة المخزون عند حذف الفاتورة
+    let prod2=products;
+    if(inv){
+      inv.lines.forEach(line=>{
+        const p=products.find(x=>x.name===line.name&&x.stock!=null);
+        if(p){
+          prod2=prod2.map(x=>x.id===p.id?{...x,stock:(x.stock||0)+(parseFloat(line.qty)||1)}:x);
+        }
+      });
+    }
     setInvoices(inv2); setTxs(tx2);
-    persist({invoices:inv2,txs:tx2});
+    if(prod2!==products) setProducts(prod2);
+    persist({invoices:inv2,txs:tx2,products:prod2});
     showToast("Facture supprimée ✓");
   };
 
@@ -4834,9 +5065,21 @@ export default function App(){
             }}
             onDelete={id=>{const f2=fournisseurs.filter(x=>x.id!==id);setFournisseurs(f2);persist({fournisseurs:f2});}}
             onAddTx={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});showToast("Achat enregistré ✓");}}
-            onUpdateStock={(prodId,qty)=>{
-              const p2=products.map(p=>p.id===prodId?{...p,stock:(p.stock||0)+qty}:p);
+            onUpdateStock={(prodId,qty,prixAchat)=>{
+              const p2=products.map(p=>p.id===prodId?{
+                ...p,
+                stock:(p.stock||0)+qty,
+                // حدّث سعر الشراء إذا تغيّر
+                ...(prixAchat&&prixAchat>0?{prixAchat}:{})
+              }:p);
               setProducts(p2);persist({products:p2});
+            }}
+            onCreateProduct={p=>{
+              // تحقق أن المنتج غير موجود قبل إضافته
+              if(products.find(x=>x.name.toLowerCase()===p.name.toLowerCase())) return;
+              const p2=[p,...products];
+              setProducts(p2);persist({products:p2});
+              showToast(`Produit "${p.name}" créé automatiquement ✓`);
             }}
             onPayDette={(txId,montant,fournisseurId)=>{
               const t2=txs.map(tx=>{
@@ -4849,6 +5092,11 @@ export default function App(){
               showToast("Paiement enregistré ✓");
             }}
             onAddVersement={v=>{const v2=[v,...versements];setVersements(v2);persist({versements:v2});showToast("Versement enregistré ✓");}}
+            onCreateProduct={p=>{
+              if(products.find(x=>x.name.toLowerCase()===p.name.toLowerCase())) return;
+              const p2=[p,...products];setProducts(p2);persist({products:p2});
+              showToast(`Produit "${p.name}" créé ✓`);
+            }}
             products={products}
           />
         )}
@@ -4875,6 +5123,7 @@ export default function App(){
             rapportYear={rapportYear} setRapportYear={setRapportYear}
             setPreviewInvoice={setPreviewInvoice}
             versements={versements}
+            products={products}
           />
         )}
       </div>{/* end CONTENT */}
@@ -4941,8 +5190,8 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={bizSettings} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
