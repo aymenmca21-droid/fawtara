@@ -1700,6 +1700,14 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
               {editing?"Modifier le produit":"Nouveau produit"}
             </div>
 
+            {/* اسم المنتج */}
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>📦 Nom du produit *</div>
+              <input value={name} onChange={e=>setName(e.target.value)}
+                placeholder="Ex: Semoule 50kg, PC HP..."
+                style={{...S.inp({fontSize:15,fontWeight:600,borderColor:name?"#2563EB":"#e5e7eb",borderWidth:"2px"}),width:"100%"}}/>
+            </div>
+
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
               <div>
                 <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>💰 Prix d'achat (DA)</div>
