@@ -1212,6 +1212,7 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
                   onMouseEnter={e=>e.currentTarget.style.background="#f9fafb"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
                   <div>
                     <span style={{fontSize:13,fontWeight:600,color:"#111"}}>{p.name}</span>
+                    {p.isCarton&&p.cartonQte&&<span style={{fontSize:10,color:"#2563EB",marginLeft:4,fontWeight:600}}>📦 ×{p.cartonQte} {p.cartonUnite}</span>}
                     <div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap"}}>
                       {p.autoCode&&<span style={{fontSize:9,color:"#6366f1",fontFamily:"monospace",background:"#ede9fe",padding:"0 5px",borderRadius:4}}>{p.autoCode}</span>}
                       {p.ref&&<span style={{fontSize:9,color:"#0369a1",fontFamily:"monospace",background:"#e0f2fe",padding:"0 5px",borderRadius:4}}>{p.ref}</span>}
@@ -1751,7 +1752,46 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
               </div>
             )}
 
-            {/* Stock */}
+            {/* نظام الصناديق */}
+            <div style={{marginBottom:10,padding:"10px 12px",background:isCarton?"#eff6ff":"#f9fafb",borderRadius:10,border:`1.5px solid ${isCarton?"#2563EB":"#e5e7eb"}`}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:isCarton?10:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:16}}>📦</span>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#374151"}}>Vente en carton / lot</div>
+                    <div style={{fontSize:10,color:"#9ca3af"}}>Ex: 1 carton = 6 bouteilles</div>
+                  </div>
+                </div>
+                <button onClick={()=>setIsCarton(!isCarton)}
+                  style={{padding:"4px 12px",borderRadius:20,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",
+                    background:isCarton?"#2563EB":"#e5e7eb",color:isCarton?"#fff":"#6b7280"}}>
+                  {isCarton?"✓ Activé":"Activer"}
+                </button>
+              </div>
+              {isCarton&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>Qté par carton</div>
+                    <input type="text" inputMode="numeric" value={cartonQte}
+                      onChange={e=>setCartonQte(e.target.value.replace(/[^0-9]/g,""))}
+                      placeholder="Ex: 6, 12, 24..."
+                      style={{...S.inp({fontSize:15,fontWeight:700,borderColor:"#2563EB"}),width:"100%"}}/>
+                    {cartonQte&&price&&<div style={{fontSize:10,color:"#059669",marginTop:3,fontWeight:600}}>
+                      Prix carton = {fmt((parseFloat(price)||0)*(parseInt(cartonQte)||1),lang)}
+                    </div>}
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>Unité contenu</div>
+                    <select value={cartonUnite} onChange={e=>setCartonUnite(e.target.value)}
+                      style={{...S.inp({fontSize:13}),width:"100%"}}>
+                      {["unité","pièce","kg","g","litre","ml","m","boîte","sachet","tube"].map(u=>
+                        <option key={u} value={u}>{u}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:5}}>📦 Stock actuel</div>
@@ -1830,7 +1870,9 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
                 border:`1px solid ${sc&&p.stock===0?"#fecaca":sc&&p.stock<=5?"#fde68a":"#e5e7eb"}`}}>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}</div>
+                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{p.name}
+                      {p.isCarton&&p.cartonQte&&<span style={{fontSize:10,fontWeight:700,color:"#2563EB",background:"#eff6ff",padding:"1px 7px",borderRadius:20,marginLeft:6}}>📦 ×{p.cartonQte} {p.cartonUnite}</span>}
+                    </div>
                     <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:2}}>
                       {p.autoCode&&<span style={{fontSize:10,fontWeight:700,color:"#6366f1",background:"#ede9fe",padding:"1px 7px",borderRadius:6,fontFamily:"monospace"}}>{p.autoCode}</span>}
                       {p.ref&&<span style={{fontSize:10,fontWeight:700,color:"#0369a1",background:"#e0f2fe",padding:"1px 7px",borderRadius:6,fontFamily:"monospace"}}>{p.ref}</span>}
@@ -1958,46 +2000,46 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
 <title>Facture ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#1e293b;padding:32px}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#000;padding:32px}
   .page{max-width:740px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #1e293b;margin-bottom:20px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #000;margin-bottom:20px}
   .logo-block img{height:56px;max-width:150px;object-fit:contain;margin-bottom:8px;display:block}
-  .company-name{font-size:18px;font-weight:900;color:#1e293b;margin-bottom:5px}
-  .company-info{font-size:10.5px;color:#64748b;line-height:1.9}
+  .company-name{font-size:18px;font-weight:900;color:#000;margin-bottom:5px}
+  .company-info{font-size:10.5px;color:#333;line-height:1.9}
   .company-info span{display:block}
   .inv-block{text-align:right}
-  .inv-title{font-size:28px;font-weight:900;color:#1e293b;letter-spacing:-1px;margin-bottom:4px}
-  .inv-number{font-size:13px;color:#64748b;font-family:monospace;margin-bottom:4px}
-  .inv-date{font-size:12px;color:#64748b;margin-bottom:2px}
+  .inv-title{font-size:28px;font-weight:900;color:#000;letter-spacing:-1px;margin-bottom:4px}
+  .inv-number{font-size:13px;color:#333;font-family:monospace;margin-bottom:4px}
+  .inv-date{font-size:12px;color:#333;margin-bottom:2px}
   .badge{display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px;border:1.5px solid}
   .badge-paid{border-color:#059669;color:#059669}
   .badge-unpaid{border-color:#dc2626;color:#dc2626}
   .badge-partial{border-color:#d97706;color:#d97706}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-  .party-block{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-  .party-name{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px}
-  .party-info{font-size:10.5px;color:#64748b;line-height:1.9;font-family:monospace}
+  .party-block{padding:12px 14px;background:#fff;border-radius:4px;border:1.5px solid #000}
+  .party-label{font-size:9px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .party-name{font-size:15px;font-weight:700;color:#000;margin-bottom:4px}
+  .party-info{font-size:10.5px;color:#333;line-height:1.9;font-family:monospace}
   .party-info span{display:block}
   table{width:100%;border-collapse:collapse;margin-bottom:16px}
-  thead tr{border-bottom:2px solid #1e293b}
-  th{font-size:9.5px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;padding:8px 8px;text-align:left}
-  tbody tr{border-bottom:1px solid #e2e8f0}
-  td{padding:9px 8px;font-size:13px;color:#1e293b}
+  thead tr{border-bottom:2px solid #000;border-top:1px solid #000}
+  th{font-size:9.5px;color:#000;text-transform:uppercase;letter-spacing:.8px;padding:8px 8px;text-align:left;font-weight:700}
+  tbody tr{border-bottom:1px solid #ccc}
+  td{padding:9px 8px;font-size:13px;color:#000}
   .tc{text-align:center}
   .tr{text-align:right;font-weight:600}
-  .totals{border:1.5px solid #e2e8f0;border-radius:6px;padding:14px 18px;margin-bottom:14px}
-  .tl{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#64748b}
-  .tl.sep{border-top:1px solid #e2e8f0;margin-top:6px;padding-top:10px}
-  .tl.main{font-size:17px;font-weight:900;color:#1e293b;border-top:2px solid #1e293b;margin-top:6px;padding-top:10px}
-  .lettres{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#374151}
-  .pr{display:flex;justify-content:space-between;padding:7px 10px;border:1px solid #e2e8f0;border-radius:4px;margin-bottom:4px;font-size:12px}
+  .totals{border:1.5px solid #000;border-radius:4px;padding:14px 18px;margin-bottom:14px}
+  .tl{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#333}
+  .tl.sep{border-top:1px solid #ccc;margin-top:6px;padding-top:10px}
+  .tl.main{font-size:17px;font-weight:900;color:#000;border-top:2px solid #000;margin-top:6px;padding-top:10px}
+  .lettres{background:#fff;border:1px solid #000;border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#000}
+  .pr{display:flex;justify-content:space-between;padding:7px 10px;border:1px solid #ccc;border-radius:4px;margin-bottom:4px;font-size:12px}
   .pr .pamt{font-weight:700;color:#059669}
-  .rr{display:flex;justify-content:space-between;padding:9px 12px;border:1.5px solid #1e293b;border-radius:4px;margin-top:6px}
+  .rr{display:flex;justify-content:space-between;padding:9px 12px;border:1.5px solid #000;border-radius:4px;margin-top:6px}
   .rr.clear{border-color:#059669}
-  .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #e2e8f0;display:flex;justify-content:space-between;align-items:flex-end}
-  .footer-legal{font-size:9.5px;color:#94a3b8;line-height:1.9;font-family:monospace}
-  .footer-brand{font-size:10px;color:#94a3b8;text-align:right}
+  .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #000;display:flex;justify-content:space-between;align-items:flex-end}
+  .footer-legal{font-size:9.5px;color:#333;line-height:1.9;font-family:monospace}
+  .footer-brand{font-size:10px;color:#333;text-align:right}
   @media print{body{padding:20px}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
@@ -4668,7 +4710,9 @@ export default function App(){
       inv.lines.forEach(line=>{
         const p=products.find(x=>x.name===line.name&&x.stock!=null);
         if(p){
-          prod2=prod2.map(x=>x.id===p.id?{...x,stock:(x.stock||0)+(parseFloat(line.qty)||1)}:x);
+          const qtyLine=parseFloat(line.qty)||1;
+          const restore=p.isCarton&&p.cartonQte?qtyLine*(p.cartonQte):qtyLine;
+          prod2=prod2.map(x=>x.id===p.id?{...x,stock:(x.stock||0)+restore}:x);
         }
       });
     }
@@ -4711,7 +4755,10 @@ export default function App(){
     invoice.lines.forEach(line=>{
       const p=products.find(x=>x.name===line.name&&x.stock!=null);
       if(p){
-        const newStock=Math.max(0,p.stock-(parseFloat(line.qty)||1));
+        // إذا كان المنتج صندوق — ننقص qty × cartonQte وحدات
+        const qtyLine=parseFloat(line.qty)||1;
+        const deduct=p.isCarton&&p.cartonQte?qtyLine*(p.cartonQte):qtyLine;
+        const newStock=Math.max(0,p.stock-deduct);
         prod2=prod2.map(x=>x.id===p.id?{...x,stock:newStock}:x);
       }
     });
