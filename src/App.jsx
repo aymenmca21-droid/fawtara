@@ -1537,7 +1537,16 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 ═══════════════════════════════════════════════ */
 function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSaveBizSettings}){
   const t=T[lang],rtl=lang==="ar";
-  const [name,setName]=useState(""), [price,setPrice]=useState(""), [prixAchat,setPrixAchat]=useState(""), [code,setCode]=useState(""), [stock,setStock]=useState("0"), [alertThreshold,setAlertThreshold]=useState("5"), [editing,setEditing]=useState(null);
+  const [name,setName]=useState("");
+  const [price,setPrice]=useState("");
+  const [prixAchat,setPrixAchat]=useState("");
+  const [ref,setRef]=useState("");
+  const [stock,setStock]=useState("0");
+  const [alertThreshold,setAlertThreshold]=useState("5");
+  const [editing,setEditing]=useState(null);
+  const [isCarton,setIsCarton]=useState(false);
+  const [cartonQte,setCartonQte]=useState("");
+  const [cartonUnite,setCartonUnite]=useState("unité");
   const [famille,setFamille]=useState("");
   const [sousFamille,setSousFamille]=useState("");
   const [filter,setFilter]=useState("all");
