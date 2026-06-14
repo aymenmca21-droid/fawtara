@@ -1567,11 +1567,12 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
     const stockVal=stock?parseInt(stock):0;
     const alertVal=alertThreshold?parseInt(alertThreshold):5;
     onSave({id:editing||uid(),name:name.trim(),code:code.trim()||null,price:parseFloat(price),prixAchat:prixAchat?parseFloat(prixAchat):null,stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null});
-    setName("");setPrice("");setPrixAchat("");setCode("");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
+    setName("");setPrice("");setPrixAchat("");setRef("");setIsCarton(false);setCartonQte("");setCartonUnite("unité");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
   };
   const startEdit=p=>{
     setEditing(p.id);setName(p.name);setPrice(String(p.price));
-    setPrixAchat(p.prixAchat?String(p.prixAchat):"");setCode(p.code||"");
+    setPrixAchat(p.prixAchat?String(p.prixAchat):"");setRef(p.ref||"");
+    setIsCarton(p.isCarton||false);setCartonQte(p.cartonQte?String(p.cartonQte):"");setCartonUnite(p.cartonUnite||"unité");
     setStock(p.stock!=null?String(p.stock):"0");setAlertThreshold(p.alertThreshold!=null?String(p.alertThreshold):"5");
     setFamille(p.famille||"");setSousFamille(p.sousFamille||"");
   };
