@@ -1566,7 +1566,8 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
     if(!ok)return;
     const stockVal=stock?parseInt(stock):0;
     const alertVal=alertThreshold?parseInt(alertThreshold):5;
-    onSave({id:editing||uid(),name:name.trim(),code:code.trim()||null,price:parseFloat(price),prixAchat:prixAchat?parseFloat(prixAchat):null,stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null});
+    const autoCode=editing?products.find(p=>p.id===editing)?.autoCode:`P-${String((products.length+1)).padStart(4,"0")}`;
+    onSave({id:editing||uid(),name:name.trim(),autoCode,ref:ref.trim()||null,price:parseFloat(price),prixAchat:prixAchat?parseFloat(prixAchat):null,stock:stockVal,alertThreshold:alertVal,famille:famille||null,sousFamille:sousFamille||null,isCarton:isCarton||false,cartonQte:isCarton?(parseInt(cartonQte)||1):null,cartonUnite:isCarton?cartonUnite:null});
     setName("");setPrice("");setPrixAchat("");setRef("");setIsCarton(false);setCartonQte("");setCartonUnite("unité");setStock("");setAlertThreshold("5");setEditing(null);setFamille("");setSousFamille("");
   };
   const startEdit=p=>{
