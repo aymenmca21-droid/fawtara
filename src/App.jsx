@@ -4766,7 +4766,14 @@ export default function App(){
     setUser(userInfo);
     setTxs(data.txs||[]);
     setProducts(data.products||[]);
-    setInvoices(data.invoices||[]);
+    // إصلاح تلقائي للفواتير القديمة — paidAmount يساوي total عند payStatus paid
+    const fixedInvoices=(data.invoices||[]).map(inv=>{
+      if(inv.payStatus==="paid"&&inv.paidAmount!==inv.total){
+        return {...inv,paidAmount:inv.total};
+      }
+      return inv;
+    });
+    setInvoices(fixedInvoices);
     setCustomers(data.customers||[]);
     setFournisseurs(data.fournisseurs||[]);
     setVersements(data.versements||[]);
