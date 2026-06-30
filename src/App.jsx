@@ -1290,6 +1290,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const [echeance,setEcheance]=useState(editing?.echeance||"");
   const [notes,setNotes]=useState(src?.notes||"");
   const [showMore,setShowMore]=useState(false);
+  const [invoiceDate,setInvoiceDate]=useState(editing?.date||src?.date||today());
   const [showAdvancePrompt,setShowAdvancePrompt]=useState(false);
   const [advanceUsed,setAdvanceUsed]=useState(false);
 
@@ -1330,7 +1331,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     const prefix=bizSettings?.invPrefix||"FAC";
     const counter=String(bizSettings?.invCounter||1).padStart(4,"0");
     const invId=editing?editing.id:`${prefix}-${year}-${counter}`;
-    const invoiceDate=editing?editing.date:today();
+    // invoiceDate مأخوذ من الـ state
 
     let finalPayStatus=payStatus;
     let finalPaidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
@@ -1446,6 +1447,13 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
           {total>0&&<div style={{background:"#f9fafb",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,color:"#6b7280",fontWeight:600}}>{t.subtotal}</span><span style={{fontSize:20,fontWeight:900,color:"#111"}}>{fmt(total,lang)}</span></div>}
           {/* Payment */}
           <div>
+            {/* تاريخ الفاتورة */}
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>📅 Date de la facture</div>
+              <input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)}
+                style={{...S.inp({fontSize:14,fontWeight:600}),width:"100%"}}/>
+            </div>
+
             <div style={{fontSize:11,fontWeight:700,color:"#9ca3af",textTransform:"uppercase",letterSpacing:.8,marginBottom:8}}>{t.payStatus}</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
               {[["paid","#ecfdf5","#10B981","#065f46"],["partial","#fffbeb","#f59e0b","#92400e"],["unpaid","#fef2f2","#ef4444","#b91c1c"]].map(([s,bg,border,tc])=>(
@@ -3633,7 +3641,7 @@ function ReferralPanel({user,lang,onClose}){
 /* ═══════════════════════════════════════════════
    FOURNISSEURS TAB
 ═══════════════════════════════════════════════ */
-function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette,onAddVersement,onCreateProduct}){
+function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx,onUpdateStock,onPayDette,onAddVersement,onCreateProduct,onUpdateAchat}){
   const t=T[lang];
   const [selected,setSelected]=useState(null);
   const [showForm,setShowForm]=useState(false);
@@ -3666,6 +3674,8 @@ function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx
       onPayDette={(txId,montant)=>onPayDette(txId,montant,f.id)}
       onAddVersement={v=>onAddVersement&&onAddVersement(v)}
       onCreateProduct={onCreateProduct}
+      onUpdateAchat={(newTx,oldTx)=>onUpdateAchat&&onUpdateAchat(newTx,oldTx)}
+      onEditAchat={onEditAchat}
     />;
   }
 
@@ -3776,7 +3786,7 @@ function FournisseurModal({existing,onSave,onClose,lang}){
   );
 }
 
-function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette,onAddVersement,onCreateProduct}){
+function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete,onAddAchat,onUpdateStock,onPayDette,onAddVersement,onCreateProduct,onUpdateAchat}){
   const [showAchat,setShowAchat]=useState(false);
   const [confirmDel,setConfirmDel]=useState(false);
   const [achatPaid,setAchatPaid]=useState(true);
@@ -3786,6 +3796,9 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   const [payModal,setPayModal]=useState(null); // tx à payer
   const [payAmt,setPayAmt]=useState("");
   const [showVersement,setShowVersement]=useState(false);
+  const [editingAchat,setEditingAchat]=useState(null);
+
+  const [achatDate,setAchatDate]=useState(today());
 
   const totalAchats=txs.reduce((s,tx)=>s+tx.amount,0);
   const totalPaye=txs.filter(tx=>tx.paid).reduce((s,tx)=>s+tx.amount,0);
@@ -3804,40 +3817,62 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   // يكفي أن يكون هناك منتج بكمية — السعر اختياري
   const canSubmit=lignes.some(l=>l.produit.trim()&&parseFloat(l.qty)>0);
 
+  const startEditAchat=tx=>{
+    setEditingAchat(tx);
+    setLignes(tx.lignes.map(l=>({...l,id:uid()})));
+    setAchatDesc(tx.desc&&tx.desc!==tx.lignes.map(l=>l.produit).join(", ")?tx.desc:"");
+    setAchatPaid(tx.paid);
+    setAchatDate(tx.date);
+    setShowAchat(true);
+    setSelectedTx(null);
+  };
+
   const submitAchat=()=>{
     if(!canSubmit) return;
     const validLines=lignes.filter(l=>l.produit.trim()&&parseFloat(l.qty)>0);
     const montant=validLines.reduce((s,l)=>s+(parseFloat(l.prix)||0)*(parseFloat(l.qty)||1),0);
     if(montant<=0&&totalCalc<=0){alert("Veuillez saisir un prix pour au moins un produit");return;}
-    const tx={
-      id:uid(), type:"expense",
-      amount:montant,
-      desc:achatDesc||validLines.map(l=>l.produit).join(", "),
-      client:fournisseur.name, date:today(), paid:achatPaid,
-      fournisseurId:fournisseur.id,
-      lignes:validLines,
-    };
-    onAddAchat(tx);
-    // تحديث أو إنشاء المنتجات تلقائياً
-    validLines.forEach(l=>{
-      const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
-      const qty=parseFloat(l.qty)||0;
-      const prixAchat=parseFloat(l.prix)||null;
-      if(prod){
-        // المنتج موجود — زد المخزون وحدّث سعر الشراء
-        onUpdateStock(prod.id, qty, prixAchat);
-      } else if(qty>0){
-        // المنتج غير موجود — أنشئه تلقائياً
-        onCreateProduct({
-          id:uid(), name:l.produit.trim(),
-          price:prixAchat||0, prixAchat:prixAchat,
-          stock:qty, alertThreshold:5,
-          famille:null, sousFamille:null
-        });
-      }
-    });
+
+    if(editingAchat){
+      // تعديل شراء موجود — يحتفظ بنفس الـ id والتاريخ القديم إذا لم يُغيَّر
+      const tx={
+        ...editingAchat,
+        amount:montant,
+        desc:achatDesc||validLines.map(l=>l.produit).join(", "),
+        paid:achatPaid, date:achatDate,
+        lignes:validLines,
+      };
+      onUpdateAchat(tx, editingAchat);
+      setEditingAchat(null);
+    } else {
+      const tx={
+        id:uid(), type:"expense",
+        amount:montant,
+        desc:achatDesc||validLines.map(l=>l.produit).join(", "),
+        client:fournisseur.name, date:achatDate, paid:achatPaid,
+        fournisseurId:fournisseur.id,
+        lignes:validLines,
+      };
+      onAddAchat(tx);
+      // تحديث أو إنشاء المنتجات تلقائياً
+      validLines.forEach(l=>{
+        const prod=products.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
+        const qty=parseFloat(l.qty)||0;
+        const prixAchat=parseFloat(l.prix)||null;
+        if(prod){
+          onUpdateStock(prod.id, qty, prixAchat);
+        } else if(qty>0){
+          onCreateProduct({
+            id:uid(), name:l.produit.trim(),
+            price:prixAchat||0, prixAchat:prixAchat,
+            stock:qty, alertThreshold:5,
+            famille:null, sousFamille:null
+          });
+        }
+      });
+    }
     setLignes([{id:uid(),produit:"",qty:"",prix:""}]);
-    setAchatDesc(""); setShowAchat(false);
+    setAchatDesc(""); setShowAchat(false); setAchatDate(today());
   };
 
   return(
@@ -3857,6 +3892,59 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
         onSave={v=>{if(onAddVersement)onAddVersement(v);setShowVersement(false);}}
         onClose={()=>setShowVersement(false)} lang={lang}
       />}
+
+      {/* Modal تعديل الشراء */}
+      {editingAchat&&(
+        <div onClick={()=>setEditingAchat(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300,backdropFilter:"blur(6px)"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"85svh",display:"flex",flexDirection:"column",animation:"up .22s cubic-bezier(.22,1,.36,1)"}}>
+            <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+              <div style={{fontWeight:900,fontSize:16,color:"#111"}}>✏️ Modifier l'achat</div>
+              <button onClick={()=>setEditingAchat(null)} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280"}}>×</button>
+            </div>
+            <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
+              {/* سطور المنتجات */}
+              {lignes.map((l,i)=>(
+                <div key={l.id} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr auto",gap:6,marginBottom:8,alignItems:"center"}}>
+                  <input value={l.produit} onChange={e=>setLignes(p=>p.map(x=>x.id===l.id?{...x,produit:e.target.value}:x))}
+                    placeholder="Produit..." style={S.inp({fontSize:13})}/>
+                  <input type="text" inputMode="decimal" value={l.qty} onChange={e=>setLignes(p=>p.map(x=>x.id===l.id?{...x,qty:e.target.value.replace(/[^0-9.]/g,"")}:x))}
+                    placeholder="Qté" style={S.inp({fontSize:13,textAlign:"center"})}/>
+                  <input type="text" inputMode="decimal" value={l.prix} onChange={e=>setLignes(p=>p.map(x=>x.id===l.id?{...x,prix:e.target.value.replace(/[^0-9.]/g,"")}:x))}
+                    placeholder="Prix" style={S.inp({fontSize:13,textAlign:"right"})}/>
+                  {lignes.length>1&&<button onClick={()=>setLignes(p=>p.filter(x=>x.id!==l.id))} style={{background:"none",border:"none",color:"#fca5a5",fontSize:18,cursor:"pointer"}}>×</button>}
+                </div>
+              ))}
+              <button onClick={()=>setLignes(p=>[...p,{id:uid(),produit:"",qty:"",prix:""}])}
+                style={{width:"100%",padding:10,background:"#f9fafb",border:"1.5px dashed #e5e7eb",borderRadius:10,fontSize:13,color:"#6b7280",cursor:"pointer",marginBottom:12}}>
+                + Ajouter un produit
+              </button>
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <button onClick={()=>setAchatPaid(true)}
+                  style={{flex:1,padding:10,borderRadius:10,border:`1.5px solid ${achatPaid?"#059669":"#e5e7eb"}`,background:achatPaid?"#ecfdf5":"#fff",color:achatPaid?"#059669":"#6b7280",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                  ✓ Payé
+                </button>
+                <button onClick={()=>setAchatPaid(false)}
+                  style={{flex:1,padding:10,borderRadius:10,border:`1.5px solid ${!achatPaid?"#dc2626":"#e5e7eb"}`,background:!achatPaid?"#fef2f2":"#fff",color:!achatPaid?"#dc2626":"#6b7280",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+                  ⏳ À payer
+                </button>
+              </div>
+            </div>
+            <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0}}>
+              <button onClick={()=>{
+                const validLines=lignes.filter(l=>l.produit.trim()&&parseFloat(l.qty)>0);
+                if(!validLines.length) return;
+                const montant=validLines.reduce((s,l)=>s+(parseFloat(l.prix)||0)*(parseFloat(l.qty)||1),0);
+                const updTx={...editingAchat,lignes:validLines,amount:montant,paid:achatPaid};
+                if(onEditAchat) onEditAchat(updTx);
+                setEditingAchat(null);
+              }}
+                style={{width:"100%",padding:14,background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                ✓ Enregistrer les modifications
+              </button>
+            </div>
+          </div>
+        </div>
+      )}}
 
       {/* Infos fournisseur */}
       <div style={S.card({marginBottom:16})}>
@@ -3905,7 +3993,18 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
       {/* فورم الشراء — متعدد المنتجات */}
       {showAchat&&(
         <div style={{background:"#eff6ff",borderRadius:14,padding:16,marginBottom:16,border:"1.5px solid #bfdbfe",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>🛒 Nouvel achat</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#1d4ed8"}}>{editingAchat?"✏️ Modifier l'achat":"🛒 Nouvel achat"}</div>
+            {editingAchat&&<button onClick={()=>{setEditingAchat(null);setLignes([{id:uid(),produit:"",qty:"",prix:""}]);setAchatDesc("");setAchatDate(today());setShowAchat(false);}}
+              style={{background:"none",border:"none",color:"#9ca3af",fontSize:12,cursor:"pointer"}}>Annuler</button>}
+          </div>
+
+          {/* تاريخ الشراء */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>📅 Date</div>
+            <input type="date" value={achatDate} onChange={e=>setAchatDate(e.target.value)}
+              style={{...S.inp({fontSize:13}),width:"100%"}}/>
+          </div>
 
           {/* رأس الجدول */}
           <div style={{display:"grid",gridTemplateColumns:"2fr 60px 80px 24px",gap:6,marginBottom:6}}>
@@ -3971,7 +4070,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
             <button onClick={submitAchat} disabled={!canSubmit}
               style={{flex:canSubmit?2:1,padding:"12px",borderRadius:11,border:"none",fontSize:14,fontWeight:800,color:"#fff",
                 background:canSubmit?"#2563EB":"#e5e7eb",cursor:canSubmit?"pointer":"default"}}>
-              Enregistrer
+              {editingAchat?"✓ Enregistrer les modifications":"Enregistrer"}
             </button>
           </div>
         </div>
@@ -4040,8 +4139,13 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
                       <span style={{fontWeight:700,fontSize:13,color:"#374151"}}>Total</span>
                       <span style={{fontWeight:900,fontSize:14,color:"#dc2626"}}>–{fmt(tx.amount,lang)}</span>
                     </div>
-                    {/* زر Bon d'Entrée */}
-                    <button onClick={()=>{
+                    {/* أزرار Bon d'Entrée + Modifier */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12}}>
+                      <button onClick={()=>startEditAchat(tx)}
+                        style={{padding:"10px 0",background:"#fffbeb",color:"#92400e",border:"1.5px solid #fde68a",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        ✏️ Modifier
+                      </button>
+                      <button onClick={()=>{
                       const rows=tx.lignes.map((l,i)=>`
                         <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                           <td style="padding:10px 12px;font-size:13px;font-weight:600">${l.produit}</td>
@@ -4144,9 +4248,10 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
                       window.open(url,"_blank");
                       setTimeout(()=>URL.revokeObjectURL(url),10000);
                     }}
-                      style={{marginTop:12,width:"100%",padding:"10px 0",background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                      📥 Imprimer Bon d'Entrée
-                    </button>
+                        style={{padding:"10px 0",background:"#0ea5e9",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                        📥 Bon d'Entrée
+                      </button>
+                    </div>
                   </>
                 ):(
                   <div style={{padding:"8px 0"}}>
@@ -5144,6 +5249,31 @@ export default function App(){
             }}
             onDelete={id=>{const f2=fournisseurs.filter(x=>x.id!==id);setFournisseurs(f2);persist({fournisseurs:f2});}}
             onAddTx={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});showToast("Achat enregistré ✓");}}
+            onUpdateAchat={(newTx,oldTx)=>{
+              // 1. عكس تأثير الشراء القديم على المخزون
+              let p2=products;
+              (oldTx.lignes||[]).forEach(l=>{
+                const prod=p2.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
+                if(prod) p2=p2.map(p=>p.id===prod.id?{...p,stock:Math.max(0,(p.stock||0)-(parseFloat(l.qty)||0))}:p);
+              });
+              // 2. طبّق تأثير الشراء الجديد على المخزون
+              (newTx.lignes||[]).forEach(l=>{
+                const qty=parseFloat(l.qty)||0;
+                const prixAchat=parseFloat(l.prix)||null;
+                const prod=p2.find(p=>p.name.toLowerCase()===l.produit.toLowerCase());
+                if(prod){
+                  p2=p2.map(p=>p.id===prod.id?{...p,stock:(p.stock||0)+qty,...(prixAchat>0?{prixAchat}:{})}:p);
+                } else if(qty>0){
+                  p2=[{id:uid(),name:l.produit.trim(),price:prixAchat||0,prixAchat,stock:qty,alertThreshold:5,famille:null,sousFamille:null},...p2];
+                }
+              });
+              setProducts(p2);
+              // 3. حدّث الـ tx نفسها
+              const t2=txs.map(tx=>tx.id===oldTx.id?newTx:tx);
+              setTxs(t2);
+              persist({txs:t2,products:p2});
+              showToast("Achat modifié ✓");
+            }}
             onUpdateStock={(prodId,qty,prixAchat)=>{
               const p2=products.map(p=>p.id===prodId?{
                 ...p,
@@ -5175,6 +5305,11 @@ export default function App(){
               if(products.find(x=>x.name.toLowerCase()===p.name.toLowerCase())) return;
               const p2=[p,...products];setProducts(p2);persist({products:p2});
               showToast(`Produit "${p.name}" créé ✓`);
+            }}
+            onEditAchat={updTx=>{
+              const t2=txs.map(t=>t.id===updTx.id?updTx:t);
+              setTxs(t2);persist({txs:t2});
+              showToast("Achat modifié ✓");
             }}
             products={products}
           />
