@@ -3675,7 +3675,6 @@ function FournisseursTab({fournisseurs,txs,products,lang,onSave,onDelete,onAddTx
       onAddVersement={v=>onAddVersement&&onAddVersement(v)}
       onCreateProduct={onCreateProduct}
       onUpdateAchat={(newTx,oldTx)=>onUpdateAchat&&onUpdateAchat(newTx,oldTx)}
-      onEditAchat={onEditAchat}
     />;
   }
 
