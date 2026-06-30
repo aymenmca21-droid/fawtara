@@ -5371,7 +5371,8 @@ export default function App(){
         products={products} customers={customers} invoices={invoices}
         onClose={()=>setEditingInvoice(null)}
         onCreated={(updInv,newTxs)=>{
-          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id,date:editingInvoice.date}:i);
+          // نحتفظ بنفس الرقم التسلسلي ونأخذ التاريخ الجديد من الفورم
+          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
           setInvoices(inv2);
           persist({invoices:inv2});
           setEditingInvoice(null);
