@@ -1313,7 +1313,12 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
 
   const lineTotal=l=>(parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
-  const owingAmt=payStatus==="unpaid"?total:payStatus==="partial"?total-(parseFloat(paidAmt)||0):0;
+  // حساب المبلغ الكلي مع TVA وضريبة الطابع
+  const tvaAmt=bizSettings?.tvaEnabled?Math.round(total*(bizSettings?.tvaRate||19)/100):0;
+  const montantTTC=total+tvaAmt;
+  const timbreAmt=bizSettings?.timbreEnabled?calcTimbre(montantTTC):0;
+  const totalFinal=montantTTC+timbreAmt;
+  const owingAmt=payStatus==="unpaid"?totalFinal:payStatus==="partial"?totalFinal-(parseFloat(paidAmt)||0):0;
 
   const addLine=()=>setLines(p=>[...p,{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
   const setLP=(lid,prod)=>setLines(p=>p.map(l=>l.id===lid?{...l,productId:prod.id,name:prod.name,price:prod.price}:l)); // price = prix de vente
@@ -1334,16 +1339,14 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     // invoiceDate مأخوذ من الـ state
 
     let finalPayStatus=payStatus;
-    let finalPaidAmount=payStatus==="paid"?total:payStatus==="partial"?parseFloat(paidAmt)||0:0;
+    let finalPaidAmount=payStatus==="paid"?totalFinal:payStatus==="partial"?parseFloat(paidAmt)||0:0;
 
     // استخدام التسبيق
     if(useAdvance&&advanceAvailable>0){
-      if(advanceAvailable>=total){
-        // التسبيق يغطي الفاتورة كلها
+      if(advanceAvailable>=totalFinal){
         finalPayStatus="paid";
-        finalPaidAmount=total;
+        finalPaidAmount=totalFinal;
       } else {
-        // التسبيق جزئي
         finalPayStatus="partial";
         finalPaidAmount=advanceAvailable;
       }
@@ -1353,9 +1356,9 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     const invoice={
       id:invId, customer:customer.trim(),
       lines:lines.filter(l=>l.name.trim()),
-      total, payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
+      total:totalFinal, payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
       modePaiement, echeance, notes,
-      advanceUsed:useAdvance?Math.min(advanceAvailable,total):0,
+      advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
     };
     const txs=[];
@@ -1444,7 +1447,33 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
             ))}
             <button onClick={addLine} style={{width:"100%",padding:10,background:"#f9fafb",border:"1.5px dashed #e5e7eb",borderRadius:10,fontSize:14,fontWeight:600,color:"#6b7280",cursor:"pointer",marginTop:4}}>{t.addProduct}</button>
           </div>
-          {total>0&&<div style={{background:"#f9fafb",borderRadius:12,padding:"12px 16px",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontSize:13,color:"#6b7280",fontWeight:600}}>{t.subtotal}</span><span style={{fontSize:20,fontWeight:900,color:"#111"}}>{fmt(total,lang)}</span></div>}
+          {total>0&&(
+            <div style={{background:"#f9fafb",borderRadius:12,padding:"12px 16px",marginBottom:16}}>
+              {bizSettings?.tvaEnabled&&(
+                <>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#6b7280",marginBottom:4}}>
+                    <span>Sous-total HT</span><span>{fmt(total,lang)}</span>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#6b7280",marginBottom:4}}>
+                    <span>TVA {bizSettings.tvaRate}%</span><span>+{fmt(tvaAmt,lang)}</span>
+                  </div>
+                  {bizSettings?.timbreEnabled&&<div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#6b7280",marginBottom:4}}>
+                    <span>Timbre</span><span>+{fmt(timbreAmt,lang)}</span>
+                  </div>}
+                  <div style={{borderTop:"1.5px solid #e5e7eb",marginTop:6,paddingTop:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:13,color:"#111",fontWeight:700}}>Total TTC</span>
+                    <span style={{fontSize:20,fontWeight:900,color:"#111"}}>{fmt(totalFinal,lang)}</span>
+                  </div>
+                </>
+              )}
+              {!bizSettings?.tvaEnabled&&(
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:13,color:"#6b7280",fontWeight:600}}>{t.subtotal}</span>
+                  <span style={{fontSize:20,fontWeight:900,color:"#111"}}>{fmt(totalFinal,lang)}</span>
+                </div>
+              )}
+            </div>
+          )}
           {/* Payment */}
           <div>
             {/* تاريخ الفاتورة */}
@@ -1460,7 +1489,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
                 <button key={s} onClick={()=>setPayStatus(s)} style={{padding:"10px 4px",borderRadius:10,border:`1.5px solid ${payStatus===s?border:"#e5e7eb"}`,background:payStatus===s?bg:"#fff",fontSize:12,fontWeight:700,color:payStatus===s?tc:"#9ca3af",cursor:"pointer"}}>{t[s]}</button>
               ))}
             </div>
-            {payStatus==="partial"&&<div style={{marginTop:10}}><input type="text" inputMode="decimal" placeholder={t.paidAmount} value={paidAmt} onChange={e=>setPaidAmt(e.target.value.replace(/[^0-9.]/g,""))} style={S.inp({fontSize:16,fontWeight:700})}/>{paidAmt&&total>0&&<div style={{fontSize:12,color:"#9ca3af",marginTop:4}}>Reste: {fmt(total-(parseFloat(paidAmt)||0),lang)}</div>}</div>}
+            {payStatus==="partial"&&<div style={{marginTop:10}}><input type="text" inputMode="decimal" placeholder={t.paidAmount} value={paidAmt} onChange={e=>setPaidAmt(e.target.value.replace(/[^0-9.]/g,""))} style={S.inp({fontSize:16,fontWeight:700})}/>{paidAmt&&totalFinal>0&&<div style={{fontSize:12,color:"#9ca3af",marginTop:4}}>Reste: {fmt(totalFinal-(parseFloat(paidAmt)||0),lang)}</div>}</div>}
           </div>
 
           {/* Mode de paiement + Échéance */}
@@ -1497,7 +1526,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0}}>
           <button onClick={create} disabled={!canCreate} style={{width:"100%",padding:15,background:canCreate?"#2563EB":"#e5e7eb",color:canCreate?"#fff":"#9ca3af",border:"none",borderRadius:14,fontSize:16,fontWeight:800,cursor:canCreate?"pointer":"default",boxShadow:canCreate?"0 8px 20px rgba(37,99,235,.35)":"none"}}>
-            {editing?"✏️ Modifier la facture":t.createInvoice}{total>0?` · ${fmt(total,lang)}`:""}
+            {editing?"✏️ Modifier la facture":t.createInvoice}{totalFinal>0?` · ${fmt(totalFinal,lang)}`:""}
           </button>
         </div>
       </div>
