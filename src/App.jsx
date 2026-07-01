@@ -4783,12 +4783,21 @@ export default function App(){
     setTxs(data.txs||[]);
     setProducts(data.products||[]);
     // إصلاح تلقائي للفواتير القديمة — paidAmount يساوي total عند payStatus paid
+    // إصلاح شامل للفواتير القديمة
+    const bs2=data.bizSettings||{};
     const fixedInvoices=(data.invoices||[]).map(inv=>{
-      const refTotal=inv.totalTTC||inv.total;
-      if(inv.payStatus==="paid"&&inv.paidAmount!==refTotal){
-        return {...inv,paidAmount:refTotal};
+      // إذا لم يكن لها totalTTC — احسبه
+      let totalTTC=inv.totalTTC;
+      if(!totalTTC){
+        const ht=inv.total||0;
+        const tva=bs2.tvaEnabled?Math.round(ht*(bs2.tvaRate||19)/100):0;
+        const ttc=ht+tva;
+        const timbre=bs2.timbreEnabled?calcTimbre(ttc):0;
+        totalTTC=ttc+timbre;
       }
-      return inv;
+      // إذا الفاتورة مدفوعة — paidAmount يجب أن يساوي totalTTC
+      const paidAmount=inv.payStatus==="paid"?totalTTC:(inv.paidAmount||0);
+      return {...inv,totalTTC,paidAmount};
     });
     setInvoices(fixedInvoices);
     setCustomers(data.customers||[]);
