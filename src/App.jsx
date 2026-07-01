@@ -2482,7 +2482,7 @@ ${paidTxs.length>0?`
 </table>
 <div class="total-section">
   ${invTvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${invTvaRate}%</span><span>+${Math.round(invoice.total*invTvaRate/100).toLocaleString()} DA</span></div>`:""}
-  ${bs?.timbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
   <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
 <div class="footer">Merci pour votre confiance 🙏<br><span style="font-size:10px">Non fiscal · ${invoice.id}</span></div>
