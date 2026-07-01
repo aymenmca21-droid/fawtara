@@ -1360,6 +1360,10 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       totalTTC:totalFinal, // TTC+Timbre
       payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
       modePaiement, echeance, notes,
+      // نُخزّن إعدادات TVA وTimbre داخل الفاتورة — تبقى ثابتة حتى لو تغيّرت الإعدادات لاحقاً
+      tvaEnabled:bizSettings?.tvaEnabled||false,
+      tvaRate:bizSettings?.tvaRate||19,
+      timbreEnabled:bizSettings?.timbreEnabled||false,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
     };
@@ -1990,11 +1994,16 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
   const bs=bizSettings||{};
 
+  // نأخذ إعدادات TVA وTimbre من الفاتورة نفسها أولاً — وإلا من bizSettings
+  const invTvaEnabled=invoice.tvaEnabled!==undefined?invoice.tvaEnabled:bs.tvaEnabled;
+  const invTvaRate=invoice.tvaRate||bs.tvaRate||19;
+  const invTimbreEnabled=invoice.timbreEnabled!==undefined?invoice.timbreEnabled:bs.timbreEnabled;
+
   // حسابات TVA + Timbre
   const montantHT=invoice.total; // دائماً HT
-  const tvaAmt=bs.tvaEnabled?Math.round(montantHT*(bs.tvaRate||19)/100):0;
+  const tvaAmt=invTvaEnabled?Math.round(montantHT*(invTvaRate)/100):0;
   const montantTTC=montantHT+tvaAmt;
-  const timbreAmt=bs.timbreEnabled?calcTimbre(montantTTC):0;
+  const timbreAmt=invTimbreEnabled?calcTimbre(montantTTC):0;
   // totalFinal = إذا كانت فاتورة جديدة نأخذ totalTTC، وإلا نحسب
   const totalFinal=invoice.totalTTC||(montantTTC+timbreAmt);
 
@@ -2145,18 +2154,18 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
     <th>Désignation</th>
     <th class="tc">Qté</th>
     <th class="tc">Unité</th>
-    <th style="text-align:right">${bs.tvaEnabled?"PU HT":"Prix unit."}</th>
+    <th style="text-align:right">${invTvaEnabled?"PU HT":"Prix unit."}</th>
     <th class="tc">Remise</th>
-    <th style="text-align:right">${bs.tvaEnabled?"Montant HT":"Total"}</th>
+    <th style="text-align:right">${invTvaEnabled?"Montant HT":"Total"}</th>
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
 
 <div class="totals">
   <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
-  ${bs.tvaEnabled?`<div class="tl"><span>TVA ${bs.tvaRate}%</span><span>+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
-  ${bs.tvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
-  ${bs.timbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
   <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
 
@@ -2392,7 +2401,7 @@ ${paidTxs.length>0?`
 
 <div class="total-box">
   <div class="total-line"><span>Sous-total HT</span><span>${invoice.total.toLocaleString()} DA</span></div>
-  ${bs?.tvaEnabled?`<div class="total-line"><span>TVA ${bs.tvaRate}%</span><span>+ ${Math.round(invoice.total*bs.tvaRate/100).toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="total-line"><span>TVA ${invTvaRate}%</span><span>+ ${Math.round(invoice.total*invTvaRate/100).toLocaleString()} DA</span></div>`:""}
   <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
 
@@ -2472,7 +2481,7 @@ ${paidTxs.length>0?`
   <tbody>${bvRows}</tbody>
 </table>
 <div class="total-section">
-  ${bs?.tvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${bs.tvaRate}%</span><span>+${Math.round(invoice.total*(bs.tvaRate||19)/100).toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${invTvaRate}%</span><span>+${Math.round(invoice.total*invTvaRate/100).toLocaleString()} DA</span></div>`:""}
   ${bs?.timbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
   <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
