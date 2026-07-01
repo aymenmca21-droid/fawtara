@@ -1356,7 +1356,9 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     const invoice={
       id:invId, customer:customer.trim(),
       lines:lines.filter(l=>l.name.trim()),
-      total:totalFinal, payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
+      total, // HT دائماً
+      totalTTC:totalFinal, // TTC+Timbre
+      payStatus:finalPayStatus, paidAmount, date:invoiceDate, companyName,
       modePaiement, echeance, notes,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
       customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
@@ -1989,18 +1991,14 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   const bs=bizSettings||{};
 
   // حسابات TVA + Timbre
-  const montantHT=invoice.total;
-  const tvaAmt=bs.tvaEnabled?Math.round(montantHT*bs.tvaRate/100):0;
+  const montantHT=invoice.total; // دائماً HT
+  const tvaAmt=bs.tvaEnabled?Math.round(montantHT*(bs.tvaRate||19)/100):0;
   const montantTTC=montantHT+tvaAmt;
   const timbreAmt=bs.timbreEnabled?calcTimbre(montantTTC):0;
-  const totalFinal=montantTTC+timbreAmt;
+  // totalFinal = إذا كانت فاتورة جديدة نأخذ totalTTC، وإلا نحسب
+  const totalFinal=invoice.totalTTC||(montantTTC+timbreAmt);
 
   // المبلغ الكلي المخزَّن في الفاتورة (TTC+Timbre)
-  const montantHT2=invoice.total;
-  const tvaAmt2=bs.tvaEnabled?Math.round(montantHT2*(bs.tvaRate||19)/100):0;
-  const ttc2=montantHT2+tvaAmt2;
-  const timbre2=bs.timbreEnabled?calcTimbre(ttc2):0;
-
   const paidTxs=(relatedTxs||[]).filter(tx=>tx.paid).sort((a,b)=>new Date(a.date)-new Date(b.date));
   const totalPaidAll=invoice.paidAmount||0;
   const remaining=Math.max(0, totalFinal - totalPaidAll);
@@ -2676,7 +2674,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   const custInvs=invoices.filter(i=>i.customer===customer.name).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custTxs=txs.filter(x=>x.client===customer.name&&x.type==="income").sort((a,b)=>new Date(b.date)-new Date(a.date));
   const custVersements=(versements||[]).filter(v=>v.entityName===customer.name&&v.entityType==="client");
-  const totalSpent=custInvs.reduce((s,i)=>s+i.total,0);
+  const totalSpent=custInvs.reduce((s,i)=>s+(i.totalTTC||i.total),0);
   const totalPaid=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
   const totalVers=custVersements.reduce((s,v)=>s+v.montant,0);
   const debt=Math.max(0,totalSpent-totalPaid-totalVers);
@@ -2809,7 +2807,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                 const sb2={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
                 const custVers=(versements||[]).filter(v=>v.entityName===customer.name&&v.entityType==="client").sort((a,b)=>new Date(b.date)-new Date(a.date));
                 const totalVersements=custVers.reduce((s,v)=>s+v.montant,0);
-                const totalAll=custInvs.reduce((s,i)=>s+i.total,0);
+                const totalAll=custInvs.reduce((s,i)=>s+(i.totalTTC||i.total),0);
                 const totalPaid=custInvs.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
                 const resteFactures=custInvs.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
                 const totalReste=Math.max(0, resteFactures-totalVersements);
@@ -3017,7 +3015,7 @@ function CustomersTab({customers,invoices,txs,products,lang,onSelectCustomer,onN
   // Build enriched customer data
   const enriched=useMemo(()=>customers.map(c=>{
     const custInvs=invoices.filter(i=>i.customer===c.name);
-    const totalSpent=custInvs.reduce((s,i)=>s+i.total,0);
+    const totalSpent=custInvs.reduce((s,i)=>s+(i.totalTTC||i.total),0);
     const totalPaid=custInvs.reduce((s,i)=>s+(i.paidAmount||0),0);
     const totalVers=(versements||[]).filter(v=>v.entityName===c.name&&v.entityType==="client").reduce((s,v)=>s+v.montant,0);
     const debt=Math.max(0,totalSpent-totalPaid-totalVers);
@@ -4544,7 +4542,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
   const today30=new Date(); today30.setDate(today30.getDate()-30);
   const oldDebts=invoices.filter(inv=>inv.payStatus!=="paid"&&new Date(inv.date)<today30);
   const clientMap={};
-  mInvs.forEach(inv=>{clientMap[inv.customer]=(clientMap[inv.customer]||0)+inv.total;});
+  mInvs.forEach(inv=>{clientMap[inv.customer]=(clientMap[inv.customer]||0)+(inv.totalTTC||inv.total);});
   const topClients=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const exportRapport=()=>{
     const rows=[[`Rapport ${months[rapportMonth]} ${rapportYear}`],[],["Indicateur","Montant"],["Revenus encaissés",revenus],["Dépenses",depenses],["Bénéfice net",benefice],["À encaisser",attente],[],["Factures émises",nbInv],["Factures payées",nbPaid],["Factures impayées",nbInv-nbPaid]];
@@ -4786,8 +4784,9 @@ export default function App(){
     setProducts(data.products||[]);
     // إصلاح تلقائي للفواتير القديمة — paidAmount يساوي total عند payStatus paid
     const fixedInvoices=(data.invoices||[]).map(inv=>{
-      if(inv.payStatus==="paid"&&inv.paidAmount!==inv.total){
-        return {...inv,paidAmount:inv.total};
+      const refTotal=inv.totalTTC||inv.total;
+      if(inv.payStatus==="paid"&&inv.paidAmount!==refTotal){
+        return {...inv,paidAmount:refTotal};
       }
       return inv;
     });
