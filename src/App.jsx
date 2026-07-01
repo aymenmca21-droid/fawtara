@@ -1995,10 +1995,16 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   const timbreAmt=bs.timbreEnabled?calcTimbre(montantTTC):0;
   const totalFinal=montantTTC+timbreAmt;
 
+  // المبلغ الكلي المخزَّن في الفاتورة (TTC+Timbre)
+  const montantHT2=invoice.total;
+  const tvaAmt2=bs.tvaEnabled?Math.round(montantHT2*(bs.tvaRate||19)/100):0;
+  const ttc2=montantHT2+tvaAmt2;
+  const timbre2=bs.timbreEnabled?calcTimbre(ttc2):0;
+
   const paidTxs=(relatedTxs||[]).filter(tx=>tx.paid).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const totalPaid=paidTxs.reduce((s,tx)=>s+tx.amount,0);
-  const remaining=Math.max(0, totalFinal - totalPaid);
-  const isFullyPaid=remaining===0;
+  const totalPaidAll=invoice.paidAmount||0;
+  const remaining=Math.max(0, totalFinal - totalPaidAll);
+  const isFullyPaid=remaining<=0||invoice.payStatus==="paid";
 
   const [showForm,setShowForm]=useState(false);
   const [newAmt,setNewAmt]=useState("");
@@ -2535,7 +2541,19 @@ ${paidTxs.length>0?`
               <div style={{fontSize:13,color:"#9ca3af",padding:"10px 0"}}>{t.noPayments}</div>
             )}
 
-            {/* Liste des dépenses */}
+            {/* إذا لا توجد txs لكن الفاتورة مدفوعة — أظهر paidAmount */}
+            {paidTxs.length===0&&invoice.paidAmount>0&&(
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#f0fdf4",borderRadius:12,marginBottom:6,border:"1px solid #bbf7d0"}}>
+                <div style={{width:32,height:32,borderRadius:8,background:"#dcfce7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>💰</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{t.firstPayment}</div>
+                  <div style={{fontSize:11,color:"#9ca3af"}}>{invoice.date}</div>
+                </div>
+                <span style={{fontWeight:800,fontSize:15,color:"#059669"}}>+{fmt(invoice.paidAmount,lang)}</span>
+              </div>
+            )}
+
+            {/* Liste des paiements enregistrés */}
             {paidTxs.map((tx,i)=>(
               <div key={tx.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background: i===0?"#f0fdf4":"#f9fafb",borderRadius:12,marginBottom:6,border:`1px solid ${i===0?"#bbf7d0":"#f3f4f6"}`}}>
                 <div style={{width:32,height:32,borderRadius:8,background:i===0?"#dcfce7":"#e5e7eb",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>
@@ -2550,7 +2568,7 @@ ${paidTxs.length>0?`
             ))}
 
             {/* Résumé restant */}
-            {paidTxs.length>0&&(
+            {(paidTxs.length>0||invoice.paidAmount>0)&&(
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:isFullyPaid?"#ecfdf5":"#fffbeb",borderRadius:12,marginTop:4,border:`1px solid ${isFullyPaid?"#a7f3d0":"#fde68a"}`}}>
                 <span style={{fontSize:13,fontWeight:700,color:isFullyPaid?"#065f46":"#92400e"}}>
                   {isFullyPaid?"✓ "+t.fullyPaid:t.remaining}
