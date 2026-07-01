@@ -1994,10 +1994,10 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
   const bs=bizSettings||{};
 
-  // نأخذ إعدادات TVA وTimbre من الفاتورة نفسها أولاً — وإلا من bizSettings
-  const invTvaEnabled=invoice.tvaEnabled!==undefined?invoice.tvaEnabled:bs.tvaEnabled;
-  const invTvaRate=invoice.tvaRate||bs.tvaRate||19;
-  const invTimbreEnabled=invoice.timbreEnabled!==undefined?invoice.timbreEnabled:bs.timbreEnabled;
+  // نأخذ TVA وTimbre من الفاتورة نفسها فقط — إذا لم تكن محفوظة = false
+  const invTvaEnabled=invoice.tvaEnabled===true;
+  const invTvaRate=invoice.tvaRate||19;
+  const invTimbreEnabled=invoice.timbreEnabled===true;
 
   // حسابات TVA + Timbre
   const montantHT=invoice.total; // دائماً HT
@@ -4795,18 +4795,27 @@ export default function App(){
     // إصلاح شامل للفواتير القديمة
     const bs2=data.bizSettings||{};
     const fixedInvoices=(data.invoices||[]).map(inv=>{
-      // إذا لم يكن لها totalTTC — احسبه
+      // إذا لم يكن لها tvaEnabled محفوظ — تعني أنها أُنشئت قبل هذه الميزة
+      // نحتفظ بـ total كـ HT ونعتبر TVA = false (لا نضيف TVA على القديمة)
+      const hasTvaFlag=inv.tvaEnabled!==undefined;
+      const tvaEnabled=hasTvaFlag?inv.tvaEnabled:false;
+      const tvaRate=inv.tvaRate||bs2.tvaRate||19;
+      const timbreEnabled=hasTvaFlag?inv.timbreEnabled:false;
+
+      // totalTTC: إذا لم يكن محفوظاً — نحسبه بدون TVA (لأنها فاتورة قديمة)
       let totalTTC=inv.totalTTC;
       if(!totalTTC){
         const ht=inv.total||0;
-        const tva=bs2.tvaEnabled?Math.round(ht*(bs2.tvaRate||19)/100):0;
+        const tva=tvaEnabled?Math.round(ht*(tvaRate)/100):0;
         const ttc=ht+tva;
-        const timbre=bs2.timbreEnabled?calcTimbre(ttc):0;
+        const timbre=timbreEnabled?calcTimbre(ttc):0;
         totalTTC=ttc+timbre;
       }
-      // إذا الفاتورة مدفوعة — paidAmount يجب أن يساوي totalTTC
+
+      // paidAmount: إذا الفاتورة مدفوعة يجب أن يساوي totalTTC
       const paidAmount=inv.payStatus==="paid"?totalTTC:(inv.paidAmount||0);
-      return {...inv,totalTTC,paidAmount};
+
+      return {...inv,tvaEnabled,tvaRate,timbreEnabled,totalTTC,paidAmount};
     });
     setInvoices(fixedInvoices);
     setCustomers(data.customers||[]);
