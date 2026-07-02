@@ -423,9 +423,13 @@ const EMPTY_DATA=()=>({txs:[],products:[],invoices:[],customers:[],companyName:"
 ═══════════════════════════════════════════════ */
 const fmt=(n,lang)=>{
   const num=Math.abs(n||0);
-  const hasDecimal=num%1!==0&&Math.round(num*100)/100!==Math.round(num);
-  const decimals=hasDecimal?2:0;
-  const formatted=num.toLocaleString("fr-DZ",{minimumFractionDigits:decimals,maximumFractionDigits:2});
+  // نُقرّب لرقمين عشريين ثم نتحقق إذا كان هناك كسر
+  const rounded=Math.round(num*100)/100;
+  const hasDecimal=rounded!==Math.floor(rounded);
+  const formatted=rounded.toLocaleString("fr-DZ",{
+    minimumFractionDigits:hasDecimal?2:0,
+    maximumFractionDigits:2
+  });
   return formatted+" DA";
 };
 const today=()=>new Date().toISOString().split("T")[0];
