@@ -423,10 +423,9 @@ const EMPTY_DATA=()=>({txs:[],products:[],invoices:[],customers:[],companyName:"
 ═══════════════════════════════════════════════ */
 const fmt=(n,lang)=>{
   const num=Math.abs(n||0);
-  // إذا كان الرقم صحيحاً نعرضه بدون فاصلة، وإلا نعرض رقمين عشريين
-  const isInt=Number.isInteger(num)||(Math.round(num*100)/100===Math.round(num));
-  const decimals=isInt?0:2;
-  const formatted=num.toLocaleString("fr-DZ",{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+  const hasDecimal=num%1!==0&&Math.round(num*100)/100!==Math.round(num);
+  const decimals=hasDecimal?2:0;
+  const formatted=num.toLocaleString("fr-DZ",{minimumFractionDigits:decimals,maximumFractionDigits:2});
   return formatted+" DA";
 };
 const today=()=>new Date().toISOString().split("T")[0];
@@ -2163,7 +2162,7 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="totals">
   <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
-  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt.toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt.toLocaleString("fr-DZ",{minimumFractionDigits:tvaAmt%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
   ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
   ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
   <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
@@ -2401,7 +2400,7 @@ ${paidTxs.length>0?`
 
 <div class="total-box">
   <div class="total-line"><span>Sous-total HT</span><span>${invoice.total.toLocaleString()} DA</span></div>
-  ${invTvaEnabled?`<div class="total-line"><span>TVA ${invTvaRate}%</span><span>+ ${Math.round(invoice.total*invTvaRate/100).toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="total-line"><span>TVA ${invTvaRate}%</span><span>+ ${parseFloat((invoice.total*invTvaRate/100).toFixed(2)).toLocaleString()} DA</span></div>`:""}
   <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
 
@@ -2481,7 +2480,7 @@ ${paidTxs.length>0?`
   <tbody>${bvRows}</tbody>
 </table>
 <div class="total-section">
-  ${invTvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${invTvaRate}%</span><span>+${Math.round(invoice.total*invTvaRate/100).toLocaleString()} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${invTvaRate}%</span><span>+${parseFloat((invoice.total*invTvaRate/100).toFixed(2)).toLocaleString()} DA</span></div>`:""}
   ${invTimbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
   <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString()} DA</span></div>
 </div>
@@ -3208,7 +3207,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   // aperçu calcul
   const exampleHT=50000;
-  const exampleTVA=tvaEnabled?Math.round(exampleHT*tvaRate/100):0;
+  const exampleTVA=tvaEnabled?parseFloat((exampleHT*tvaRate/100).toFixed(2)):0;
   const exampleTTC=exampleHT+exampleTVA;
   const exampleTimbre=timbreEnabled?calcTimbre(exampleTTC):0;
 
