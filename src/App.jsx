@@ -1313,7 +1313,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const lineTotal=l=>(parseFloat(l.price)||0)*(parseFloat(l.qty)||0)*(1-(parseFloat(l.remise)||0)/100);
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
   // حساب المبلغ الكلي مع TVA وضريبة الطابع
-  const tvaAmt=bizSettings?.tvaEnabled?Math.round(total*(bizSettings?.tvaRate||19)/100):0;
+  const tvaAmt=bizSettings?.tvaEnabled?parseFloat((total*(bizSettings?.tvaRate||19)/100).toFixed(2)):0;
   const montantTTC=total+tvaAmt;
   const timbreAmt=bizSettings?.timbreEnabled?calcTimbre(montantTTC):0;
   const totalFinal=montantTTC+timbreAmt;
@@ -2000,7 +2000,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
 
   // حسابات TVA + Timbre
   const montantHT=invoice.total; // دائماً HT
-  const tvaAmt=invTvaEnabled?Math.round(montantHT*(invTvaRate)/100):0;
+  const tvaAmt=invTvaEnabled?parseFloat((montantHT*invTvaRate/100).toFixed(2)):0;
   const montantTTC=montantHT+tvaAmt;
   const timbreAmt=invTimbreEnabled?calcTimbre(montantTTC):0;
   // totalFinal = إذا كانت فاتورة جديدة نأخذ totalTTC، وإلا نحسب
@@ -2162,10 +2162,10 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="totals">
   <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
-  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt.toLocaleString("fr-DZ",{minimumFractionDigits:tvaAmt%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
-  ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
-  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toLocaleString()} DA</span></div>`:""}
-  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt % 1 === 0 ? tvaAmt.toLocaleString("fr-DZ") : tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")+" DA".replace(" DA","")} DA</span></div>`:""}
+  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
 <div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres}</div>
@@ -2401,7 +2401,7 @@ ${paidTxs.length>0?`
 <div class="total-box">
   <div class="total-line"><span>Sous-total HT</span><span>${invoice.total.toLocaleString()} DA</span></div>
   ${invTvaEnabled?`<div class="total-line"><span>TVA ${invTvaRate}%</span><span>+ ${parseFloat((invoice.total*invTvaRate/100).toFixed(2)).toLocaleString()} DA</span></div>`:""}
-  <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+  <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
 <div class="conditions">
@@ -2481,8 +2481,8 @@ ${paidTxs.length>0?`
 </table>
 <div class="total-section">
   ${invTvaEnabled?`<div class="trow"><span>HT</span><span>${invoice.total.toLocaleString()} DA</span></div><div class="trow"><span>TVA ${invTvaRate}%</span><span>+${parseFloat((invoice.total*invTvaRate/100).toFixed(2)).toLocaleString()} DA</span></div>`:""}
-  ${invTimbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toLocaleString()} DA</span></div>`:""}
-  <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString()} DA</span></div>
+  ${invTimbreEnabled?`<div class="trow"><span>Timbre</span><span>+${timbreAmt.toFixed(2).replace(".",",")+" DA".replace(" DA","")} DA</span></div>`:""}
+  <div class="tmain"><span>Total</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 <div class="footer">Merci pour votre confiance 🙏<br><span style="font-size:10px">Non fiscal · ${invoice.id}</span></div>
 </body></html>`;
@@ -2661,7 +2661,7 @@ ${paidTxs.length>0?`
               🧾 BV
             </button>
             <button onClick={()=>{
-              const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString()} DA\nDate: ${invoice.date}`);
+              const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA\nDate: ${invoice.date}`);
               window.open(`https://wa.me/?text=${msg}`,"_blank");
             }}
               style={{padding:11,background:"#25D366",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
@@ -4805,7 +4805,7 @@ export default function App(){
       let totalTTC=inv.totalTTC;
       if(!totalTTC){
         const ht=inv.total||0;
-        const tva=tvaEnabled?Math.round(ht*(tvaRate)/100):0;
+        const tva=tvaEnabled?parseFloat((ht*tvaRate/100).toFixed(2)):0;
         const ttc=ht+tva;
         const timbre=timbreEnabled?calcTimbre(ttc):0;
         totalTTC=ttc+timbre;
