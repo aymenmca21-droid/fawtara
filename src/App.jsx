@@ -3004,7 +3004,7 @@ ${custVers.length>0?`
             </div>
             <div style={{textAlign:"right",display:"flex",alignItems:"center",gap:8}}>
               <div>
-                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{fmt(inv.total,lang)}</div>
+                <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
                 <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
               </div>
               <div style={{color:"#d1d5db",fontSize:14}}>›</div>
@@ -4625,7 +4625,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                 {statFilter==="paid"?"Factures payées":statFilter==="unpaid"?"Factures impayées":statFilter==="attente"?"À encaisser":"Toutes les factures"} ({filtered.length})
               </div>
               {[...filtered].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(inv=>{
-                const reste=inv.total-(inv.paidAmount||0);
+                const reste=(inv.totalTTC||inv.total)-(inv.paidAmount||0);
                 const isPaid=inv.payStatus==="paid";
                 return(
                   <div key={inv.id}
@@ -4641,7 +4641,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                     </div>
                     <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                       <div style={{fontWeight:800,fontSize:14,color:isPaid?"#059669":"#dc2626"}}>
-                        {isPaid?fmt(inv.total,lang):fmt(reste,lang)}
+                        {isPaid?fmt(inv.totalTTC||inv.total,lang):fmt(reste,lang)}
                       </div>
                       <div style={{fontSize:10,fontWeight:700,color:isPaid?"#059669":inv.payStatus==="partial"?"#d97706":"#dc2626"}}>
                         {isPaid?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
@@ -4662,7 +4662,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
           <div style={{fontWeight:800,fontSize:14,color:"#b91c1c",marginBottom:12}}>⏰ Factures impayées depuis +30 jours ({oldDebts.length})</div>
           {oldDebts.map(inv=>{
             const days=Math.floor((new Date()-new Date(inv.date))/(1000*60*60*24));
-            const reste=inv.total-(inv.paidAmount||0);
+            const reste=(inv.totalTTC||inv.total)-(inv.paidAmount||0);
             return(
               <div key={inv.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:10,marginBottom:6,border:"1px solid #fecaca"}}>
                 <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,cursor:"pointer"}}>
@@ -5127,9 +5127,9 @@ export default function App(){
             const periodLabel=invoiceDateFrom||invoiceDateTo
               ?`${invoiceDateFrom||"…"} → ${invoiceDateTo||"…"}`
               :`${months[now.getMonth()]} ${now.getFullYear()}`;
-            const totalAll=filtered.reduce((s,i)=>s+i.total,0);
+            const totalAll=filtered.reduce((s,i)=>s+(i.totalTTC||i.total),0);
             const totalPaid=filtered.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
-            const totalUnpaid=filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0);
+            const totalUnpaid=filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0);
             const rows=filtered.map((inv,i)=>`
               <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                 <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
@@ -5244,11 +5244,11 @@ export default function App(){
                   <div style={{fontSize:9,color:"#1d4ed8",fontWeight:700,marginTop:2}}>FACTURES</div>
                 </div>
                 <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px",textAlign:"center"}}>
-                  <div style={{fontWeight:900,fontSize:13,color:"#059669"}}>{fmt(filtered.reduce((s,i)=>s+i.total,0),lang)}</div>
+                  <div style={{fontWeight:900,fontSize:13,color:"#059669"}}>{fmt(filtered.reduce((s,i)=>s+(i.totalTTC||i.total),0),lang)}</div>
                   <div style={{fontSize:9,color:"#065f46",fontWeight:700,marginTop:2}}>TOTAL</div>
                 </div>
                 <div style={{background:"#fef2f2",borderRadius:10,padding:"10px",textAlign:"center"}}>
-                  <div style={{fontWeight:900,fontSize:13,color:"#dc2626"}}>{fmt(filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+(i.total-(i.paidAmount||0)),0),lang)}</div>
+                  <div style={{fontWeight:900,fontSize:13,color:"#dc2626"}}>{fmt(filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0),lang)}</div>
                   <div style={{fontSize:9,color:"#b91c1c",fontWeight:700,marginTop:2}}>RESTE</div>
                 </div>
               </div>
@@ -5272,7 +5272,7 @@ export default function App(){
                   <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                 </div>
                 <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
-                  <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.total,lang)}</div>
+                  <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
                   <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
                 </div>
                 <button onClick={e=>{e.stopPropagation();setDuplicateInv(inv);setModal("invoice");}}
