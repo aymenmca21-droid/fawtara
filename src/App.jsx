@@ -2012,9 +2012,9 @@ function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',system-ui,sans-serif;padding:32px;color:#000;max-width:740px;margin:0 auto}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:3px solid #dc2626;margin-bottom:20px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:3px solid #000;margin-bottom:20px}
   .badge{background:#dc2626;color:#fff;padding:6px 18px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
-  .ref{background:#fef2f2;border:1.5px solid #dc2626;border-radius:8px;padding:10px 16px;margin-bottom:20px;font-size:13px;color:#dc2626;font-weight:600}
+  .ref{background:#f5f5f5;border:1.5px solid #000;border-radius:8px;padding:10px 16px;margin-bottom:20px;font-size:13px;color:#000;font-weight:600}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   .party{padding:12px 14px;border:1.5px solid #000;border-radius:4px}
   .party-label{font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
@@ -2022,7 +2022,7 @@ function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
   table{width:100%;border-collapse:collapse;margin-bottom:16px}
   thead tr{border-bottom:2px solid #000;border-top:1px solid #000}
   th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:8px;text-align:left}
-  .total-box{border:2px solid #dc2626;border-radius:6px;padding:14px 18px;margin-bottom:16px;background:#fef2f2}
+  .total-box{border:2px solid #000;border-radius:6px;padding:14px 18px;margin-bottom:16px;background:#f5f5f5}
   .total-label{font-size:13px;font-weight:700;color:#dc2626}
   .total-amount{font-size:26px;font-weight:900;color:#dc2626}
   .motif{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 14px;margin-bottom:20px;font-size:13px}
@@ -5510,6 +5510,37 @@ export default function App(){
                   style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
               </div>
             ))}
+
+            {/* قائمة الأفيرات */}
+            {(avoirs||[]).length>0&&(
+              <div style={{marginTop:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>📝 Notes d'Avoir ({avoirs.length})</div>
+                {[...avoirs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(av=>(
+                  <div key={av.id} style={{...S.card({marginBottom:8,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #e5e7eb"})}}>
+                    <div style={{width:40,height:40,background:"#f5f5f5",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>📝</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{av.customer}</div>
+                      <div style={{fontSize:11,color:"#9ca3af"}}>Avoir · Réf: {av.refFacture} · {av.date}</div>
+                      {av.motif&&<div style={{fontSize:11,color:"#6b7280",marginTop:2}}>{av.motif}</div>}
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0}}>
+                      <div style={{fontWeight:800,fontSize:15,color:"#111"}}>– {fmt(av.montant,lang)}</div>
+                      <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginTop:2}}>{av.avoirType==="total"?"Annulation totale":"Avoir partiel"}</div>
+                    </div>
+                    <button onClick={()=>{
+                      const html=buildAvoirHTML(av,bizSettings,av.montant,av.tvaEnabled,av.tvaRate,av.timbreEnabled);
+                      const blob=new Blob([html],{type:"text/html"});
+                      const url=URL.createObjectURL(blob);
+                      window.open(url,"_blank");
+                      setTimeout(()=>URL.revokeObjectURL(url),10000);
+                    }}
+                      style={{background:"#f3f4f6",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,cursor:"pointer",color:"#374151",flexShrink:0,fontWeight:700}}>🖨</button>
+                    <button onClick={()=>setAvoirs(prev=>{const a2=prev.filter(x=>x.id!==av.id);persist({avoirs:a2});return a2;})}
+                      style={{background:"#f5f5f5",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#6b7280",flexShrink:0}}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           );
         })()}
