@@ -1109,6 +1109,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
   const [nis,setNis]=useState(existing?.nis||"");
   const [rc,setRc]=useState(existing?.rc||"");
   const [article,setArticle]=useState(existing?.article||"");
+  const [rip,setRip]=useState(existing?.rip||"");
   const [adresse,setAdresse]=useState(existing?.adresse||"");
   const [isProf,setIsProf]=useState(!!(existing?.nif||existing?.rc));
   const ok=name.trim();
@@ -1158,12 +1159,17 @@ function CustomerModal({existing,onSave,onClose,lang}){
                   <input value={article} onChange={e=>setArticle(e.target.value)} placeholder="Ex: 73211000..." style={{...S.inp({fontFamily:"monospace",fontSize:13,borderColor:"#93c5fd"}),width:"100%"}}/>
                 </div>
               </div>
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>🏦 RIP (Relevé d'Identité Postale)</div>
+                <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="Ex: 007 99999 0012345678 90"
+                  style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
+              </div>
             </div>
           )}
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim()});onClose();}}
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim(),rip:rip.trim()});onClose();}}
             style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
@@ -1375,7 +1381,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       tvaRate:bizSettings?.tvaRate||19,
       timbreEnabled:bizSettings?.timbreEnabled||false,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
-      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone}:null,
+      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone,rip:custObj.rip}:null,
     };
     const txs=[];
     if(paidAmount>0) txs.push({id:uid(),type:"income",amount:paidAmount,desc:`Facture ${invId}`,client:customer.trim(),date:today(),paid:true,invoiceId:invId});
@@ -2144,6 +2150,7 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
       ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
       ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
       ${bs.article?`<span>Art. : ${bs.article}</span>`:""}
+      ${bs.rip?`<span>🏦 RIP : ${bs.rip}</span>`:""}
       ${bs.adresse?`<span>${bs.adresse}</span>`:""}
     </div>
   </div>
@@ -2205,7 +2212,7 @@ ${paidTxs.length>0?`
 
 <div class="footer">
   <div class="footer-legal">
-    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:""].filter(Boolean).join("  ·  ")}
+    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
     ${bs.adresse?`<br>${bs.adresse}`:""}
   </div>
   <div class="footer-brand">Document généré par Fawtara</div>
@@ -3195,6 +3202,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [activite,setActivite]=useState(settings?.activite||"");
   const [adresse,setAdresse]=useState(settings?.adresse||"");
   const [article,setArticle]=useState(settings?.article||"");
+  const [rip,setRip]=useState(settings?.rip||"");
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
@@ -3213,7 +3221,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
     onClose();
   };
 
@@ -3331,10 +3339,18 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
             </div>
 
             {/* Adresse */}
-            <div style={{marginBottom:0}}>
+            <div style={{marginBottom:10}}>
               <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>Adresse — العنوان الكامل</div>
               <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Ex: 12 Rue Didouche Mourad, Alger"
                 style={S.inp()}/>
+            </div>
+
+            {/* RIP */}
+            <div style={{marginBottom:0}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIP — Relevé d'Identité Postale</div>
+              <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="Ex: 007 99999 0012345678 90"
+                style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+              <div style={{fontSize:10,color:"#9ca3af",marginTop:3}}>Apparaît sur les factures pour faciliter les paiements CCP</div>
             </div>
           </div>
 
