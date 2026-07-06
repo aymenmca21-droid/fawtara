@@ -1108,6 +1108,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
   const [nif,setNif]=useState(existing?.nif||"");
   const [nis,setNis]=useState(existing?.nis||"");
   const [rc,setRc]=useState(existing?.rc||"");
+  const [article,setArticle]=useState(existing?.article||"");
   const [adresse,setAdresse]=useState(existing?.adresse||"");
   const [isProf,setIsProf]=useState(!!(existing?.nif||existing?.rc));
   const ok=name.trim();
@@ -1121,7 +1122,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
           <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
-          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:14})}/>
+          <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:10})}/>
           <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:16})}/>
 
           {/* Type de client */}
@@ -1137,18 +1138,24 @@ function CustomerModal({existing,onSave,onClose,lang}){
           {isProf&&(
             <div style={{background:"#eff6ff",borderRadius:14,padding:14,border:"1px solid #bfdbfe",marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:700,color:"#1d4ed8",marginBottom:12}}>📋 Informations légales du client</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>NIF</div>
-                  <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="000316..." style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                  <input value={nif} onChange={e=>setNif(e.target.value)} placeholder="000316..." style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
                 </div>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>NIS</div>
-                  <input value={nis} onChange={e=>setNis(e.target.value)} placeholder="099812..." style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                  <input value={nis} onChange={e=>setNis(e.target.value)} placeholder="099812..." style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
                 </div>
-                <div style={{gridColumn:"1/-1"}}>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                <div>
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>RC — Registre du Commerce</div>
-                  <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="16/00-0012345B19" style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+                  <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="16/00-0012345B19" style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#2563EB",marginBottom:4}}>📌 Article (N° fiscal)</div>
+                  <input value={article} onChange={e=>setArticle(e.target.value)} placeholder="Ex: 73211000..." style={{...S.inp({fontFamily:"monospace",fontSize:13,borderColor:"#93c5fd"}),width:"100%"}}/>
                 </div>
               </div>
             </div>
@@ -1156,7 +1163,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim()});onClose();}}
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim()});onClose();}}
             style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
@@ -1318,9 +1325,9 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
   const total=lines.reduce((s,l)=>s+lineTotal(l),0);
   // حساب المبلغ الكلي مع TVA وضريبة الطابع
   const tvaAmt=bizSettings?.tvaEnabled?parseFloat((total*(bizSettings?.tvaRate||19)/100).toFixed(2)):0;
-  const montantTTC=total+tvaAmt;
+  const montantTTC=parseFloat((total+tvaAmt).toFixed(2));
   const timbreAmt=bizSettings?.timbreEnabled?calcTimbre(montantTTC):0;
-  const totalFinal=montantTTC+timbreAmt;
+  const totalFinal=parseFloat((montantTTC+timbreAmt).toFixed(2));
   const owingAmt=payStatus==="unpaid"?totalFinal:payStatus==="partial"?totalFinal-(parseFloat(paidAmt)||0):0;
 
   const addLine=()=>setLines(p=>[...p,{id:uid(),productId:null,name:"",price:"",qty:1,unite:"unité",remise:0}]);
@@ -2005,16 +2012,17 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   // حسابات TVA + Timbre
   const montantHT=invoice.total; // دائماً HT
   const tvaAmt=invTvaEnabled?parseFloat((montantHT*invTvaRate/100).toFixed(2)):0;
-  const montantTTC=montantHT+tvaAmt;
+  const montantTTC=parseFloat((montantHT+tvaAmt).toFixed(2));
   const timbreAmt=invTimbreEnabled?calcTimbre(montantTTC):0;
-  // totalFinal = إذا كانت فاتورة جديدة نأخذ totalTTC، وإلا نحسب
-  const totalFinal=invoice.totalTTC||(montantTTC+timbreAmt);
+  // نحسب totalFinal دائماً من HT + TVA — لا نعتمد على totalTTC المخزَّن
+  const totalFinal=parseFloat((montantTTC+timbreAmt).toFixed(2));
 
   // المبلغ الكلي المخزَّن في الفاتورة (TTC+Timbre)
   const paidTxs=(relatedTxs||[]).filter(tx=>tx.paid).sort((a,b)=>new Date(a.date)-new Date(b.date));
   const totalPaidAll=invoice.paidAmount||0;
-  const remaining=Math.max(0, totalFinal - totalPaidAll);
-  const isFullyPaid=remaining<=0||invoice.payStatus==="paid";
+  // الباقي = TTC المحسوب - المدفوع
+  const remaining=Math.max(0, parseFloat((totalFinal-totalPaidAll).toFixed(2)));
+  const isFullyPaid=remaining<=0.01||invoice.payStatus==="paid";
 
   const [showForm,setShowForm]=useState(false);
   const [newAmt,setNewAmt]=useState("");
@@ -4807,13 +4815,12 @@ export default function App(){
 
       // totalTTC: إذا لم يكن محفوظاً — نحسبه بدون TVA (لأنها فاتورة قديمة)
       let totalTTC=inv.totalTTC;
-      if(!totalTTC){
-        const ht=inv.total||0;
-        const tva=tvaEnabled?parseFloat((ht*tvaRate/100).toFixed(2)):0;
-        const ttc=ht+tva;
-        const timbre=timbreEnabled?calcTimbre(ttc):0;
-        totalTTC=ttc+timbre;
-      }
+      // نُعيد الحساب دائماً بدقة من HT + TVA
+      const ht=inv.total||0;
+      const tva=tvaEnabled?parseFloat((ht*tvaRate/100).toFixed(2)):0;
+      const ttc=parseFloat((ht+tva).toFixed(2));
+      const timbre=timbreEnabled?calcTimbre(ttc):0;
+      totalTTC=parseFloat((ttc+timbre).toFixed(2));
 
       // paidAmount: إذا الفاتورة مدفوعة يجب أن يساوي totalTTC
       const paidAmount=inv.payStatus==="paid"?totalTTC:(inv.paidAmount||0);
