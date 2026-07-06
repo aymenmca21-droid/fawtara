@@ -460,7 +460,7 @@ function Bars({txs}){
   const mo=["J","F","M","A","M","J","J","A","S","O","N","D"];
   const now=new Date().getMonth();
   const data=mo.map((_,i)=>({
-    i:txs.filter(t=>t.type==="income"&&t.paid&&new Date(t.date).getMonth()===i).reduce((s,t)=>s+t.amount,0),
+    i:txs.filter(t=>t.type==="income"&&t.paid&&new Date(t.date).getMonth()===i).reduce((s,t)=>s+t.amount,0)-txs.filter(t=>t.type==="avoir"&&new Date(t.date).getMonth()===i).reduce((s,t)=>s+Math.abs(t.amount),0),
     e:txs.filter(t=>t.type==="expense"&&new Date(t.date).getMonth()===i).reduce((s,t)=>s+t.amount,0),
   }));
   const max=Math.max(...data.map(d=>Math.max(d.i,d.e)),1);
@@ -4756,7 +4756,8 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
   const mInvs=invoices.filter(inv=>inv.date?.startsWith(prefix));
   const mVers=(versements||[]).filter(v=>v.date?.startsWith(prefix));
   const totalVersements=mVers.reduce((s,v)=>s+v.montant,0);
-  const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0);
+  const avoirsTxMonth=mTxs.filter(tx=>tx.type==="avoir").reduce((s,tx)=>s+Math.abs(tx.amount),0);
+  const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0)-avoirsTxMonth;
   const depenses=mTxs.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
   const benefice=revenus-depenses;
 
@@ -5088,7 +5089,8 @@ export default function App(){
     },1500);
   };
 
-  const totalInc=txs.filter(x=>x.type==="income"&&x.paid).reduce((s,x)=>s+x.amount,0);
+  const avoirsTxTotal=txs.filter(x=>x.type==="avoir").reduce((s,x)=>s+Math.abs(x.amount),0);
+  const totalInc=txs.filter(x=>x.type==="income"&&x.paid).reduce((s,x)=>s+x.amount,0)-avoirsTxTotal;
   const totalExp=txs.filter(x=>x.type==="expense").reduce((s,x)=>s+x.amount,0);
   const net=totalInc-totalExp;
   const owing=txs.filter(x=>x.type==="income"&&!x.paid).reduce((s,x)=>s+x.amount,0);
