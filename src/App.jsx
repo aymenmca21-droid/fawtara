@@ -5486,15 +5486,46 @@ export default function App(){
             )}
 
             {/* قائمة الفواتير */}
-            {invoices.length===0?(
+            {/* قائمة مدمجة — فواتير + أفيرات مرتبة بالتاريخ */}
+          {invoices.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:12}}>🧾</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>{t.noInvoices}</div>
                 <button onClick={()=>setModal("invoice")} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
               </div>
-            ):filtered.length===0?(
+            ):filtered.length===0&&(avoirs||[]).length===0?(
               <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat</div>
-            ):filtered.map(inv=>(
+            ):[
+              ...filtered.map(inv=>({...inv,_type:"invoice"})),
+              ...(avoirs||[]).map(av=>({...av,_type:"avoir"}))
+            ].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(item=>{
+              if(item._type==="avoir") return(
+                <div key={item.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #e5e7eb",opacity:0.9})}}>
+                  <div style={{width:40,height:40,background:"#f5f5f5",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>📝</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{item.customer}</div>
+                    <div style={{fontSize:11,color:"#9ca3af"}}>Avoir · Réf: {item.refFacture} · {item.date}</div>
+                    {item.motif&&<div style={{fontSize:11,color:"#6b7280"}}>{item.motif}</div>}
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontWeight:800,fontSize:15,color:"#374151"}}>– {fmt(item.montant,lang)}</div>
+                    <span style={{fontSize:10,fontWeight:700,color:"#6b7280",background:"#f3f4f6",padding:"2px 8px",borderRadius:20}}>AVOIR</span>
+                  </div>
+                  <button onClick={()=>{
+                    const html=buildAvoirHTML(item,bizSettings,item.montant,item.tvaEnabled,item.tvaRate,item.timbreEnabled);
+                    const blob=new Blob([html],{type:"text/html"});
+                    const url=URL.createObjectURL(blob);
+                    window.open(url,"_blank");
+                    setTimeout(()=>URL.revokeObjectURL(url),10000);
+                  }} style={{background:"#f3f4f6",border:"none",padding:"6px 10px",borderRadius:8,fontSize:13,cursor:"pointer",flexShrink:0}}>🖨</button>
+                  <button onClick={()=>{
+                    const a2=(avoirs||[]).filter(x=>x.id!==item.id);
+                    setAvoirs(a2);persist({avoirs:a2});
+                  }} style={{background:"#f5f5f5",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#6b7280",flexShrink:0}}>×</button>
+                </div>
+              );
+              const inv=item;
+              return(
               <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
                 onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
                 <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
@@ -5512,38 +5543,8 @@ export default function App(){
                 <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
                   style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
               </div>
-            ))}
-
-            {/* قائمة الأفيرات */}
-            {(avoirs||[]).length>0&&(
-              <div style={{marginTop:16}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>📝 Notes d'Avoir ({avoirs.length})</div>
-                {[...avoirs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(av=>(
-                  <div key={av.id} style={{...S.card({marginBottom:8,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #e5e7eb"})}}>
-                    <div style={{width:40,height:40,background:"#f5f5f5",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>📝</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{av.customer}</div>
-                      <div style={{fontSize:11,color:"#9ca3af"}}>Avoir · Réf: {av.refFacture} · {av.date}</div>
-                      {av.motif&&<div style={{fontSize:11,color:"#6b7280",marginTop:2}}>{av.motif}</div>}
-                    </div>
-                    <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontWeight:800,fontSize:15,color:"#111"}}>– {fmt(av.montant,lang)}</div>
-                      <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginTop:2}}>{av.avoirType==="total"?"Annulation totale":"Avoir partiel"}</div>
-                    </div>
-                    <button onClick={()=>{
-                      const html=buildAvoirHTML(av,bizSettings,av.montant,av.tvaEnabled,av.tvaRate,av.timbreEnabled);
-                      const blob=new Blob([html],{type:"text/html"});
-                      const url=URL.createObjectURL(blob);
-                      window.open(url,"_blank");
-                      setTimeout(()=>URL.revokeObjectURL(url),10000);
-                    }}
-                      style={{background:"#f3f4f6",border:"none",padding:"6px 10px",borderRadius:8,fontSize:12,cursor:"pointer",color:"#374151",flexShrink:0,fontWeight:700}}>🖨</button>
-                    <button onClick={()=>setAvoirs(prev=>{const a2=prev.filter(x=>x.id!==av.id);persist({avoirs:a2});return a2;})}
-                      style={{background:"#f5f5f5",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#6b7280",flexShrink:0}}>×</button>
-                  </div>
-                ))}
-              </div>
-            )}
+              );
+            })}
           </div>
           );
         })()}
