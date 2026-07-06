@@ -1124,7 +1124,9 @@ function CustomerModal({existing,onSave,onClose,lang}){
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
           <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
           <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:10})}/>
-          <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:16})}/>
+          <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:10})}/>
+          <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="🏦 RIP — Ex: 007 99999 0012345678 90"
+            style={{...S.inp({marginBottom:16,fontFamily:"monospace",fontSize:13})}}/>
 
           {/* Type de client */}
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,padding:"10px 14px",background:"#f9fafb",borderRadius:12}}>
@@ -1158,11 +1160,6 @@ function CustomerModal({existing,onSave,onClose,lang}){
                   <div style={{fontSize:10,fontWeight:700,color:"#2563EB",marginBottom:4}}>📌 Article (N° fiscal)</div>
                   <input value={article} onChange={e=>setArticle(e.target.value)} placeholder="Ex: 73211000..." style={{...S.inp({fontFamily:"monospace",fontSize:13,borderColor:"#93c5fd"}),width:"100%"}}/>
                 </div>
-              </div>
-              <div style={{marginTop:8}}>
-                <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>🏦 RIP (Relevé d'Identité Postale)</div>
-                <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="Ex: 007 99999 0012345678 90"
-                  style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
               </div>
             </div>
           )}
@@ -3346,11 +3343,11 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
             </div>
 
             {/* RIP */}
-            <div style={{marginBottom:0}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIP — Relevé d'Identité Postale</div>
+            <div style={{marginBottom:0,padding:"12px",background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIP — Relevé d'Identité Postale (CCP)</div>
               <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="Ex: 007 99999 0012345678 90"
                 style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
-              <div style={{fontSize:10,color:"#9ca3af",marginTop:3}}>Apparaît sur les factures pour faciliter les paiements CCP</div>
+              <div style={{fontSize:10,color:"#6b7280",marginTop:3}}>Apparaît sur les factures PDF</div>
             </div>
           </div>
 
