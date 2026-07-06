@@ -1999,9 +1999,115 @@ function ProductsModal({products,onSave,onDelete,onClose,lang,bizSettings,onSave
 /* ═══════════════════════════════════════════════
    INVOICE PDF MODAL  — avec historique des paiements
 ═══════════════════════════════════════════════ */
-function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC, onEdit}){
+function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
+  const avoirNum=`AV-${avoir.date?.replace(/-/g,"").slice(0,8)}-${avoir.id?.slice(-4)||"0001"}`;
+  const rows=(avoir.lines||[]).map(l=>`
+    <tr>
+      <td style="padding:9px 8px;border-bottom:1px solid #ccc;font-size:13px">${l.name}</td>
+      <td style="padding:9px 8px;border-bottom:1px solid #ccc;font-size:13px;text-align:center">${l.qty||1}</td>
+      <td style="padding:9px 8px;border-bottom:1px solid #ccc;font-size:13px;text-align:center">${l.unite||"unité"}</td>
+      <td style="padding:9px 8px;border-bottom:1px solid #ccc;font-size:13px;text-align:right">${(parseFloat(l.price)||0).toLocaleString("fr-DZ")} DA</td>
+    </tr>`).join("");
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Avoir ${avoirNum}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;padding:32px;color:#000;max-width:740px;margin:0 auto}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:18px;border-bottom:3px solid #dc2626;margin-bottom:20px}
+  .badge{background:#dc2626;color:#fff;padding:6px 18px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+  .ref{background:#fef2f2;border:1.5px solid #dc2626;border-radius:8px;padding:10px 16px;margin-bottom:20px;font-size:13px;color:#dc2626;font-weight:600}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  .party{padding:12px 14px;border:1.5px solid #000;border-radius:4px}
+  .party-label{font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-name{font-size:15px;font-weight:700}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
+  thead tr{border-bottom:2px solid #000;border-top:1px solid #000}
+  th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:8px;text-align:left}
+  .total-box{border:2px solid #dc2626;border-radius:6px;padding:14px 18px;margin-bottom:16px;background:#fef2f2}
+  .total-label{font-size:13px;font-weight:700;color:#dc2626}
+  .total-amount{font-size:26px;font-weight:900;color:#dc2626}
+  .motif{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:12px 14px;margin-bottom:20px;font-size:13px}
+  .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .sign-box{border:1.5px solid #000;border-radius:6px;padding:14px;min-height:80px}
+  .sign-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .sign-line{border-bottom:1px dashed #ccc;margin-top:50px}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #ccc;font-size:10px;color:#666;text-align:center}
+  @media print{body{padding:20px}}
+</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body>
+
+<div class="header">
+  <div>
+    ${bs?.logo?`<img src="${bs.logo}" style="height:48px;object-fit:contain;margin-bottom:6px;display:block"/>`:``}
+    <div style="font-size:18px;font-weight:900">${avoir.companyName||"Fawtara"}</div>
+    <div style="font-size:10px;color:#333;font-family:monospace;margin-top:3px">
+      ${[bs?.nif?`NIF: ${bs.nif}`:"",bs?.rc?`RC: ${bs.rc}`:""].filter(Boolean).join(" · ")}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div class="badge">NOTE D'AVOIR</div>
+    <div style="font-size:20px;font-weight:900;font-family:monospace;margin-top:8px">${avoirNum}</div>
+    <div style="font-size:12px;color:#666;margin-top:3px">Date : ${avoir.date}</div>
+  </div>
+</div>
+
+<div class="ref">
+  📄 En référence à la facture N° <strong>${avoir.refFacture}</strong> —
+  ${avoir.avoirType==="total"?"Annulation totale":"Avoir partiel"}
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Émetteur</div>
+    <div class="party-name">${avoir.companyName||"Fawtara"}</div>
+    ${bs?.adresse?`<div style="font-size:11px;color:#555;margin-top:3px">${bs.adresse}</div>`:""}
+  </div>
+  <div class="party">
+    <div class="party-label">Bénéficiaire</div>
+    <div class="party-name">${avoir.customer}</div>
+    ${avoir.customerInfo?.adresse?`<div style="font-size:11px;color:#555;margin-top:3px">${avoir.customerInfo.adresse}</div>`:""}
+    ${avoir.customerInfo?.nif?`<div style="font-size:10px;color:#888;font-family:monospace;margin-top:2px">NIF: ${avoir.customerInfo.nif}</div>`:""}
+  </div>
+</div>
+
+${avoir.avoirType==="total"?`
+<table>
+  <thead><tr>
+    <th>Désignation</th><th style="text-align:center">Qté</th><th style="text-align:center">Unité</th><th style="text-align:right">Prix</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>`:""}
+
+<div class="total-box">
+  <div class="total-label">MONTANT DE L'AVOIR</div>
+  <div class="total-amount">– ${montant.toLocaleString("fr-DZ",{minimumFractionDigits:montant%1===0?0:2,maximumFractionDigits:2})} DA</div>
+  ${tvaEnabled?`<div style="font-size:11px;color:#dc2626;margin-top:4px">Dont TVA ${tvaRate}%</div>`:""}
+</div>
+
+${avoir.motif?`<div class="motif"><strong>Motif :</strong> ${avoir.motif}</div>`:""}
+
+<div class="sign-section">
+  <div class="sign-box">
+    <div class="sign-label">Émetteur — Signature & Cachet</div>
+    <div class="sign-line"></div>
+  </div>
+  <div class="sign-box">
+    <div class="sign-label">Bénéficiaire — Accusé de réception</div>
+    <div class="sign-line"></div>
+  </div>
+</div>
+
+<div class="footer">Document généré par Fawtara · Avoir N° ${avoirNum} · ${avoir.date}</div>
+</body></html>`;
+}
+
+function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC, onEdit, onCreateAvoir}){
   const t=T[lang], rtl=lang==="ar";
-  const [docType,setDocType]=useState("facture"); // facture | bv
+  const [docType,setDocType]=useState("facture");
+  const [showAvoirModal,setShowAvoirModal]=useState(false);
+  const [avoirType,setAvoirType]=useState("total");
+  const [avoirMontant,setAvoirMontant]=useState("");
+  const [avoirMotif,setAvoirMotif]=useState(""); // facture | bv
   const sc={paid:"#059669",unpaid:"#dc2626",partial:"#d97706"};
   const sb={paid:"#ecfdf5",unpaid:"#fef2f2",partial:"#fffbeb"};
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -2651,7 +2757,7 @@ ${paidTxs.length>0?`
           </div>
         </div>
 
-        {/* Footer — 4 أزرار */}
+        {/* Footer — 4 أزرار + Avoir */}
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",flexShrink:0,display:"flex",flexDirection:"column",gap:8}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             <button onClick={printDirect}
@@ -2684,7 +2790,103 @@ ${paidTxs.length>0?`
               📲 WA
             </button>
           </div>
+          {/* زر Avoir */}
+          {onCreateAvoir&&(
+            <button onClick={()=>setShowAvoirModal(true)}
+              style={{padding:12,background:"#fff",color:"#dc2626",border:"2px solid #dc2626",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              📝 Créer un Avoir (Retour / Correction)
+            </button>
+          )}
         </div>
+
+        {/* Modal Avoir */}
+        {showAvoirModal&&(
+          <div onClick={()=>setShowAvoirModal(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400,backdropFilter:"blur(4px)",padding:20}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:20,padding:28,width:"100%",maxWidth:400,boxShadow:"0 24px 64px rgba(0,0,0,.3)",animation:"up .2s cubic-bezier(.22,1,.36,1)"}}>
+              <div style={{fontSize:20,textAlign:"center",marginBottom:8}}>📝</div>
+              <div style={{fontWeight:900,fontSize:16,color:"#111",textAlign:"center",marginBottom:4}}>Créer un Avoir</div>
+              <div style={{fontSize:13,color:"#6b7280",textAlign:"center",marginBottom:20}}>Réf: {invoice.id} · {invoice.customer}</div>
+
+              <div style={{background:"#fef2f2",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+                <div style={{fontSize:11,color:"#6b7280",marginBottom:4}}>Montant de la facture originale</div>
+                <div style={{fontSize:20,fontWeight:900,color:"#dc2626"}}>{totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</div>
+              </div>
+
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>Type d'avoir</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <button onClick={()=>setAvoirType("total")}
+                    style={{padding:"10px",borderRadius:10,border:`2px solid ${avoirType==="total"?"#dc2626":"#e5e7eb"}`,
+                      background:avoirType==="total"?"#fef2f2":"#fff",color:avoirType==="total"?"#dc2626":"#6b7280",
+                      fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    ❌ Avoir total<br/><span style={{fontSize:10,fontWeight:400}}>Annulation complète</span>
+                  </button>
+                  <button onClick={()=>setAvoirType("partial")}
+                    style={{padding:"10px",borderRadius:10,border:`2px solid ${avoirType==="partial"?"#d97706":"#e5e7eb"}`,
+                      background:avoirType==="partial"?"#fffbeb":"#fff",color:avoirType==="partial"?"#d97706":"#6b7280",
+                      fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    ⚡ Avoir partiel<br/><span style={{fontSize:10,fontWeight:400}}>Correction / retour partiel</span>
+                  </button>
+                </div>
+              </div>
+
+              {avoirType==="partial"&&(
+                <div style={{marginBottom:12}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>Montant de l'avoir</div>
+                  <input type="text" inputMode="decimal" value={avoirMontant}
+                    onChange={e=>setAvoirMontant(e.target.value.replace(/[^0-9.]/g,""))}
+                    placeholder={`Max: ${totalFinal.toLocaleString("fr-DZ")} DA`}
+                    style={{...S.inp({fontSize:18,fontWeight:700,borderColor:"#d97706"}),width:"100%"}}/>
+                </div>
+              )}
+
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>Motif</div>
+                <input value={avoirMotif} onChange={e=>setAvoirMotif(e.target.value)}
+                  placeholder="Ex: Retour marchandise, Erreur de prix..."
+                  style={{...S.inp({fontSize:13}),width:"100%"}}/>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <button onClick={()=>setShowAvoirModal(false)}
+                  style={{padding:13,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>
+                  Annuler
+                </button>
+                <button onClick={()=>{
+                  const montant=avoirType==="total"?totalFinal:Math.min(parseFloat(avoirMontant)||0,totalFinal);
+                  if(montant<=0) return;
+                  const avoir={
+                    id:uid(),
+                    type:"avoir",
+                    refFacture:invoice.id,
+                    customer:invoice.customer,
+                    montant,
+                    avoirType,
+                    motif:avoirMotif,
+                    date:today(),
+                    companyName:invoice.companyName,
+                    lines:invoice.lines,
+                    tvaEnabled:invoice.tvaEnabled,
+                    tvaRate:invoice.tvaRate,
+                    timbreEnabled:invoice.timbreEnabled,
+                    customerInfo:invoice.customerInfo,
+                  };
+                  onCreateAvoir(avoir);
+                  // طباعة وثيقة الأفير
+                  const html=buildAvoirHTML(avoir,bs,montant,invTvaEnabled,invTvaRate,invTimbreEnabled);
+                  const blob=new Blob([html],{type:"text/html"});
+                  const url=URL.createObjectURL(blob);
+                  window.open(url,"_blank");
+                  setTimeout(()=>URL.revokeObjectURL(url),10000);
+                  setShowAvoirModal(false);
+                }}
+                  style={{padding:13,borderRadius:12,border:"none",fontSize:14,fontWeight:800,color:"#fff",background:"#dc2626",cursor:"pointer"}}>
+                  ✓ Créer l'Avoir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -4793,6 +4995,7 @@ export default function App(){
   const [invoiceDateTo,setInvoiceDateTo]=useState("");
   const [confirmLogout,setConfirmLogout]=useState(false);
   const [versements,setVersements]=useState([]);
+  const [avoirs,setAvoirs]=useState([]);
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
   const [editingInvoice,setEditingInvoice]=useState(null);
@@ -4844,6 +5047,7 @@ export default function App(){
     setCustomers(data.customers||[]);
     setFournisseurs(data.fournisseurs||[]);
     setVersements(data.versements||[]);
+    setAvoirs(data.avoirs||[]);
     setCompanyName(data.companyName||userInfo.shopName||"");
     setBizSettings(data.bizSettings||{nif:"",tvaEnabled:false,tvaRate:19,timbreEnabled:false,invPrefix:"FAC",invCounter:1,blCounter:1,bcCounter:1});
     setStarted((data.txs||[]).length>0||(data.invoices||[]).length>0);
@@ -4873,6 +5077,7 @@ export default function App(){
         invoices:patch.invoices??invoices, customers:patch.customers??customers,
         fournisseurs:patch.fournisseurs??fournisseurs,
         versements:patch.versements??versements,
+        avoirs:patch.avoirs??avoirs,
         companyName:patch.companyName??effectiveCompanyName,
         bizSettings:patch.bizSettings??bizSettings,
       });
@@ -5508,8 +5713,8 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onCreateAvoir={avoir=>{const a2=[avoir,...(avoirs||[])];setAvoirs(a2);persist({avoirs:a2});showToast("Avoir créé ✓");setDetailTx(null);}}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{const a2=[avoir,...(avoirs||[])];setAvoirs(a2);persist({avoirs:a2});showToast("Avoir créé ✓");setPreviewInvoice(null);}}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
