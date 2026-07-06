@@ -4687,13 +4687,14 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
             const linkedInv=tx.invoiceId?invoices.find(i=>i.id===tx.invoiceId):null;
             return(
               <div key={tx.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f9fafb"}}>
-                <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:tx.type==="income"?"#ecfdf5":"#fef2f2",fontSize:16}}>{tx.type==="income"?"↑":"↓"}</div>
+                <div style={{width:36,height:36,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:tx.type==="avoir"?"#f5f5f5":tx.type==="income"?"#ecfdf5":"#fef2f2",fontSize:16}}>{tx.type==="avoir"?"📝":tx.type==="income"?"↑":"↓"}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:14,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx.desc}</div>
                   <div style={{fontSize:11,color:"#9ca3af"}}>{tx.client||tx.date}{tx.invoiceId?` · 📄${tx.invoiceId}`:""}</div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <div style={{fontWeight:700,fontSize:14,color:tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="income"?"+":"–"}{fmt(tx.amount,lang)}</div>
+                  <div style={{fontWeight:700,fontSize:14,color:tx.type==="avoir"?"#374151":tx.type==="income"?"#059669":"#dc2626"}}>{tx.type==="avoir"?"–":tx.type==="income"?"+":"–"}{fmt(Math.abs(tx.amount),lang)}</div>
+                  {tx.type==="avoir"&&<div style={{fontSize:10,color:"#6b7280",fontWeight:700}}>AVOIR</div>}
                   {!tx.paid&&tx.type==="income"&&<div style={{fontSize:10,color:"#d97706",fontWeight:700}}>EN ATTENTE</div>}
                 </div>
                 {linkedInv&&<button onClick={()=>setPreviewInvoice(linkedInv)} style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,color:"#1d4ed8",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>🧾 PDF</button>}
@@ -5747,8 +5748,36 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onCreateAvoir={avoir=>{const a2=[avoir,...(avoirs||[])];setAvoirs(a2);persist({avoirs:a2});showToast("Avoir créé ✓");setDetailTx(null);}}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{const a2=[avoir,...(avoirs||[])];setAvoirs(a2);persist({avoirs:a2});showToast("Avoir créé ✓");setPreviewInvoice(null);}}/>}
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onCreateAvoir={avoir=>{
+        const a2=[avoir,...(avoirs||[])];
+        // تسجيل tx سالب في Historique
+        const avoirTx={id:uid(),type:"avoir",amount:-avoir.montant,desc:`Avoir · Réf: ${avoir.refFacture}`,client:avoir.customer,date:avoir.date,paid:true,avoirId:avoir.id};
+        const t2=[avoirTx,...txs];
+        // تحديث الفاتورة الأصلية — زيادة paidAmount بمقدار الأفير
+        const inv2=invoices.map(inv=>{
+          if(inv.id!==avoir.refFacture) return inv;
+          const newPaid=Math.min((inv.totalTTC||inv.total),(inv.paidAmount||0)+avoir.montant);
+          const payStatus=newPaid>=(inv.totalTTC||inv.total)?"paid":"partial";
+          return {...inv,paidAmount:newPaid,payStatus};
+        });
+        setAvoirs(a2);setTxs(t2);setInvoices(inv2);
+        persist({avoirs:a2,txs:t2,invoices:inv2});
+        showToast("Avoir créé ✓");setDetailTx(null);
+      }}/>}
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{
+        const a2=[avoir,...(avoirs||[])];
+        const avoirTx={id:uid(),type:"avoir",amount:-avoir.montant,desc:`Avoir · Réf: ${avoir.refFacture}`,client:avoir.customer,date:avoir.date,paid:true,avoirId:avoir.id};
+        const t2=[avoirTx,...txs];
+        const inv2=invoices.map(inv=>{
+          if(inv.id!==avoir.refFacture) return inv;
+          const newPaid=Math.min((inv.totalTTC||inv.total),(inv.paidAmount||0)+avoir.montant);
+          const payStatus=newPaid>=(inv.totalTTC||inv.total)?"paid":"partial";
+          return {...inv,paidAmount:newPaid,payStatus};
+        });
+        setAvoirs(a2);setTxs(t2);setInvoices(inv2);
+        persist({avoirs:a2,txs:t2,invoices:inv2});
+        showToast("Avoir créé ✓");setPreviewInvoice(null);
+      }}/>}
       {pendingRef&&<ReferralNotif referral={pendingRef} onClose={()=>setPendingRef(null)} lang={lang}/>}
       {showRefPanel&&<ReferralPanel user={user} lang={lang} onClose={()=>setShowRefPanel(false)}/>}
 
