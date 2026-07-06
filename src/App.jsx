@@ -5360,7 +5360,7 @@ export default function App(){
               :`${months[now.getMonth()]} ${now.getFullYear()}`;
             const totalAll=filtered.reduce((s,i)=>s+(i.totalTTC||i.total),0);
             const totalPaid=filtered.filter(i=>i.payStatus==="paid").reduce((s,i)=>s+i.total,0);
-            const totalUnpaid=filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0);
+            const totalUnpaid=Math.max(0,filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0));
             const rows=filtered.map((inv,i)=>`
               <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                 <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
@@ -5475,11 +5475,11 @@ export default function App(){
                   <div style={{fontSize:9,color:"#1d4ed8",fontWeight:700,marginTop:2}}>FACTURES</div>
                 </div>
                 <div style={{background:"#ecfdf5",borderRadius:10,padding:"10px",textAlign:"center"}}>
-                  <div style={{fontWeight:900,fontSize:13,color:"#059669"}}>{fmt(filtered.reduce((s,i)=>s+(i.totalTTC||i.total),0),lang)}</div>
+                  <div style={{fontWeight:900,fontSize:13,color:"#059689"}}>{fmt(filtered.reduce((s,i)=>s+(i.totalTTC||i.total),0)-(avoirs||[]).filter(a=>filtered.some(i=>i.id===a.refFacture)).reduce((s,a)=>s+a.montant,0),lang)}</div>
                   <div style={{fontSize:9,color:"#065f46",fontWeight:700,marginTop:2}}>TOTAL</div>
                 </div>
                 <div style={{background:"#fef2f2",borderRadius:10,padding:"10px",textAlign:"center"}}>
-                  <div style={{fontWeight:900,fontSize:13,color:"#dc2626"}}>{fmt(filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0),lang)}</div>
+                  <div style={{fontWeight:900,fontSize:13,color:"#dc2626"}}>{fmt(Math.max(0,filtered.filter(i=>i.payStatus!=="paid").reduce((s,i)=>s+((i.totalTTC||i.total)-(i.paidAmount||0)),0)),lang)}</div>
                   <div style={{fontSize:9,color:"#b91c1c",fontWeight:700,marginTop:2}}>RESTE</div>
                 </div>
               </div>
