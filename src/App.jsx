@@ -2080,8 +2080,11 @@ ${avoir.avoirType==="total"?`
 
 <div class="total-box">
   <div class="total-label">MONTANT DE L'AVOIR</div>
-  <div class="total-amount">– ${montant.toLocaleString("fr-DZ",{minimumFractionDigits:montant%1===0?0:2,maximumFractionDigits:2})} DA</div>
-  ${tvaEnabled?`<div style="font-size:11px;color:#dc2626;margin-top:4px">Dont TVA ${tvaRate}%</div>`:""}
+  ${tvaEnabled?`
+  <div style="font-size:13px;color:#666;margin-bottom:4px">Montant HT : ${(montant/(1+tvaRate/100)).toLocaleString("fr-DZ",{minimumFractionDigits:2,maximumFractionDigits:2})} DA</div>
+  <div style="font-size:13px;color:#666;margin-bottom:8px">TVA ${tvaRate}% : ${(montant-montant/(1+tvaRate/100)).toLocaleString("fr-DZ",{minimumFractionDigits:2,maximumFractionDigits:2})} DA</div>
+  `:""}
+  <div class="total-amount">– ${montant.toLocaleString("fr-DZ",{minimumFractionDigits:montant%1===0?0:2,maximumFractionDigits:2})} DA ${tvaEnabled?"TTC":""}</div>
 </div>
 
 ${avoir.motif?`<div class="motif"><strong>Motif :</strong> ${avoir.motif}</div>`:""}
@@ -2190,12 +2193,12 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .company-info span{display:block}
   .inv-block{text-align:right}
   .inv-title{font-size:28px;font-weight:900;color:#000;letter-spacing:-1px;margin-bottom:4px}
-  .inv-number{font-size:13px;color:#333;font-family:monospace;margin-bottom:4px}
+  .inv-number{font-size:13px;color:#000;font-family:monospace;margin-bottom:4px}
   .inv-date{font-size:12px;color:#333;margin-bottom:2px}
   .badge{display:inline-block;padding:4px 12px;border-radius:4px;font-size:11px;font-weight:700;margin-top:6px;border:1.5px solid}
-  .badge-paid{border-color:#059669;color:#059669}
-  .badge-unpaid{border-color:#dc2626;color:#dc2626}
-  .badge-partial{border-color:#d97706;color:#d97706}
+  .badge-paid{border-color:#000;color:#000}
+  .badge-unpaid{border-color:#000;color:#000}
+  .badge-partial{border-color:#000;color:#000}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   .party-block{padding:12px 14px;background:#fff;border-radius:4px;border:1.5px solid #000}
   .party-label{font-size:9px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
@@ -2215,9 +2218,9 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .tl.main{font-size:17px;font-weight:900;color:#000;border-top:2px solid #000;margin-top:6px;padding-top:10px}
   .lettres{background:#fff;border:1px solid #000;border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#000}
   .pr{display:flex;justify-content:space-between;padding:7px 10px;border:1px solid #ccc;border-radius:4px;margin-bottom:4px;font-size:12px}
-  .pr .pamt{font-weight:700;color:#059669}
+  .pr .pamt{font-weight:700;color:#000}
   .rr{display:flex;justify-content:space-between;padding:9px 12px;border:1.5px solid #000;border-radius:4px;margin-top:6px}
-  .rr.clear{border-color:#059669}
+  .rr.clear{border-color:#000}
   .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #000;display:flex;justify-content:space-between;align-items:flex-end}
   .footer-legal{font-size:9.5px;color:#333;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:10px;color:#333;text-align:right}
@@ -3051,7 +3054,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                     <td style="padding:8px 10px;font-size:12px">${inv.lines.map(l=>l.name).slice(0,2).join(", ")}${inv.lines.length>2?"...":""}</td>
                     <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
                     <td style="padding:8px 10px;font-size:11px;text-align:center">
-                      <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:${sb2[inv.payStatus]||"#f3f4f6"};color:${sc2[inv.payStatus]||"#374151"}">
+                      <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:#f5f5f5;color:#000">
                         ${inv.payStatus==="paid"?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
                       </span>
                     </td>
@@ -3087,10 +3090,10 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   </div>
 </div>
 <div class="summary">
-  <div class="sum-box" style="background:#eff6ff"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#2563EB">${totalAll.toLocaleString()} DA</div></div>
-  <div class="sum-box" style="background:#ecfdf5"><div class="sum-label">Total payé</div><div class="sum-value" style="color:#059669">${totalPaid.toLocaleString()} DA</div></div>
+  <div class="sum-box"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#000">${totalAll.toLocaleString()} DA</div></div>
+  <div class="sum-box"><div class="sum-label">Total payé</div><div class="sum-value" style="color:#000">${totalPaid.toLocaleString()} DA</div></div>
   ${totalVersements>0?`<div class="sum-box" style="background:#f0fdf4"><div class="sum-label">Versements (${custVers.length})</div><div class="sum-value" style="color:#16a34a">+${totalVersements.toLocaleString()} DA</div></div>`:""}
-  <div class="sum-box" style="background:${totalReste>0?"#fef2f2":"#ecfdf5"}"><div class="sum-label">Reste à payer</div><div class="sum-value" style="color:${totalReste>0?"#dc2626":"#059669"}">${totalReste>0?totalReste.toLocaleString()+" DA":"✓ Soldé"}</div></div>
+  <div class="sum-box"><div class="sum-label">Reste à payer</div><div class="sum-value" style="color:#000">${totalReste>0?totalReste.toLocaleString()+" DA":"✓ Soldé"}</div></div>
 </div>
 <table>
   <thead><tr><th>N° Facture</th><th>Date</th><th>Articles</th><th style="text-align:right">Montant</th><th style="text-align:center">Statut</th><th style="text-align:right">Reste</th></tr></thead>
@@ -3106,7 +3109,7 @@ ${custVers.length>0?`
     <tbody>${versRows}</tbody>
     <tfoot><tr>
       <td colspan="3" style="padding:8px 10px;font-weight:700;font-size:12px">Total versements</td>
-      <td style="padding:8px 10px;text-align:right;font-weight:900;color:#059669;font-size:14px">+${totalVersements.toLocaleString()} DA</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:900;color:#000;font-size:14px">+${totalVersements.toLocaleString()} DA</td>
     </tr></tfoot>
   </table>
 </div>`:""}
@@ -5362,7 +5365,7 @@ export default function App(){
                 <td style="padding:8px 10px;font-size:12px;color:#64748b">${inv.date}</td>
                 <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
                 <td style="padding:8px 10px;font-size:11px;text-align:center">
-                  <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:${sb[inv.payStatus]};color:${sc[inv.payStatus]}">
+                  <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:#f5f5f5;color:#000">
                     ${inv.payStatus==="paid"?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}
                   </span>
                 </td>
@@ -5402,9 +5405,9 @@ export default function App(){
   </div>
 </div>
 <div class="summary">
-  <div class="sum-box" style="background:#eff6ff"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#2563EB">${totalAll.toLocaleString()} DA</div></div>
-  <div class="sum-box" style="background:#ecfdf5"><div class="sum-label">Total encaissé</div><div class="sum-value" style="color:#059669">${totalPaid.toLocaleString()} DA</div></div>
-  <div class="sum-box" style="background:#fef2f2"><div class="sum-label">Reste à encaisser</div><div class="sum-value" style="color:#dc2626">${totalUnpaid.toLocaleString()} DA</div></div>
+  <div class="sum-box"><div class="sum-label">Total facturé</div><div class="sum-value" style="color:#000">${totalAll.toLocaleString()} DA</div></div>
+  <div class="sum-box"><div class="sum-label">Total encaissé</div><div class="sum-value">${totalPaid.toLocaleString()} DA</div></div>
+  <div class="sum-box"><div class="sum-label">Reste à encaisser</div><div class="sum-value">${totalUnpaid.toLocaleString()} DA</div></div>
 </div>
 <table>
   <thead><tr>
