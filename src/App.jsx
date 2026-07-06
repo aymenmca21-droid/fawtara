@@ -5469,7 +5469,7 @@ export default function App(){
       )}
 
       {/* MODALS */}
-      {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{setTxs(p=>[tx,...p]);setModal(null);}} onClose={()=>setModal(null)} lang={lang}/>}
+      {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});setModal(null);showToast(tx.type==="income"?"Revenu enregistré ✓":"Dépense enregistrée ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
       {editingInvoice&&<InvoiceModal
         products={products} customers={customers} invoices={invoices}
         onClose={()=>setEditingInvoice(null)}
