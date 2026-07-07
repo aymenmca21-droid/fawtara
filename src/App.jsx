@@ -2183,8 +2183,9 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Facture ${invoice.id}</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#000;padding:32px}
+  *{box-sizing:border-box;margin:0;padding:0;color:#000 !important}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:32px}
+  a{color:#000 !important;text-decoration:none}
   .page{max-width:740px;margin:0 auto}
   .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #000;margin-bottom:20px}
   .logo-block img{height:56px;max-width:150px;object-fit:contain;margin-bottom:8px;display:block}
