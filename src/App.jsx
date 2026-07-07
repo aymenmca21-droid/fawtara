@@ -1378,7 +1378,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       tvaRate:bizSettings?.tvaRate||19,
       timbreEnabled:bizSettings?.timbreEnabled||false,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
-      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,adresse:custObj.adresse,phone:custObj.phone,rip:custObj.rip}:null,
+      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,article:custObj.article,adresse:custObj.adresse,phone:custObj.phone,rip:custObj.rip}:null,
     };
     const txs=[];
     if(paidAmount>0) txs.push({id:uid(),type:"income",amount:paidAmount,desc:`Facture ${invId}`,client:customer.trim(),date:today(),paid:true,invoiceId:invId});
@@ -2189,7 +2189,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:20px;border-bottom:3px solid #000;margin-bottom:20px}
   .logo-block img{height:56px;max-width:150px;object-fit:contain;margin-bottom:8px;display:block}
   .company-name{font-size:18px;font-weight:900;color:#000;margin-bottom:5px}
-  .company-info{font-size:10.5px;color:#333;line-height:1.9}
+  .company-info{font-size:10.5px;color:#000;line-height:1.9}
   .company-info span{display:block}
   .inv-block{text-align:right}
   .inv-title{font-size:28px;font-weight:900;color:#000;letter-spacing:-1px;margin-bottom:4px}
@@ -2203,7 +2203,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .party-block{padding:12px 14px;background:#fff;border-radius:4px;border:1.5px solid #000}
   .party-label{font-size:9px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
   .party-name{font-size:15px;font-weight:700;color:#000;margin-bottom:4px}
-  .party-info{font-size:10.5px;color:#333;line-height:1.9;font-family:monospace}
+  .party-info{font-size:10.5px;color:#000;line-height:1.9;font-family:monospace}
   .party-info span{display:block}
   table{width:100%;border-collapse:collapse;margin-bottom:16px}
   thead tr{border-bottom:2px solid #000;border-top:1px solid #000}
@@ -2267,6 +2267,8 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
       ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
       ${ci.nis?`<span>NIS : ${ci.nis}</span>`:""}
       ${ci.rc?`<span>RC : ${ci.rc}</span>`:""}
+      ${ci.article?`<span>Art. : ${ci.article}</span>`:""}
+      ${ci.rip?`<span>🏦 RIP : ${ci.rip}</span>`:""}
       ${ci.adresse?`<span>${ci.adresse}</span>`:""}
       ${ci.phone?`<span>Tél : ${ci.phone}</span>`:""}
     </div>
@@ -2304,7 +2306,7 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
 
 ${paidTxs.length>0?`
 <div style="margin-bottom:14px">
-  <div style="font-size:9.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
+  <div style="font-size:9.5px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
   ${paidTxs.map((tx,i)=>`
   <div class="pr">
     <span>${i===0?t.firstPayment:t.paymentNum(i+1)} — ${tx.date}</span>
@@ -2360,17 +2362,17 @@ ${paidTxs.length>0?`
   .badge{background:#1e293b;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-label{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
   .party-name{font-size:15px;font-weight:700;color:#1e293b}
   table{width:100%;border-collapse:collapse;margin-bottom:24px}
   thead tr{border-bottom:2px solid #1e293b;background:#f8fafc}
-  th{padding:10px 8px;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th{padding:10px 8px;font-size:10px;color:#000;text-transform:uppercase;letter-spacing:.8px;text-align:left}
   th:not(:first-child){text-align:center}
   .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:32px}
   .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:16px;min-height:100px}
-  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .sign-label{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
   .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:60px}
-  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;font-family:monospace}
+  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#555;display:flex;justify-content:space-between;font-family:monospace}
   @media print{body{padding:20px}}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
@@ -2395,12 +2397,12 @@ ${paidTxs.length>0?`
   <div class="party">
     <div class="party-label">Expéditeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
-    ${bs?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${bs.adresse}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Destinataire</div>
     <div class="party-name">${invoice.customer}</div>
-    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
   </div>
 </div>
 
@@ -2460,11 +2462,11 @@ ${paidTxs.length>0?`
   .badge{background:#2563EB;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-label{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
   .party-name{font-size:15px;font-weight:700;color:#1e293b}
   table{width:100%;border-collapse:collapse;margin-bottom:20px}
   thead tr{border-bottom:2px solid #1e293b;background:#f8fafc}
-  th{padding:10px 8px;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.8px;text-align:left}
+  th{padding:10px 8px;font-size:10px;color:#000;text-transform:uppercase;letter-spacing:.8px;text-align:left}
   th:not(:first-child){text-align:right}
   th:nth-child(2),th:nth-child(3){text-align:center}
   .total-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:20px}
@@ -2473,9 +2475,9 @@ ${paidTxs.length>0?`
   .conditions{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#92400e}
   .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
   .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:16px;min-height:90px}
-  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .sign-label{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
   .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:55px}
-  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between;font-family:monospace}
+  .footer{margin-top:28px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:10px;color:#555;display:flex;justify-content:space-between;font-family:monospace}
   @media print{body{padding:20px}}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
@@ -2501,13 +2503,13 @@ ${paidTxs.length>0?`
   <div class="party">
     <div class="party-label">Fournisseur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
-    ${bs?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${bs.adresse}</div>`:""}
     ${bs?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${bs.nif}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
-    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
     ${invoice.customerInfo?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${invoice.customerInfo.nif}</div>`:""}
   </div>
 </div>
@@ -2578,7 +2580,7 @@ ${paidTxs.length>0?`
   body{font-family:'Segoe UI',system-ui,sans-serif;padding:24px;max-width:380px;margin:0 auto;color:#1e293b}
   .top{text-align:center;padding-bottom:14px;border-bottom:2px solid #1e293b;margin-bottom:14px}
   .company{font-size:20px;font-weight:900}
-  .sub{font-size:11px;color:#64748b;margin-top:3px;line-height:1.6}
+  .sub{font-size:11px;color:#333;margin-top:3px;line-height:1.6}
   .meta{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:12px}
   table{width:100%;border-collapse:collapse;margin-bottom:12px}
   th{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:6px 8px;border-bottom:2px solid #1e293b;text-align:left}
@@ -4447,7 +4449,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   .badge{background:#0ea5e9;color:#fff;padding:6px 16px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   .party{padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0}
-  .party-label{font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+  .party-label{font-size:9px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
   .party-name{font-size:15px;font-weight:700}
   table{width:100%;border-collapse:collapse;margin-bottom:20px}
   thead tr{background:#1e293b;color:#fff}
@@ -4456,7 +4458,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   .total-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
   .sign-section{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px}
   .sign-box{border:1.5px solid #e2e8f0;border-radius:8px;padding:14px;min-height:80px}
-  .sign-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .sign-label{font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
   .sign-line{border-bottom:1px dashed #cbd5e1;margin-top:50px}
   .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
   @media print{body{padding:20px}}
@@ -4477,13 +4479,13 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   <div class="party">
     <div class="party-label">Fournisseur</div>
     <div class="party-name">${fournisseur.name}</div>
-    ${fournisseur.phone?`<div style="font-size:12px;color:#64748b;margin-top:3px">📞 ${fournisseur.phone}</div>`:""}
+    ${fournisseur.phone?`<div style="font-size:12px;color:#333;margin-top:3px">📞 ${fournisseur.phone}</div>`:""}
     ${fournisseur.adresse?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${fournisseur.adresse}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Réceptionné par</div>
     <div class="party-name">${tx.companyName||"Notre société"}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:3px">Date de réception : ${tx.date}</div>
+    <div style="font-size:12px;color:#333;margin-top:3px">Date de réception : ${tx.date}</div>
     <div style="font-size:11px;color:${tx.paid?"#059669":"#d97706"};font-weight:700;margin-top:4px">${tx.paid?"✓ Payé":"⏳ À payer"}</div>
   </div>
 </div>
@@ -5222,7 +5224,7 @@ export default function App(){
           <div style={{fontSize:11,color:"#9ca3af"}}>{effectiveCompanyName} · @{user?.username}</div>
         </div>
         <div style={{flex:1,padding:"10px 10px",display:"flex",flexDirection:"column",gap:2}}>
-          {[["home","🏠",t.home],["invoices","🧾",t.invoices],["customers","👥",t.customers],["fournisseurs","🏭","Fournisseurs"],["history","📋",t.history],["rapport","📈","Rapport"]].map(([k,icon,label])=>(
+          {[["home","🏠",t.home],["invoices","🧾",t.invoices],["avoirs","📝","Avoirs"],["customers","👥",t.customers],["fournisseurs","🏭","Fournisseurs"],["history","📋",t.history],["rapport","📈","Rapport"]].map(([k,icon,label])=>(
             <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);}}
               style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?700:400,background:tab===k?"#eff6ff":"transparent",color:tab===k?"#2563EB":"#6b7280",textAlign:"left",width:"100%"}}>
               <span>{icon}</span>{label}
@@ -5336,6 +5338,54 @@ export default function App(){
             }
           </div>
         </>)}
+
+        {/* ── AVOIRS ── */}
+        {tab==="avoirs"&&(
+          <div>
+            <div style={{marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{fontSize:13,color:"#6b7280"}}>{(avoirs||[]).length} Note(s) d'Avoir</div>
+            </div>
+            {(avoirs||[]).length===0?(
+              <div style={{textAlign:"center",padding:"60px 20px"}}>
+                <div style={{fontSize:48,marginBottom:12}}>📝</div>
+                <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>Aucun avoir</div>
+                <div style={{fontSize:13,color:"#9ca3af"}}>Les avoirs apparaissent ici après leur création depuis une facture</div>
+              </div>
+            ):[...(avoirs||[])].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(av=>(
+              <div key={av.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}>
+                <div onClick={()=>{
+                  const html=buildAvoirHTML(av,bizSettings,av.montant,av.tvaEnabled,av.tvaRate,av.timbreEnabled);
+                  const blob=new Blob([html],{type:"text/html"});
+                  const url=URL.createObjectURL(blob);
+                  window.open(url,"_blank");
+                  setTimeout(()=>URL.revokeObjectURL(url),10000);
+                }} style={{width:40,height:40,background:"#f5f5f5",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>📝</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{av.customer}</div>
+                  <div style={{fontSize:11,color:"#9ca3af"}}>Réf: {av.refFacture} · {av.date}</div>
+                  {av.motif&&<div style={{fontSize:11,color:"#6b7280",marginTop:2}}>📌 {av.motif}</div>}
+                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginTop:2}}>{av.avoirType==="total"?"Annulation totale":"Avoir partiel"}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontWeight:800,fontSize:16,color:"#374151"}}>– {fmt(av.montant,lang)}</div>
+                  <div style={{fontSize:10,background:"#f3f4f6",color:"#6b7280",padding:"2px 8px",borderRadius:20,marginTop:4,fontWeight:700}}>AVOIR</div>
+                </div>
+                <button onClick={()=>{
+                  const html=buildAvoirHTML(av,bizSettings,av.montant,av.tvaEnabled,av.tvaRate,av.timbreEnabled);
+                  const blob=new Blob([html],{type:"text/html"});
+                  const url=URL.createObjectURL(blob);
+                  window.open(url,"_blank");
+                  setTimeout(()=>URL.revokeObjectURL(url),10000);
+                }} style={{background:"#f3f4f6",border:"none",padding:"8px 12px",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer",color:"#374151",flexShrink:0}}>🖨 PDF</button>
+                <button onClick={()=>{
+                  const a2=(avoirs||[]).filter(x=>x.id!==av.id);
+                  setAvoirs(a2);persist({avoirs:a2});
+                  showToast("Avoir supprimé ✓");
+                }} style={{background:"#fef2f2",border:"none",padding:"8px 10px",borderRadius:10,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── INVOICES ── */}
         {tab==="invoices"&&(()=>{
@@ -5486,62 +5536,64 @@ export default function App(){
             )}
 
             {/* قائمة الفواتير */}
-            {/* قائمة مدمجة — فواتير + أفيرات مرتبة بالتاريخ */}
+            {/* قائمة الفواتير مع الأفيرات كفروع */}
           {invoices.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:12}}>🧾</div>
                 <div style={{fontWeight:700,fontSize:16,color:"#374151",marginBottom:8}}>{t.noInvoices}</div>
                 <button onClick={()=>setModal("invoice")} style={{padding:"12px 24px",background:"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ {t.newInvoice}</button>
               </div>
-            ):filtered.length===0&&(avoirs||[]).length===0?(
+            ):filtered.length===0?(
               <div style={{textAlign:"center",padding:"40px 0",color:"#9ca3af",fontSize:14}}>Aucun résultat</div>
-            ):[
-              ...filtered.map(inv=>({...inv,_type:"invoice"})),
-              ...(avoirs||[]).map(av=>({...av,_type:"avoir"}))
-            ].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(item=>{
-              if(item._type==="avoir") return(
-                <div key={item.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12,border:"1.5px solid #e5e7eb",opacity:0.9})}}>
-                  <div style={{width:40,height:40,background:"#f5f5f5",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>📝</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{item.customer}</div>
-                    <div style={{fontSize:11,color:"#9ca3af"}}>Avoir · Réf: {item.refFacture} · {item.date}</div>
-                    {item.motif&&<div style={{fontSize:11,color:"#6b7280"}}>{item.motif}</div>}
-                  </div>
-                  <div style={{textAlign:"right",flexShrink:0}}>
-                    <div style={{fontWeight:800,fontSize:15,color:"#374151"}}>– {fmt(item.montant,lang)}</div>
-                    <span style={{fontSize:10,fontWeight:700,color:"#6b7280",background:"#f3f4f6",padding:"2px 8px",borderRadius:20}}>AVOIR</span>
-                  </div>
-                  <button onClick={()=>{
-                    const html=buildAvoirHTML(item,bizSettings,item.montant,item.tvaEnabled,item.tvaRate,item.timbreEnabled);
-                    const blob=new Blob([html],{type:"text/html"});
-                    const url=URL.createObjectURL(blob);
-                    window.open(url,"_blank");
-                    setTimeout(()=>URL.revokeObjectURL(url),10000);
-                  }} style={{background:"#f3f4f6",border:"none",padding:"6px 10px",borderRadius:8,fontSize:13,cursor:"pointer",flexShrink:0}}>🖨</button>
-                  <button onClick={()=>{
-                    const a2=(avoirs||[]).filter(x=>x.id!==item.id);
-                    setAvoirs(a2);persist({avoirs:a2});
-                  }} style={{background:"#f5f5f5",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#6b7280",flexShrink:0}}>×</button>
-                </div>
-              );
-              const inv=item;
+            ):filtered.map(inv=>{
+              const invAvoirs=(avoirs||[]).filter(a=>a.refFacture===inv.id);
               return(
-              <div key={inv.id} style={{...S.card({marginBottom:10,display:"flex",alignItems:"center",gap:12})}}
-                onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
-                <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
-                <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
-                  <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
-                  <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
+              <div key={inv.id} style={{marginBottom:invAvoirs.length>0?4:10}}>
+                {/* الفاتورة الأصلية */}
+                <div style={{...S.card({marginBottom:invAvoirs.length>0?0:0,display:"flex",alignItems:"center",gap:12,borderRadius:invAvoirs.length>0?"12px 12px 0 0":12})}}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
+                    <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
+                  </div>
+                  <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                    <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
+                    <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
+                  </div>
+                  <button onClick={e=>{e.stopPropagation();setDuplicateInv(inv);setModal("invoice");}}
+                    title="Dupliquer"
+                    style={{background:"#f0fdf4",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#059669",flexShrink:0}}>⧉</button>
+                  <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
+                    style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
                 </div>
-                <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
-                  <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
-                  <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
-                </div>
-                <button onClick={e=>{e.stopPropagation();setDuplicateInv(inv);setModal("invoice");}}
-                  title="Dupliquer"
-                  style={{background:"#f0fdf4",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#059669",flexShrink:0}}>⧉</button>
-                <button onClick={e=>{e.stopPropagation();setConfirmDelInvoice(inv);}}
-                  style={{background:"#fef2f2",border:"none",padding:"6px 10px",borderRadius:8,fontSize:14,cursor:"pointer",color:"#dc2626",flexShrink:0}}>×</button>
+                {/* الأفيرات كفروع */}
+                {invAvoirs.map((av,idx)=>(
+                  <div key={av.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px 8px 20px",
+                    background:"#f9fafb",border:"1px solid #e5e7eb",borderTop:"none",
+                    borderRadius:idx===invAvoirs.length-1?"0 0 12px 12px":"0",marginBottom:idx===invAvoirs.length-1?10:0}}>
+                    <div style={{color:"#9ca3af",fontSize:14,flexShrink:0}}>└─</div>
+                    <div style={{fontSize:14,flexShrink:0}}>📝</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:12,color:"#374151"}}>
+                        Avoir · {av.avoirType==="total"?"Annulation totale":"Partiel"}{av.motif?` · ${av.motif}`:""}
+                      </div>
+                      <div style={{fontSize:10,color:"#9ca3af"}}>{av.date}</div>
+                    </div>
+                    <div style={{fontWeight:700,fontSize:13,color:"#374151",flexShrink:0}}>– {fmt(av.montant,lang)}</div>
+                    <button onClick={()=>{
+                      const html=buildAvoirHTML(av,bizSettings,av.montant,av.tvaEnabled,av.tvaRate,av.timbreEnabled);
+                      const blob=new Blob([html],{type:"text/html"});
+                      const url=URL.createObjectURL(blob);
+                      window.open(url,"_blank");
+                      setTimeout(()=>URL.revokeObjectURL(url),10000);
+                    }} style={{background:"#f3f4f6",border:"none",padding:"4px 8px",borderRadius:6,fontSize:12,cursor:"pointer",flexShrink:0}}>🖨</button>
+                    <button onClick={()=>{
+                      const a2=(avoirs||[]).filter(x=>x.id!==av.id);
+                      setAvoirs(a2);persist({avoirs:a2});
+                    }} style={{background:"none",border:"none",padding:"4px 6px",fontSize:12,cursor:"pointer",color:"#9ca3af",flexShrink:0}}>×</button>
+                  </div>
+                ))}
               </div>
               );
             })}
