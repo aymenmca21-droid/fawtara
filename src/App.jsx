@@ -2060,12 +2060,12 @@ function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
   <div class="party">
     <div class="party-label">Émetteur</div>
     <div class="party-name">${avoir.companyName||"Fawtara"}</div>
-    ${bs?.adresse?`<div style="font-size:11px;color:#555;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${bs.adresse}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Bénéficiaire</div>
     <div class="party-name">${avoir.customer}</div>
-    ${avoir.customerInfo?.adresse?`<div style="font-size:11px;color:#555;margin-top:3px">${avoir.customerInfo.adresse}</div>`:""}
+    ${avoir.customerInfo?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${avoir.customerInfo.adresse}</div>`:""}
     ${avoir.customerInfo?.nif?`<div style="font-size:10px;color:#888;font-family:monospace;margin-top:2px">NIF: ${avoir.customerInfo.nif}</div>`:""}
   </div>
 </div>
@@ -2165,7 +2165,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
       return `<tr>
         <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#94a3b8;font-family:monospace">${codeLabel}</span>`:""}</td>
         <td style="text-align:center">${qty}</td>
-        <td style="text-align:center;font-size:11px;color:#64748b">${l.unite||"unité"}</td>
+        <td style="text-align:center;font-size:11px;color:#000">${l.unite||"unité"}</td>
         <td style="text-align:right">${pu.toLocaleString()} DA</td>
         ${rem>0?`<td style="text-align:center;color:#d97706">-${rem}%</td>`:`<td style="text-align:center;color:#94a3b8">—</td>`}
         <td style="text-align:right;font-weight:600">${montant.toLocaleString()} DA</td>
@@ -2382,14 +2382,14 @@ ${paidTxs.length>0?`
   <div>
     ${bs?.logo?`<img src="${bs.logo}" style="height:48px;max-width:130px;object-fit:contain;margin-bottom:8px;display:block"/>`:""}
     <div style="font-size:18px;font-weight:900;color:#1e293b;margin-bottom:4px">${invoice.companyName||"Fawtara"}</div>
-    <div style="font-size:10px;color:#64748b">
+    <div style="font-size:10px;color:#000">
       ${bs?.adresse||""}${bs?.nif?` · NIF: ${bs.nif}`:""}
     </div>
   </div>
   <div style="text-align:right">
     <div class="badge">Bon de Livraison</div>
     <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° ${blId}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px">Date : ${invoice.date}</div>
+    <div style="font-size:12px;color:#000;margin-top:4px">Date : ${invoice.date}</div>
   </div>
 </div>
 
@@ -2397,12 +2397,12 @@ ${paidTxs.length>0?`
   <div class="party">
     <div class="party-label">Expéditeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
-    ${bs?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${bs.adresse}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Destinataire</div>
     <div class="party-name">${invoice.customer}</div>
-    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
   </div>
 </div>
 
@@ -2470,7 +2470,7 @@ ${paidTxs.length>0?`
   th:not(:first-child){text-align:right}
   th:nth-child(2),th:nth-child(3){text-align:center}
   .total-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:20px}
-  .total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#64748b}
+  .total-line{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#000}
   .total-main{font-size:17px;font-weight:900;color:#1e293b;border-top:2px solid #1e293b;margin-top:8px;padding-top:10px;display:flex;justify-content:space-between}
   .conditions{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#92400e}
   .sign-section{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
@@ -2487,14 +2487,14 @@ ${paidTxs.length>0?`
   <div>
     ${bs?.logo?`<img src="${bs.logo}" style="height:48px;max-width:130px;object-fit:contain;margin-bottom:8px;display:block"/>`:""}
     <div style="font-size:18px;font-weight:900;color:#1e293b;margin-bottom:4px">${invoice.companyName||"Fawtara"}</div>
-    <div style="font-size:10px;color:#64748b;font-family:monospace">
+    <div style="font-size:10px;color:#000;font-family:monospace">
       ${bs?.nif?`NIF: ${bs.nif}`:""} ${bs?.rc?`· RC: ${bs.rc}`:""}
     </div>
   </div>
   <div style="text-align:right">
     <div class="badge">Bon de Commande</div>
     <div style="font-size:18px;font-weight:900;color:#1e293b;margin-top:10px;font-family:monospace">N° ${bcId}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:4px">Date : ${invoice.date}</div>
+    <div style="font-size:12px;color:#000;margin-top:4px">Date : ${invoice.date}</div>
     ${invoice.echeance?`<div style="font-size:12px;color:#d97706;margin-top:2px;font-weight:600">Livraison prévue : ${invoice.echeance}</div>`:""}
   </div>
 </div>
@@ -2503,13 +2503,13 @@ ${paidTxs.length>0?`
   <div class="party">
     <div class="party-label">Fournisseur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
-    ${bs?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${bs.adresse}</div>`:""}
+    ${bs?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${bs.adresse}</div>`:""}
     ${bs?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${bs.nif}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
-    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#333;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
+    ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
     ${invoice.customerInfo?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${invoice.customerInfo.nif}</div>`:""}
   </div>
 </div>
@@ -2580,13 +2580,13 @@ ${paidTxs.length>0?`
   body{font-family:'Segoe UI',system-ui,sans-serif;padding:24px;max-width:380px;margin:0 auto;color:#1e293b}
   .top{text-align:center;padding-bottom:14px;border-bottom:2px solid #1e293b;margin-bottom:14px}
   .company{font-size:20px;font-weight:900}
-  .sub{font-size:11px;color:#333;margin-top:3px;line-height:1.6}
-  .meta{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:12px}
+  .sub{font-size:11px;color:#000;margin-top:3px;line-height:1.6}
+  .meta{display:flex;justify-content:space-between;font-size:11px;color:#000;margin-bottom:12px}
   table{width:100%;border-collapse:collapse;margin-bottom:12px}
   th{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;padding:6px 8px;border-bottom:2px solid #1e293b;text-align:left}
   th:not(:first-child){text-align:right} th:nth-child(2){text-align:center}
   .total-section{border-top:2px solid #1e293b;padding-top:10px;margin-bottom:16px}
-  .trow{display:flex;justify-content:space-between;padding:3px 8px;font-size:13px;color:#64748b}
+  .trow{display:flex;justify-content:space-between;padding:3px 8px;font-size:13px;color:#000}
   .tmain{display:flex;justify-content:space-between;padding:8px;font-size:18px;font-weight:900;border-top:1px solid #e2e8f0;margin-top:4px}
   .footer{text-align:center;font-size:12px;color:#94a3b8;border-top:1px dashed #e2e8f0;padding-top:12px}
   @media print{body{padding:16px;max-width:100%}}
@@ -3044,7 +3044,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                 const totalReste=Math.max(0, resteFactures-totalVersements);
                 const versRows=custVers.map((v,i)=>`
                   <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
-                    <td style="padding:8px 10px;font-size:12px;color:#64748b">${v.date}</td>
+                    <td style="padding:8px 10px;font-size:12px;color:#000">${v.date}</td>
                     <td style="padding:8px 10px;font-size:12px;font-weight:600">${v.mode}</td>
                     <td style="padding:8px 10px;font-size:12px;color:#6b7280">${v.note||"—"}</td>
                     <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700;color:#059669">+${v.montant.toLocaleString()} DA</td>
@@ -3052,7 +3052,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
                 const rows=[...custInvs].sort((a,b)=>new Date(b.date)-new Date(a.date)).map((inv,i)=>`
                   <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                     <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
-                    <td style="padding:8px 10px;font-size:12px;color:#64748b">${inv.date}</td>
+                    <td style="padding:8px 10px;font-size:12px;color:#000">${inv.date}</td>
                     <td style="padding:8px 10px;font-size:12px">${inv.lines.map(l=>l.name).slice(0,2).join(", ")}${inv.lines.length>2?"...":""}</td>
                     <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
                     <td style="padding:8px 10px;font-size:11px;text-align:center">
@@ -3088,7 +3088,7 @@ function CustomerDetail({customer,invoices,txs,products,onBack,onEdit,onDelete,o
   <div>
     <div style="font-size:20px;font-weight:900">Relevé de compte</div>
     <div style="font-size:16px;font-weight:700;color:#2563EB;margin-top:4px">${customer.name}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:2px">${custInvs.length} facture(s) · ${new Date().toLocaleDateString("fr-DZ")}${customer.phone?" · "+customer.phone:""}</div>
+    <div style="font-size:12px;color:#000;margin-top:2px">${custInvs.length} facture(s) · ${new Date().toLocaleDateString("fr-DZ")}${customer.phone?" · "+customer.phone:""}</div>
   </div>
 </div>
 <div class="summary">
@@ -3149,8 +3149,8 @@ ${custVers.length>0?`
                       </div>
                       <div style="text-align:right">
                         <div style="font-size:22px;font-weight:900;letter-spacing:-1px">FACTURE</div>
-                        <div style="font-size:13px;font-family:monospace;color:#64748b">N° ${inv.id}</div>
-                        <div style="font-size:12px;color:#64748b">${inv.date}</div>
+                        <div style="font-size:13px;font-family:monospace;color:#000">N° ${inv.id}</div>
+                        <div style="font-size:12px;color:#000">${inv.date}</div>
                         <div style="margin-top:6px;padding:3px 12px;border-radius:4px;border:1.5px solid ${statusColor};color:${statusColor};font-weight:700;font-size:11px;display:inline-block">${statusLabel}</div>
                       </div>
                     </div>
@@ -3158,16 +3158,16 @@ ${custVers.length>0?`
                       <div style="padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
                         <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Acheteur</div>
                         <div style="font-size:15px;font-weight:700">${inv.customer}</div>
-                        ${inv.customerInfo?.adresse?`<div style="font-size:11px;color:#64748b">${inv.customerInfo.adresse}</div>`:""}
+                        ${inv.customerInfo?.adresse?`<div style="font-size:11px;color:#000">${inv.customerInfo.adresse}</div>`:""}
                       </div>
                     </div>
                     <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
                       <thead><tr style="border-bottom:2px solid #1e293b">
-                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:left">Désignation</th>
-                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:center">Qté</th>
-                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:center">Unité</th>
-                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:right">Prix unit.</th>
-                        <th style="padding:8px;font-size:10px;color:#64748b;text-transform:uppercase;text-align:right">Total</th>
+                        <th style="padding:8px;font-size:10px;color:#000;text-transform:uppercase;text-align:left">Désignation</th>
+                        <th style="padding:8px;font-size:10px;color:#000;text-transform:uppercase;text-align:center">Qté</th>
+                        <th style="padding:8px;font-size:10px;color:#000;text-transform:uppercase;text-align:center">Unité</th>
+                        <th style="padding:8px;font-size:10px;color:#000;text-transform:uppercase;text-align:right">Prix unit.</th>
+                        <th style="padding:8px;font-size:10px;color:#000;text-transform:uppercase;text-align:right">Total</th>
                       </tr></thead>
                       <tbody>${rows}</tbody>
                     </table>
@@ -4469,8 +4469,8 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
 <div class="header">
   <div>
     <div style="font-size:18px;font-weight:900;margin-bottom:4px">BON D'ENTRÉE</div>
-    <div style="font-size:13px;color:#64748b;font-family:monospace">N° BE-${tx.date?.replace(/-/g,"")}-${tx.id?.slice(-4)||"0001"}</div>
-    <div style="font-size:12px;color:#64748b;margin-top:2px">Date : ${tx.date}</div>
+    <div style="font-size:13px;color:#000;font-family:monospace">N° BE-${tx.date?.replace(/-/g,"")}-${tx.id?.slice(-4)||"0001"}</div>
+    <div style="font-size:12px;color:#000;margin-top:2px">Date : ${tx.date}</div>
   </div>
   <div class="badge">Bon d'Entrée</div>
 </div>
@@ -4479,13 +4479,13 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   <div class="party">
     <div class="party-label">Fournisseur</div>
     <div class="party-name">${fournisseur.name}</div>
-    ${fournisseur.phone?`<div style="font-size:12px;color:#333;margin-top:3px">📞 ${fournisseur.phone}</div>`:""}
+    ${fournisseur.phone?`<div style="font-size:12px;color:#000;margin-top:3px">📞 ${fournisseur.phone}</div>`:""}
     ${fournisseur.adresse?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${fournisseur.adresse}</div>`:""}
   </div>
   <div class="party">
     <div class="party-label">Réceptionné par</div>
     <div class="party-name">${tx.companyName||"Notre société"}</div>
-    <div style="font-size:12px;color:#333;margin-top:3px">Date de réception : ${tx.date}</div>
+    <div style="font-size:12px;color:#000;margin-top:3px">Date de réception : ${tx.date}</div>
     <div style="font-size:11px;color:${tx.paid?"#059669":"#d97706"};font-weight:700;margin-top:4px">${tx.paid?"✓ Payé":"⏳ À payer"}</div>
   </div>
 </div>
@@ -5028,7 +5028,16 @@ export default function App(){
     // إصلاح تلقائي للفواتير القديمة — paidAmount يساوي total عند payStatus paid
     // إصلاح شامل للفواتير القديمة
     const bs2=data.bizSettings||{};
+    const custMap={};
+    (data.customers||[]).forEach(c=>{custMap[c.name]=c;});
     const fixedInvoices=(data.invoices||[]).map(inv=>{
+      // enrich customerInfo with article and rip from customers list
+      if(inv.customer&&!inv.customerInfo?.article){
+        const cust=custMap[inv.customer];
+        if(cust&&(cust.article||cust.rip)){
+          inv={...inv,customerInfo:{...(inv.customerInfo||{}),article:cust.article||inv.customerInfo?.article,rip:cust.rip||inv.customerInfo?.rip}};
+        }
+      }
       // إذا لم يكن لها tvaEnabled محفوظ — تعني أنها أُنشئت قبل هذه الميزة
       // نحتفظ بـ total كـ HT ونعتبر TVA = false (لا نضيف TVA على القديمة)
       const hasTvaFlag=inv.tvaEnabled!==undefined;
@@ -5415,7 +5424,7 @@ export default function App(){
               <tr style="background:${i%2===0?"#fff":"#f8fafc"}">
                 <td style="padding:8px 10px;font-size:12px;font-family:monospace;color:#2563EB">${inv.id}</td>
                 <td style="padding:8px 10px;font-size:12px;font-weight:600">${inv.customer}</td>
-                <td style="padding:8px 10px;font-size:12px;color:#64748b">${inv.date}</td>
+                <td style="padding:8px 10px;font-size:12px;color:#000">${inv.date}</td>
                 <td style="padding:8px 10px;font-size:12px;text-align:right;font-weight:700">${inv.total.toLocaleString()} DA</td>
                 <td style="padding:8px 10px;font-size:11px;text-align:center">
                   <span style="padding:3px 10px;border-radius:20px;font-weight:700;background:#f5f5f5;color:#000">
@@ -5449,10 +5458,10 @@ export default function App(){
 <div class="header">
   <div>
     <div style="font-size:20px;font-weight:900">${effectiveCompanyName||"Fawtara"}</div>
-    <div style="font-size:13px;color:#64748b;margin-top:4px">Liste des factures — ${periodLabel}</div>
+    <div style="font-size:13px;color:#000;margin-top:4px">Liste des factures — ${periodLabel}</div>
     ${invoiceStatusFilter!=="all"?`<div style="font-size:12px;color:#2563EB;margin-top:2px">Filtre: ${invoiceStatusFilter==="paid"?"Payées":invoiceStatusFilter==="unpaid"?"Impayées":"Partielles"}</div>`:""}
   </div>
-  <div style="text-align:right;font-size:12px;color:#64748b">
+  <div style="text-align:right;font-size:12px;color:#000">
     <div>${filtered.length} facture(s)</div>
     <div style="margin-top:4px">${new Date().toLocaleDateString("fr-DZ")}</div>
   </div>
