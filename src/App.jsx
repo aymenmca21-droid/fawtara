@@ -5163,7 +5163,25 @@ export default function App(){
     showToast("Facture supprimée ✓");
   };
 
-  const saveCustomer=c=>{const c2=customers.findIndex(x=>x.id===c.id)>=0?customers.map(x=>x.id===c.id?c:x):[c,...customers];setCustomers(c2);persist({customers:c2});};
+  const saveCustomer=c=>{
+    const c2=customers.findIndex(x=>x.id===c.id)>=0?customers.map(x=>x.id===c.id?c:x):[c,...customers];
+    setCustomers(c2);
+    // تحديث customerInfo في كل الفواتير المرتبطة بهذا الزبون
+    const inv2=invoices.map(inv=>{
+      if(inv.customer!==c.name) return inv;
+      return {...inv,customerInfo:{
+        nif:c.nif||inv.customerInfo?.nif||"",
+        nis:c.nis||inv.customerInfo?.nis||"",
+        rc:c.rc||inv.customerInfo?.rc||"",
+        article:c.article||inv.customerInfo?.article||"",
+        rip:c.rip||inv.customerInfo?.rip||"",
+        adresse:c.adresse||inv.customerInfo?.adresse||"",
+        phone:c.phone||inv.customerInfo?.phone||"",
+      }};
+    });
+    setInvoices(inv2);
+    persist({customers:c2,invoices:inv2});
+  };
   const delCustomer=id=>{const c2=customers.filter(x=>x.id!==id);setCustomers(c2);persist({customers:c2});setSelectedCustomer(null);};
 
   const handleOnboard=choice=>{
