@@ -1347,7 +1347,13 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
     }
     const year=new Date().getFullYear();
     const prefix=bizSettings?.invPrefix||"FAC";
-    const counter=String(bizSettings?.invCounter||1).padStart(4,"0");
+    // نأخذ أكبر رقم موجود في الفواتير ونضيف 1
+    const maxNum=invoices.reduce((max,inv)=>{
+      const match=inv.id?.match(/(\d+)$/);
+      const num=match?parseInt(match[1]):0;
+      return Math.max(max,num);
+    },bizSettings?.invCounter||0);
+    const counter=String(maxNum+1).padStart(4,"0");
     const invId=editing?editing.id:`${prefix}-${year}-${counter}`;
     // invoiceDate مأخوذ من الـ state
 
@@ -2104,9 +2110,11 @@ ${avoir.motif?`<div class="motif"><strong>Motif :</strong> ${avoir.motif}</div>`
 </body></html>`;
 }
 
-function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC, onEdit, onCreateAvoir}){
+function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizSettings, onIncrementBL, onIncrementBC, onEdit, onCreateAvoir, onRenameId}){
   const t=T[lang], rtl=lang==="ar";
   const [docType,setDocType]=useState("facture");
+  const [editingId,setEditingId]=useState(false);
+  const [newId,setNewId]=useState(invoice.id);
   const [showAvoirModal,setShowAvoirModal]=useState(false);
   const [avoirType,setAvoirType]=useState("total");
   const [avoirMontant,setAvoirMontant]=useState("");
@@ -2628,8 +2636,28 @@ ${paidTxs.length>0?`
         {/* Header */}
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
-            <div style={{fontWeight:900,fontSize:17,color:"#111"}}>
-              {docType==="bv"?"🧾 Bon de Vente":"🧾 "+t.invoiceNo} {invoice.id}
+            <div style={{fontWeight:900,fontSize:17,color:"#111",display:"flex",alignItems:"center",gap:8}}>
+              {docType==="bv"?"🧾 Bon de Vente":"🧾 "+t.invoiceNo}
+              {editingId?(
+                <input autoFocus value={newId} onChange={e=>setNewId(e.target.value.toUpperCase())}
+                  onKeyDown={e=>{if(e.key==="Enter"){onRenameId&&onRenameId(newId);setEditingId(false);}if(e.key==="Escape")setEditingId(false);}}
+                  style={{fontFamily:"monospace",fontWeight:900,fontSize:15,padding:"2px 8px",border:"2px solid #2563EB",borderRadius:6,outline:"none",width:180}}/>
+              ):(
+                <span style={{fontFamily:"monospace"}}>{invoice.id}</span>
+              )}
+              {onRenameId&&!editingId&&(
+                <button onClick={()=>{setNewId(invoice.id);setEditingId(true);}}
+                  style={{background:"none",border:"none",cursor:"pointer",fontSize:13,padding:"1px 4px",color:"#9ca3af"}}
+                  title="Modifier le numéro">✎</button>
+              )}
+              {editingId&&(
+                <div style={{display:"flex",gap:4}}>
+                  <button onClick={()=>{onRenameId&&onRenameId(newId);setEditingId(false);}}
+                    style={{padding:"2px 8px",background:"#2563EB",color:"#fff",border:"none",borderRadius:5,fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
+                  <button onClick={()=>setEditingId(false)}
+                    style={{padding:"2px 8px",background:"#f3f4f6",color:"#6b7280",border:"none",borderRadius:5,fontSize:11,cursor:"pointer"}}>×</button>
+                </div>
+              )}
             </div>
             <div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{invoice.customer} · {invoice.date}</div>
           </div>
@@ -4750,26 +4778,30 @@ function HistoryTab({txs,invoices,histFilter,setHistFilter,dateFrom,setDateFrom,
 }
 
 /* ═══ RAPPORT TAB COMPONENT ═══ */
-function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements,products,onEditInvoice}){
+function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRapportYear,setPreviewInvoice,lang,versements,products,onEditInvoice,avoirs,bizSettings}){
   const [statFilter,setStatFilter]=useState(null);
+  const [viewMode,setViewMode]=useState("monthly"); // monthly | annual
   const months=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   const mm=String(rapportMonth+1).padStart(2,"0");
-  const prefix=`${rapportYear}-${mm}`;
+  const prefix=viewMode==="annual"?`${rapportYear}-`:`${rapportYear}-${mm}`;
+
   const mTxs=txs.filter(tx=>tx.date?.startsWith(prefix));
   const mInvs=invoices.filter(inv=>inv.date?.startsWith(prefix));
   const mVers=(versements||[]).filter(v=>v.date?.startsWith(prefix));
+  const mAvoirs=(avoirs||[]).filter(a=>a.date?.startsWith(prefix));
   const totalVersements=mVers.reduce((s,v)=>s+v.montant,0);
+  const totalAvoirs=mAvoirs.reduce((s,a)=>s+a.montant,0);
   const avoirsTxMonth=mTxs.filter(tx=>tx.type==="avoir").reduce((s,tx)=>s+Math.abs(tx.amount),0);
   const revenus=mTxs.filter(tx=>tx.type==="income"&&tx.paid).reduce((s,tx)=>s+tx.amount,0)-avoirsTxMonth;
   const depenses=mTxs.filter(tx=>tx.type==="expense").reduce((s,tx)=>s+tx.amount,0);
   const benefice=revenus-depenses;
 
-  // حساب هامش الربح من أسعار الفواتير الفعلية مقارنة بأسعار الشراء
+  // هامش الربح
   let totalVente=0, totalAchatCorrespondant=0;
   mInvs.forEach(inv=>{
     inv.lines.forEach(l=>{
       const qty=parseFloat(l.qty)||1;
-      const prixVente=parseFloat(l.price)||0; // السعر الفعلي في الفاتورة
+      const prixVente=parseFloat(l.price)||0;
       const prod=products?.find(p=>p.name===l.name||p.id===l.productId);
       const prixAchat=prod?.prixAchat||0;
       totalVente+=prixVente*qty;
@@ -4787,25 +4819,144 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
   const clientMap={};
   mInvs.forEach(inv=>{clientMap[inv.customer]=(clientMap[inv.customer]||0)+(inv.totalTTC||inv.total);});
   const topClients=Object.entries(clientMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const periodLabel=viewMode==="annual"?`Année ${rapportYear}`:`${months[rapportMonth]} ${rapportYear}`;
+
   const exportRapport=()=>{
-    const rows=[[`Rapport ${months[rapportMonth]} ${rapportYear}`],[],["Indicateur","Montant"],["Revenus encaissés",revenus],["Dépenses",depenses],["Bénéfice net",benefice],["À encaisser",attente],[],["Factures émises",nbInv],["Factures payées",nbPaid],["Factures impayées",nbInv-nbPaid]];
+    const rows=[
+      [`Rapport ${periodLabel}`],[],
+      ["Indicateur","Montant"],
+      ["Revenus encaissés",revenus],["Dépenses",depenses],["Bénéfice net",benefice],
+      ["Avoirs émis",-totalAvoirs],["À encaisser",attente],[],
+      ["Factures émises",nbInv],["Factures payées",nbPaid],["Factures impayées",nbInv-nbPaid],
+      ["Notes d'Avoir",mAvoirs.length]
+    ];
     const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a"); a.href=url; a.download=`rapport_${prefix}.csv`; a.click(); URL.revokeObjectURL(url);
   };
+
+  // Export PDF جماعي لكل فواتير الشهر/السنة
+  const exportAllPDF=()=>{
+    if(mInvs.length===0){alert("Aucune facture pour cette période");return;}
+    const allPages=mInvs.map((inv,idx)=>{
+      const bs2=bizSettings||{};
+      const invTvaEnabled=inv.tvaEnabled===true;
+      const invTvaRate=inv.tvaRate||19;
+      const invTimbreEnabled=inv.timbreEnabled===true;
+      const tvaAmt=invTvaEnabled?parseFloat((inv.total*invTvaRate/100).toFixed(2)):0;
+      const ttc=parseFloat((inv.total+tvaAmt).toFixed(2));
+      const timbre=invTimbreEnabled?calcTimbre(ttc):0;
+      const totalF=parseFloat((ttc+timbre).toFixed(2));
+      const rows=(inv.lines||[]).map(l=>`
+        <tr style="border-bottom:1px solid #ccc">
+          <td style="padding:7px 8px;font-size:12px">${l.name}</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:center">${l.qty||1}</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:center">${l.unite||"unité"}</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:right">${(parseFloat(l.price)||0).toLocaleString("fr-DZ")} DA</td>
+          <td style="padding:7px 8px;font-size:12px;text-align:right;font-weight:700">${((parseFloat(l.price)||0)*(parseFloat(l.qty)||1)).toLocaleString("fr-DZ")} DA</td>
+        </tr>`).join("");
+      return `<div style="${idx>0?"page-break-before:always;":""}padding:28px">
+        <div style="display:flex;justify-content:space-between;padding-bottom:14px;border-bottom:3px solid #000;margin-bottom:16px">
+          <div>
+            ${bs2.logo?`<img src="${bs2.logo}" style="height:40px;margin-bottom:6px;display:block"/>`:``}
+            <div style="font-size:16px;font-weight:900">${inv.companyName||"Fawtara"}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:900">FACTURE</div>
+            <div style="font-family:monospace;font-size:12px">N° ${inv.id}</div>
+            <div style="font-size:11px;color:#333">${inv.date}</div>
+            <div style="margin-top:4px;padding:2px 10px;border:1.5px solid #000;border-radius:4px;font-size:10px;font-weight:700;display:inline-block">${inv.payStatus==="paid"?"Payé":inv.payStatus==="partial"?"Partiel":"Impayé"}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div style="padding:10px;border:1.5px solid #000;border-radius:4px">
+            <div style="font-size:9px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:4px">Vendeur</div>
+            <div style="font-weight:700">${inv.companyName||""}</div>
+          </div>
+          <div style="padding:10px;border:1.5px solid #000;border-radius:4px">
+            <div style="font-size:9px;font-weight:700;color:#555;text-transform:uppercase;margin-bottom:4px">Client</div>
+            <div style="font-weight:700">${inv.customer}</div>
+            ${inv.customerInfo?.nif?`<div style="font-size:10px;font-family:monospace">NIF: ${inv.customerInfo.nif}</div>`:""}
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+          <thead><tr style="border-bottom:2px solid #000">
+            <th style="padding:7px 8px;font-size:10px;text-align:left;text-transform:uppercase">Désignation</th>
+            <th style="padding:7px 8px;font-size:10px;text-align:center;text-transform:uppercase">Qté</th>
+            <th style="padding:7px 8px;font-size:10px;text-align:center;text-transform:uppercase">Unité</th>
+            <th style="padding:7px 8px;font-size:10px;text-align:right;text-transform:uppercase">Prix unit.</th>
+            <th style="padding:7px 8px;font-size:10px;text-align:right;text-transform:uppercase">Total</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="border:1.5px solid #000;border-radius:4px;padding:12px;margin-bottom:10px">
+          ${invTvaEnabled?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>HT</span><span>${inv.total.toLocaleString("fr-DZ")} DA</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>TVA ${invTvaRate}%</span><span>+${tvaAmt.toLocaleString("fr-DZ")} DA</span></div>`:""}
+          <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid #000;padding-top:8px;margin-top:6px">
+            <span>Total</span><span>${totalF.toLocaleString("fr-DZ")} DA</span>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:9px;color:#555;border-top:1px solid #ccc;padding-top:8px">
+          ${inv.companyName||"Fawtara"} · Facture ${idx+1}/${mInvs.length} · ${periodLabel}
+        </div>
+      </div>`;
+    }).join("");
+
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Factures ${periodLabel}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;color:#000}body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff}@media print{@page{margin:10mm}}</style>
+<script>window.onload=function(){window.print();}<\/script>
+</head><body>${allPages}</body></html>`;
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
+
   return(
     <div>
+      {/* Header navigation */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+        {/* Toggle mensuel/annuel */}
+        <div style={{display:"flex",gap:4,background:"#f3f4f6",borderRadius:10,padding:3}}>
+          <button onClick={()=>setViewMode("monthly")}
+            style={{padding:"6px 12px",borderRadius:8,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",
+              background:viewMode==="monthly"?"#fff":"transparent",color:viewMode==="monthly"?"#111":"#6b7280",
+              boxShadow:viewMode==="monthly"?"0 1px 4px rgba(0,0,0,.1)":"none"}}>
+            📅 Mensuel
+          </button>
+          <button onClick={()=>setViewMode("annual")}
+            style={{padding:"6px 12px",borderRadius:8,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",
+              background:viewMode==="annual"?"#fff":"transparent",color:viewMode==="annual"?"#111":"#6b7280",
+              boxShadow:viewMode==="annual"?"0 1px 4px rgba(0,0,0,.1)":"none"}}>
+            📆 Annuel
+          </button>
+        </div>
+      </div>
+
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-        <button onClick={()=>{if(rapportMonth===0){setRapportMonth(11);setRapportYear(y=>y-1);}else setRapportMonth(m=>m-1);}} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
-        <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:18,color:"#111"}}>{months[rapportMonth]} {rapportYear}</div>
-        <button onClick={()=>{if(rapportMonth===11){setRapportMonth(0);setRapportYear(y=>y+1);}else setRapportMonth(m=>m+1);}} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
-        <button onClick={exportRapport} style={{padding:"8px 14px",background:"#059669",color:"#fff",border:"none",borderRadius:10,fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Export</button>
+        {viewMode==="monthly"?(
+          <>
+            <button onClick={()=>{if(rapportMonth===0){setRapportMonth(11);setRapportYear(y=>y-1);}else setRapportMonth(m=>m-1);}} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+            <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:18,color:"#111"}}>{months[rapportMonth]} {rapportYear}</div>
+            <button onClick={()=>{if(rapportMonth===11){setRapportMonth(0);setRapportYear(y=>y+1);}else setRapportMonth(m=>m+1);}} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+          </>
+        ):(
+          <>
+            <button onClick={()=>setRapportYear(y=>y-1)} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+            <div style={{flex:1,textAlign:"center",fontWeight:900,fontSize:20,color:"#111"}}>📆 {rapportYear}</div>
+            <button onClick={()=>setRapportYear(y=>y+1)} style={{width:36,height:36,borderRadius:10,border:"1.5px solid #e5e7eb",background:"#fff",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+          </>
+        )}
+        <button onClick={exportRapport} style={{padding:"8px 10px",background:"#059669",color:"#fff",border:"none",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer"}}>📊 CSV</button>
+        <button onClick={exportAllPDF} style={{padding:"8px 10px",background:"#111",color:"#fff",border:"none",borderRadius:10,fontSize:11,fontWeight:700,cursor:"pointer"}}>🖨 PDF ({mInvs.length})</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
         <div style={{background:"#ecfdf5",borderRadius:14,padding:20,border:"1px solid #a7f3d0"}}><div style={{fontSize:11,fontWeight:700,color:"#065f46",marginBottom:6}}>REVENUS ENCAISSÉS</div><div style={{fontSize:26,fontWeight:900,color:"#059669"}}>{fmt(revenus,lang)}</div></div>
         <div style={{background:"#fef2f2",borderRadius:14,padding:20,border:"1px solid #fecaca"}}><div style={{fontSize:11,fontWeight:700,color:"#b91c1c",marginBottom:6}}>DÉPENSES</div><div style={{fontSize:26,fontWeight:900,color:"#dc2626"}}>{fmt(depenses,lang)}</div></div>
         {totalVersements>0&&<div style={{background:"#f0fdf4",borderRadius:14,padding:20,border:"1px solid #86efac"}}><div style={{fontSize:11,fontWeight:700,color:"#166534",marginBottom:6}}>💰 VERSEMENTS ({mVers.length})</div><div style={{fontSize:26,fontWeight:900,color:"#16a34a"}}>+{fmt(totalVersements,lang)}</div></div>}
+        {mAvoirs.length>0&&<div style={{background:"#f5f5f5",borderRadius:14,padding:20,border:"1px solid #e5e7eb"}}><div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:6}}>📝 AVOIRS ({mAvoirs.length})</div><div style={{fontSize:26,fontWeight:900,color:"#374151"}}>–{fmt(totalAvoirs,lang)}</div></div>}
         <div style={{background:benefice>=0?"#eff6ff":"#fff7ed",borderRadius:14,padding:20,border:`1px solid ${benefice>=0?"#bfdbfe":"#fed7aa"}`,gridColumn:"1/-1"}}>
           <div style={{fontSize:11,fontWeight:700,color:benefice>=0?"#1d4ed8":"#c2410c",marginBottom:6}}>BÉNÉFICE NET</div>
           <div style={{display:"flex",alignItems:"baseline",gap:12}}>
@@ -5763,6 +5914,8 @@ export default function App(){
             setPreviewInvoice={setPreviewInvoice}
             versements={versements}
             products={products}
+            avoirs={avoirs}
+            bizSettings={bizSettings}
             onEditInvoice={inv=>{setEditingInvoice(inv);}}
           />
         )}
@@ -5831,7 +5984,16 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onCreateAvoir={avoir=>{
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onRenameId={newId=>{
+        if(!newId.trim()||newId===detailTx.id) return;
+        if(invoices.find(i=>i.id===newId&&i.id!==detailTx.id)){showToast("❌ هذا الرقم مستخدم — احذف الفاتورة أولاً");return;}
+        const inv2=invoices.map(i=>i.id===detailTx.id?{...i,id:newId}:i);
+        const tx2=txs.map(tx=>tx.invoiceId===detailTx.id?{...tx,invoiceId:newId}:tx);
+        const av2=(avoirs||[]).map(a=>a.refFacture===detailTx.id?{...a,refFacture:newId}:a);
+        setInvoices(inv2);setTxs(tx2);setAvoirs(av2);
+        persist({invoices:inv2,txs:tx2,avoirs:av2});
+        setDetailTx({...detailTx,id:newId});showToast("✓ رقم الفاتورة تم تغييره");
+      }} onCreateAvoir={avoir=>{
         const a2=[avoir,...(avoirs||[])];
         // تسجيل tx سالب في Historique
         const avoirTx={id:uid(),type:"avoir",amount:-avoir.montant,desc:`Avoir · Réf: ${avoir.refFacture}`,client:avoir.customer,date:avoir.date,paid:true,avoirId:avoir.id};
