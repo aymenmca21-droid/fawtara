@@ -5021,7 +5021,7 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                       <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
                       <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                     </div>
-                    <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                    <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                       <div style={{fontWeight:800,fontSize:14,color:isPaid?"#059669":"#dc2626"}}>
                         {isPaid?fmt(inv.totalTTC||inv.total,lang):fmt(reste,lang)}
                       </div>
@@ -5731,12 +5731,12 @@ export default function App(){
                 {/* الفاتورة الأصلية */}
                 <div style={{...S.card({marginBottom:invAvoirs.length>0?0:0,display:"flex",alignItems:"center",gap:12,borderRadius:invAvoirs.length>0?"12px 12px 0 0":12})}}
                   onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{flex:1,minWidth:0,cursor:"pointer"}}>
                     <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
                     <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                   </div>
-                  <div onClick={()=>setPreviewInvoice(inv)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                     <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
                     <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
                   </div>
