@@ -5158,6 +5158,7 @@ export default function App(){
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
   const [editingInvoice,setEditingInvoice]=useState(null);
+  const [editFromBtn,setEditFromBtn]=useState(false);
   // History filters
   const [histFilter,setHistFilter]=useState("all");
   const [dateFrom,setDateFrom]=useState("");
@@ -5917,7 +5918,7 @@ export default function App(){
             products={products}
             avoirs={avoirs}
             bizSettings={bizSettings}
-            onEditInvoice={inv=>{setEditingInvoice(inv);}}
+            onEditInvoice={inv=>{setEditFromBtn(true);setEditingInvoice(inv);}}
           />
         )}
       </div>{/* end CONTENT */}
@@ -5947,16 +5948,15 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});setModal(null);showToast(tx.type==="income"?"Revenu enregistré ✓":"Dépense enregistrée ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
-      {editingInvoice&&<InvoiceModal
+      {editingInvoice&&editFromBtn&&<InvoiceModal
         products={products} customers={customers} invoices={invoices}
-        onClose={()=>setEditingInvoice(null)}
+        onClose={()=>{setEditingInvoice(null);setEditFromBtn(false);}}
         onCreated={(updInv,newTxs)=>{
           // نحتفظ بنفس الرقم التسلسلي ونأخذ التاريخ الجديد من الفورم
           const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
           setInvoices(inv2);
           persist({invoices:inv2});
-          setEditingInvoice(null);
-          setPreviewInvoice(null);
+          setEditingInvoice(null);setEditFromBtn(false);
           showToast("Facture modifiée ✓");
         }}
         lang={lang} companyName={effectiveCompanyName}
@@ -5985,7 +5985,7 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);}} onRenameId={newId=>{
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditFromBtn(true);setEditingInvoice(detailTx);setDetailTx(null);}} onRenameId={newId=>{
         if(!newId.trim()||newId===detailTx.id) return;
         if(invoices.find(i=>i.id===newId&&i.id!==detailTx.id)){showToast("❌ هذا الرقم مستخدم — احذف الفاتورة أولاً");return;}
         const inv2=invoices.map(i=>i.id===detailTx.id?{...i,id:newId}:i);
@@ -6010,7 +6010,7 @@ export default function App(){
         persist({avoirs:a2,txs:t2,invoices:inv2});
         showToast("Avoir créé ✓");setDetailTx(null);
       }}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditFromBtn(true);setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{
         const a2=[avoir,...(avoirs||[])];
         const avoirTx={id:uid(),type:"avoir",amount:-avoir.montant,desc:`Avoir · Réf: ${avoir.refFacture}`,client:avoir.customer,date:avoir.date,paid:true,avoirId:avoir.id};
         const t2=[avoirTx,...txs];
