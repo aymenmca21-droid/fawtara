@@ -5232,6 +5232,7 @@ export default function App(){
     if(user) await saveUserData(user.username,{txs,products,invoices,customers,companyName:effectiveCompanyName});
     setUser(null);setTxs([]);setProducts([]);setInvoices([]);setCustomers([]);
     setCompanyName("");setStarted(false);setTab("home");setSelectedCustomer(null);
+    setEditingInvoice(null);setPreviewInvoice(null);setDetailTx(null);
   };
 
   // ── حفظ تلقائي (debounced 1.5s) ──
@@ -5404,7 +5405,7 @@ export default function App(){
         </div>
         <div style={{flex:1,padding:"10px 10px",display:"flex",flexDirection:"column",gap:2}}>
           {[["home","🏠",t.home],["invoices","🧾",t.invoices],["avoirs","📝","Avoirs"],["customers","👥",t.customers],["fournisseurs","🏭","Fournisseurs"],["history","📋",t.history],["rapport","📈","Rapport"]].map(([k,icon,label])=>(
-            <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);}}
+            <button key={k} onClick={()=>{setTab(k);setSelectedCustomer(null);setEditingInvoice(null);setPreviewInvoice(null);}}
               style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",cursor:"pointer",fontSize:14,fontWeight:tab===k?700:400,background:tab===k?"#eff6ff":"transparent",color:tab===k?"#2563EB":"#6b7280",textAlign:"left",width:"100%"}}>
               <span>{icon}</span>{label}
             </button>
@@ -5946,7 +5947,7 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});setModal(null);showToast(tx.type==="income"?"Revenu enregistré ✓":"Dépense enregistrée ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
-      {editingInvoice&&<InvoiceModal
+      {editingInvoice&&!previewInvoice&&<InvoiceModal
         products={products} customers={customers} invoices={invoices}
         onClose={()=>setEditingInvoice(null)}
         onCreated={(updInv,newTxs)=>{
