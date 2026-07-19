@@ -5159,6 +5159,8 @@ export default function App(){
   const [duplicateInv,setDuplicateInv]=useState(null);
   const [editingInvoice,setEditingInvoice]=useState(null);
   const [editFromBtn,setEditFromBtn]=useState(false);
+  // Auto-clear editingInvoice when previewInvoice opens
+  useEffect(()=>{if(previewInvoice){setEditingInvoice(null);setEditFromBtn(false);}},[previewInvoice]);
   // History filters
   const [histFilter,setHistFilter]=useState("all");
   const [dateFrom,setDateFrom]=useState("");
