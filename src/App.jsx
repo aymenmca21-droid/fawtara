@@ -5014,14 +5014,14 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
                     style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#fff",borderRadius:10,border:"1px solid #e5e7eb",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}
                     onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"}
                     onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.04)"}>
-                    <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{width:32,height:32,borderRadius:8,background:isPaid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0,cursor:"pointer"}}>
+                    <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{width:32,height:32,borderRadius:8,background:isPaid?"#ecfdf5":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0,cursor:"pointer"}}>
                       {isPaid?"✓":"⏳"}
                     </div>
-                    <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                    <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{flex:1,minWidth:0,cursor:"pointer"}}>
                       <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
                       <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                     </div>
-                    <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                    <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                       <div style={{fontWeight:800,fontSize:14,color:isPaid?"#059669":"#dc2626"}}>
                         {isPaid?fmt(inv.totalTTC||inv.total,lang):fmt(reste,lang)}
                       </div>
@@ -5047,11 +5047,11 @@ function RapportTab({txs,invoices,rapportMonth,setRapportMonth,rapportYear,setRa
             const reste=(inv.totalTTC||inv.total)-(inv.paidAmount||0);
             return(
               <div key={inv.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 12px",background:"#fff",borderRadius:10,marginBottom:6,border:"1px solid #fecaca"}}>
-                <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{flex:1,cursor:"pointer"}}>
+                <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{flex:1,cursor:"pointer"}}>
                   <div style={{fontWeight:700,fontSize:13,color:"#111"}}>{inv.customer}</div>
                   <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {days} jours</div>
                 </div>
-                <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{fontWeight:800,fontSize:14,color:"#dc2626",cursor:"pointer",marginRight:8}}>{fmt(reste,lang)}</div>
+                <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{fontWeight:800,fontSize:14,color:"#dc2626",cursor:"pointer",marginRight:8}}>{fmt(reste,lang)}</div>
                 <button onClick={()=>onEditInvoice(inv)}
                   style={{background:"#fffbeb",border:"1.5px solid #fde68a",borderRadius:8,padding:"5px 9px",fontSize:13,cursor:"pointer",color:"#92400e",flexShrink:0}}
                   title="Modifier">✏️</button>
@@ -5158,9 +5158,8 @@ export default function App(){
   const [confirmDelTx,setConfirmDelTx]=useState(null);
   const [duplicateInv,setDuplicateInv]=useState(null);
   const [editingInvoice,setEditingInvoice]=useState(null);
-  const [editFromBtn,setEditFromBtn]=useState(false);
   // Auto-clear editingInvoice when previewInvoice opens
-  useEffect(()=>{if(previewInvoice){setEditingInvoice(null);setEditFromBtn(false);}},[previewInvoice]);
+  useEffect(()=>{if(previewInvoice)setEditingInvoice(null);},[previewInvoice]);
   // History filters
   const [histFilter,setHistFilter]=useState("all");
   const [dateFrom,setDateFrom]=useState("");
@@ -5735,12 +5734,12 @@ export default function App(){
                 {/* الفاتورة الأصلية */}
                 <div style={{...S.card({marginBottom:invAvoirs.length>0?0:0,display:"flex",alignItems:"center",gap:12,borderRadius:invAvoirs.length>0?"12px 12px 0 0":12})}}
                   onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.1)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,.06)"}>
-                  <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
-                  <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{width:40,height:40,background:"#eff6ff",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18,cursor:"pointer"}}>🧾</div>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{flex:1,minWidth:0,cursor:"pointer"}}>
                     <div style={{fontWeight:700,fontSize:14,color:"#111"}}>{inv.customer}</div>
                     <div style={{fontSize:11,color:"#9ca3af"}}>{inv.id} · {inv.date}</div>
                   </div>
-                  <div onClick={()=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+                  <div onClick={()=>{setEditingInvoice(null);setPreviewInvoice(inv);}} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
                     <div style={{fontWeight:800,fontSize:15,color:"#111",marginBottom:4}}>{fmt(inv.totalTTC||inv.total,lang)}</div>
                     <span style={S.pill(sb[inv.payStatus],sc[inv.payStatus])}>● {t["status"+cap(inv.payStatus)]}</span>
                   </div>
@@ -5797,7 +5796,7 @@ export default function App(){
               onEdit={c=>{setEditingCustomer(c);}}
               onDelete={id=>{delCustomer(id);showToast(t.deleteCustomer+" ✓");}}
               onNewInvoice={name=>{setInvoicePreselect(name);setModal("invoice");}}
-              onOpenInvoice={inv=>{setEditingInvoice(null);setEditFromBtn(false);setPreviewInvoice(inv);}}
+              onOpenInvoice={inv=>{setEditingInvoice(null);setPreviewInvoice(inv);}}
               onAddVersement={v=>{const v2=[v,...versements];setVersements(v2);persist({versements:v2});showToast("Versement enregistré ✓");}}
               versements={versements}
             />
@@ -5920,7 +5919,7 @@ export default function App(){
             products={products}
             avoirs={avoirs}
             bizSettings={bizSettings}
-            onEditInvoice={inv=>{setEditFromBtn(true);setEditingInvoice(inv);}}
+            onEditInvoice={inv=>{setEditingInvoice(inv);setModal("editInvoice");}}
           />
         )}
       </div>{/* end CONTENT */}
@@ -5950,15 +5949,15 @@ export default function App(){
 
       {/* MODALS */}
       {(modal==="income"||modal==="expense")&&<TxModal initType={modal} onSave={tx=>{const t2=[tx,...txs];setTxs(t2);persist({txs:t2});setModal(null);showToast(tx.type==="income"?"Revenu enregistré ✓":"Dépense enregistrée ✓");}} onClose={()=>setModal(null)} lang={lang}/>}
-      {editingInvoice&&editFromBtn&&!previewInvoice&&<InvoiceModal
+      {modal==="editInvoice"&&editingInvoice&&<InvoiceModal
         products={products} customers={customers} invoices={invoices}
-        onClose={()=>{setEditingInvoice(null);setEditFromBtn(false);}}
+        onClose={()=>{setEditingInvoice(null);setModal(null);}}
         onCreated={(updInv,newTxs)=>{
           // نحتفظ بنفس الرقم التسلسلي ونأخذ التاريخ الجديد من الفورم
           const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
           setInvoices(inv2);
           persist({invoices:inv2});
-          setEditingInvoice(null);setEditFromBtn(false);
+          setEditingInvoice(null);setModal(null);
           showToast("Facture modifiée ✓");
         }}
         lang={lang} companyName={effectiveCompanyName}
@@ -5987,7 +5986,7 @@ export default function App(){
         </div>
       )}
 
-      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditFromBtn(true);setEditingInvoice(detailTx);setDetailTx(null);}} onRenameId={newId=>{
+      {detailTx&&<InvoicePDFModal invoice={detailTx} lang={lang} onClose={()=>setDetailTx(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===detailTx.id)} onAddPayment={newTx=>handleAddPayment(newTx,detailTx.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(detailTx);setDetailTx(null);setModal("editInvoice");}} onRenameId={newId=>{
         if(!newId.trim()||newId===detailTx.id) return;
         if(invoices.find(i=>i.id===newId&&i.id!==detailTx.id)){showToast("❌ هذا الرقم مستخدم — احذف الفاتورة أولاً");return;}
         const inv2=invoices.map(i=>i.id===detailTx.id?{...i,id:newId}:i);
@@ -6012,7 +6011,7 @@ export default function App(){
         persist({avoirs:a2,txs:t2,invoices:inv2});
         showToast("Avoir créé ✓");setDetailTx(null);
       }}/>}
-      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditFromBtn(true);setEditingInvoice(previewInvoice);setPreviewInvoice(null);}} onCreateAvoir={avoir=>{
+      {previewInvoice&&<InvoicePDFModal invoice={previewInvoice} lang={lang} onClose={()=>setPreviewInvoice(null)} relatedTxs={txs.filter(tx=>tx.invoiceId===previewInvoice.id)} onAddPayment={newTx=>handleAddPayment(newTx,previewInvoice.id)} bizSettings={{...bizSettings,_products:products}} onIncrementBL={()=>{const nb={...bizSettings,blCounter:(bizSettings.blCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onIncrementBC={()=>{const nb={...bizSettings,bcCounter:(bizSettings.bcCounter||1)+1};setBizSettings(nb);persist({bizSettings:nb});}} onEdit={()=>{setEditingInvoice(previewInvoice);setPreviewInvoice(null);setModal("editInvoice");}} onCreateAvoir={avoir=>{
         const a2=[avoir,...(avoirs||[])];
         const avoirTx={id:uid(),type:"avoir",amount:-avoir.montant,desc:`Avoir · Réf: ${avoir.refFacture}`,client:avoir.customer,date:avoir.date,paid:true,avoirId:avoir.id};
         const t2=[avoirTx,...txs];
