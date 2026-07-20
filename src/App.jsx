@@ -1289,9 +1289,11 @@ function LineRow({line,products,onSetProduct,onUpdate,onRemove,canRemove,lang,t,
 /* ═══════════════════════════════════════════════
    INVOICE MODAL
 ═══════════════════════════════════════════════ */
-function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate,editing,versements}){
+function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,companyName,preselectedCustomer,bizSettings,duplicate,editing,versements,onRenameInvId}){
   const t=T[lang],rtl=lang==="ar";
   const src=editing||duplicate;
+  const [editInvId,setEditInvId]=useState(false);
+  const [newInvId,setNewInvId]=useState(editing?.id||"");
   const [customer,setCustomer]=useState(src?.customer||preselectedCustomer||"");
   const [custInput,setCustInput]=useState(src?.customer||preselectedCustomer||"");
   const [showCustDrop,setShowCustDrop]=useState(false);
@@ -1405,7 +1407,41 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       <div onClick={e=>e.stopPropagation()} dir={rtl?"rtl":"ltr"}
         style={{background:"#fff",borderRadius:"22px 22px 0 0",width:"100%",maxWidth:480,maxHeight:"92svh",display:"flex",flexDirection:"column",animation:"up .25s cubic-bezier(.22,1,.36,1)"}}>
         <div style={{padding:"18px 20px 14px",borderBottom:"1px solid #f3f4f6",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div><div style={{fontWeight:900,fontSize:17,color:"#111"}}>{editing?"✏️ Modifier la facture":t.newInvoice}</div><div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{customer||t.selectCustomer}</div></div>
+          <div>
+            <div style={{fontWeight:900,fontSize:17,color:"#111"}}>{editing?"✏️ Modifier la facture":t.newInvoice}</div>
+            {editing&&(
+              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:4}}>
+                <span style={{fontSize:11,color:"#9ca3af"}}>N°</span>
+                {editInvId?(
+                  <input autoFocus value={newInvId} onChange={e=>setNewInvId(e.target.value.toUpperCase())}
+                    onKeyDown={e=>{
+                      if(e.key==="Enter"){
+                        if(invoices.find(i=>i.id===newInvId&&i.id!==editing.id)){alert("❌ Ce numéro existe déjà");return;}
+                        onRenameInvId&&onRenameInvId(newInvId);setEditInvId(false);
+                      }
+                      if(e.key==="Escape")setEditInvId(false);
+                    }}
+                    style={{fontFamily:"monospace",fontSize:13,fontWeight:700,padding:"2px 8px",border:"2px solid #2563EB",borderRadius:6,outline:"none",width:180}}/>
+                ):(
+                  <span style={{fontFamily:"monospace",fontSize:13,fontWeight:700,color:"#2563EB"}}>{editing.id}</span>
+                )}
+                {!editInvId&&<button onClick={()=>{setNewInvId(editing.id);setEditInvId(true);}}
+                  style={{background:"none",border:"none",cursor:"pointer",fontSize:13,color:"#9ca3af",padding:"0 2px"}}
+                  title="Modifier le numéro">✎</button>}
+                {editInvId&&(
+                  <div style={{display:"flex",gap:4}}>
+                    <button onClick={()=>{
+                      if(invoices.find(i=>i.id===newInvId&&i.id!==editing.id)){alert("❌ Ce numéro existe déjà");return;}
+                      onRenameInvId&&onRenameInvId(newInvId);setEditInvId(false);
+                    }} style={{padding:"2px 8px",background:"#2563EB",color:"#fff",border:"none",borderRadius:5,fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
+                    <button onClick={()=>setEditInvId(false)}
+                      style={{padding:"2px 6px",background:"#f3f4f6",color:"#6b7280",border:"none",borderRadius:5,fontSize:11,cursor:"pointer"}}>×</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {!editing&&<div style={{fontSize:12,color:"#9ca3af",marginTop:2}}>{customer||t.selectCustomer}</div>}
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>{stepDot()}<button onClick={onClose} style={{background:"#f3f4f6",border:"none",width:32,height:32,borderRadius:8,cursor:"pointer",fontSize:18,color:"#6b7280",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button></div>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"16px 20px"}}>
@@ -5953,7 +5989,6 @@ export default function App(){
         products={products} customers={customers} invoices={invoices}
         onClose={()=>{setEditingInvoice(null);setModal(null);}}
         onCreated={(updInv,newTxs)=>{
-          // نحتفظ بنفس الرقم التسلسلي ونأخذ التاريخ الجديد من الفورم
           const inv2=invoices.map(i=>i.id===editingInvoice.id?{...updInv,id:editingInvoice.id}:i);
           setInvoices(inv2);
           persist({invoices:inv2});
@@ -5963,6 +5998,17 @@ export default function App(){
         lang={lang} companyName={effectiveCompanyName}
         bizSettings={bizSettings}
         editing={editingInvoice}
+        versements={versements}
+        onRenameInvId={newId=>{
+          if(invoices.find(i=>i.id===newId&&i.id!==editingInvoice.id)){showToast("❌ هذا الرقم مستخدم — احذف الفاتورة أولاً");return;}
+          const inv2=invoices.map(i=>i.id===editingInvoice.id?{...i,id:newId}:i);
+          const tx2=txs.map(tx=>tx.invoiceId===editingInvoice.id?{...tx,invoiceId:newId}:tx);
+          const av2=(avoirs||[]).map(a=>a.refFacture===editingInvoice.id?{...a,refFacture:newId}:a);
+          setInvoices(inv2);setTxs(tx2);setAvoirs(av2);
+          persist({invoices:inv2,txs:tx2,avoirs:av2});
+          setEditingInvoice({...editingInvoice,id:newId});
+          showToast("✓ رقم الفاتورة تم تغييره");
+        }}
       />}
       {modal==="invoice"&&<InvoiceModal products={products} customers={customers} invoices={invoices} onClose={()=>{setModal(null);setInvoicePreselect(null);setDuplicateInv(null);}} onCreated={handleInvoiceCreated} lang={lang} companyName={effectiveCompanyName} preselectedCustomer={invoicePreselect} bizSettings={bizSettings} duplicate={duplicateInv} versements={versements}/>}
       {modal==="products"&&<ProductsModal products={products} onSave={saveProduct} onDelete={delProduct} onClose={()=>setModal(null)} lang={lang} bizSettings={bizSettings} onSaveBizSettings={bs=>{setBizSettings(bs);persist({bizSettings:bs});}}/>}
