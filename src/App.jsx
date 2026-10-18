@@ -919,22 +919,6 @@ function Auth({onLogin,lang,setLang}){
     setLoading(false);
   };
 
-  const launchDemo=async()=>{
-    setLoading(true);
-    try{
-      let acc=await getAccount("demo");
-      if(!acc){
-        await createAccount("demo","demo","Démo Commerce","DEMO-0000");
-        const d=EMPTY_DATA();
-        d.txs=DEMO_TXS;d.products=DEMO_PRODUCTS;d.invoices=DEMO_INVOICES;d.customers=DEMO_CUSTOMERS_RAW;d.companyName="Démo Commerce";
-        await saveUserData("demo",d);
-        acc={username:"demo",shop_name:"Démo Commerce",ref_code:"DEMO-0000"};
-      }
-      const data=await getUserData("demo")||EMPTY_DATA();
-      onLogin({username:"demo",shopName:acc.shop_name,refCode:acc.ref_code},data);
-    }catch(e){showErr("Erreur démo");}
-    setLoading(false);
-  };
 
   const inp=extra=>S.inp({marginBottom:10,...extra});
 
@@ -997,7 +981,6 @@ function Auth({onLogin,lang,setLang}){
           style={{width:"100%",padding:14,background:loading?"#93c5fd":"#2563EB",color:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:loading?"default":"pointer",marginTop:mode==="login"?6:0,transition:"background .2s"}}>
           {loading?"⏳ ...":mode==="login"?t.loginBtn:t.registerBtn}
         </button>
-        {mode==="login"&&<button onClick={launchDemo} disabled={loading} style={{width:"100%",padding:"10px",background:"transparent",color:"#9ca3af",border:"1px dashed #e5e7eb",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",marginTop:10}}>👀 Voir la démo</button>}
       </div>
 
       {/* ZONE BAS */}
@@ -1053,7 +1036,6 @@ function Onboard({onChoice,lang}){
       <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",maxWidth:320}}>
         <button onClick={()=>onChoice("income")} style={{padding:20,background:"#10B981",color:"#fff",border:"none",borderRadius:16,fontSize:18,fontWeight:800,cursor:"pointer",boxShadow:"0 8px 24px rgba(16,185,129,.35)"}}>+ {t.addIncome}</button>
         <button onClick={()=>onChoice("expense")} style={{padding:20,background:"#ef4444",color:"#fff",border:"none",borderRadius:16,fontSize:18,fontWeight:800,cursor:"pointer",boxShadow:"0 8px 24px rgba(239,68,68,.35)"}}>– {t.addExpense}</button>
-        <button onClick={()=>onChoice("demo")} style={{padding:18,background:"#fff",color:"#374151",border:"1.5px solid #e5e7eb",borderRadius:16,fontSize:15,fontWeight:600,cursor:"pointer"}}>{t.demo}</button>
       </div>
     </div>
   );
@@ -5376,11 +5358,7 @@ export default function App(){
 
   const handleOnboard=choice=>{
     setStarted(true);
-    if(choice==="demo"){
-      const d={txs:DEMO_TXS,products:DEMO_PRODUCTS,customers:DEMO_CUSTOMERS_RAW,invoices:DEMO_INVOICES,companyName:effectiveCompanyName};
-      setTxs(d.txs);setProducts(d.products);setCustomers(d.customers);setInvoices(d.invoices);
-      persist(d);
-    } else setModal(choice);
+    setModal(choice);
   };
 
   const handleEditInvoice=(updatedInvoice)=>{
