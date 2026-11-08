@@ -2314,10 +2314,10 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </table>
 
 <div class="totals">
-  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
+  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
   ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt % 1 === 0 ? tvaAmt.toLocaleString("fr-DZ") : tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
   ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
-  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")+" DA".replace(" DA","")} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
   <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
@@ -2468,7 +2468,7 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
   <tbody>${rows2}</tbody>
 </table>
 <div class="totals-wrap"><div class="totals">
-  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
+  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
   ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt%1===0?tvaAmt.toLocaleString("fr-DZ"):tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
   ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
   ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small>(LF 2025)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
@@ -2705,11 +2705,7 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
   <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
-<div class="conditions">
-  <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
-  ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
-  ${invoice.notes?`<br><strong>Remarques :</strong> ${invoice.notes}`:""}
-</div>
+${invoice.notes?`<div class="conditions"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
 
 <div class="sign-section">
   <div class="sign-box">
