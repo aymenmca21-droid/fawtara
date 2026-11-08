@@ -2270,7 +2270,6 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
     <div class="inv-number">N° ${invoice.id}</div>
     <div class="inv-date">Date : ${invoice.date}</div>
     ${invoice.echeance?`<div class="inv-date">Échéance : ${invoice.echeance}</div>`:""}
-    <div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
   </div>
 </div>
 
@@ -2356,8 +2355,139 @@ ${paidTxs.length>0?`
 </div></body></html>`;
   };
 
+  // ═══ NMODELJ TANI — Moderne sans paiements ═══
+  const buildHTML2=(autoPrint=false)=>{
+    const rows2=invoice.lines.map(l=>{
+      const pu=parseFloat(l.price)||0;
+      const qty=parseFloat(l.qty)||1;
+      const rem=parseFloat(l.remise)||0;
+      const montant=pu*qty*(1-rem/100);
+      const prod=bs?._products?.find?.(p=>p.name===l.name||p.id===l.productId);
+      const codeLabel=[l.autoCode||prod?.autoCode,l.ref||prod?.ref].filter(Boolean).join(" · ");
+      return `<tr>
+        <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#64748b;font-family:monospace">${codeLabel}</span>`:""}</td>
+        <td class="tc">${qty}</td>
+        <td class="tc" style="font-size:11px">${l.unite||"unité"}</td>
+        <td style="text-align:right">${pu.toLocaleString()} DA</td>
+        ${rem>0?`<td class="tc" style="color:#f59e0b">-${rem}%</td>`:`<td class="tc" style="color:#cbd5e1">—</td>`}
+        <td style="text-align:right;font-weight:700">${montant.toLocaleString()} DA</td>
+      </tr>`;
+    }).join("");
+    const ci2=invoice.customerInfo||{};
+    const lettres2=montantEnLettres(totalFinal);
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Facture ${invoice.id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;color:#000!important}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:0}
+  a{color:#000!important;text-decoration:none}
+  .topbar{background:#1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+  .topbar *{color:#fff!important}
+  .tb-left{display:flex;align-items:center;gap:14px}
+  .tb-logo img{height:44px;max-width:120px;object-fit:contain;border-radius:4px;background:#fff;padding:3px}
+  .tb-co{font-size:16px;font-weight:900;letter-spacing:-0.5px}
+  .tb-info{font-size:9.5px;opacity:.75;line-height:1.6;margin-top:2px}
+  .tb-right{text-align:right}
+  .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+  .tb-num{font-size:22px;font-weight:900;font-family:monospace}
+  .tb-date{font-size:11px;opacity:.8;margin-top:3px}
+  .page{max-width:740px;margin:0 auto;padding:0 28px 28px}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .party{border-left:3px solid #1e293b;padding:10px 14px;background:#f8fafc}
+  .party-label{font-size:8.5px;font-weight:800;color:#64748b!important;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:5px}
+  .party-name{font-size:15px;font-weight:800;color:#0f172a}
+  .party-info{font-size:10px;color:#334155!important;line-height:1.9;font-family:monospace;margin-top:4px}
+  .party-info span{display:block}
+  table{width:100%;border-collapse:collapse;margin-bottom:18px}
+  thead tr{background:#1e293b}
+  th{font-size:9px;color:#fff!important;text-transform:uppercase;letter-spacing:1px;padding:9px 10px;text-align:left;font-weight:700}
+  th.tc{text-align:center}
+  tbody tr{border-bottom:1px solid #e2e8f0}
+  tbody tr:nth-child(even){background:#f8fafc}
+  td{padding:10px 10px;font-size:13px;color:#1e293b}
+  .tc{text-align:center}
+  .totals-wrap{display:flex;justify-content:flex-end;margin-bottom:18px}
+  .totals{width:60%;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden}
+  .tl{display:flex;justify-content:space-between;padding:7px 14px;font-size:13px}
+  .tl:nth-child(even){background:#f8fafc}
+  .tl.sep{border-top:2px solid #1e293b}
+  .tl.main{font-size:17px;font-weight:900;background:#1e293b!important;padding:11px 14px}
+  .tl.main *{color:#fff!important}
+  .lettres{border:1px dashed #94a3b8;border-radius:4px;padding:10px 14px;margin-bottom:18px;font-size:11px;color:#475569;font-style:italic}
+  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;margin-bottom:16px}
+  .sig{border:1px solid #cbd5e1;border-radius:6px;padding:14px;min-height:80px}
+  .sig-label{font-size:9px;font-weight:700;color:#64748b!important;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+  .sig-name{font-size:12px;font-weight:600;color:#1e293b;margin-bottom:30px}
+  .footer{border-top:1px solid #e2e8f0;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
+  .footer-legal{font-size:9px;color:#64748b!important;line-height:1.9;font-family:monospace}
+  .footer-brand{font-size:9px;color:#94a3b8!important;text-align:right}
+  @media print{body{padding:0}.page{padding:0 20px 20px}}
+</style>
+${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
+</head><body>
+<div class="topbar">
+  <div class="tb-left">
+    ${bs.logo?`<div class="tb-logo"><img src="${bs.logo}" alt="logo"/></div>`:""}
+    <div>
+      <div class="tb-co">${invoice.companyName||"Fawtara"}</div>
+      <div class="tb-info">${[bs.activite,bs.adresse].filter(Boolean).join(" · ")}${bs.nif?`<br>NIF: ${bs.nif}${bs.nis?" · NIS: "+bs.nis:""}${bs.rc?" · RC: "+bs.rc:""}${bs.article?" · Art: "+bs.article:""}`:""}</div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="tb-title">Facture</div>
+    <div class="tb-num">N° ${invoice.id}</div>
+    <div class="tb-date">Date : ${invoice.date}${invoice.echeance?" · Éch: "+invoice.echeance:""}</div>
+  </div>
+</div>
+<div class="page">
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Vendeur</div>
+    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
+    <div class="party-info">
+      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}${bs.rc?`<span>RC : ${bs.rc}</span>`:""}${bs.article?`<span>Art. : ${bs.article}</span>`:""}${bs.rip?`<span>RIP : ${bs.rip}</span>`:""}${bs.adresse?`<span>${bs.adresse}</span>`:""}
+    </div>
+  </div>
+  <div class="party">
+    <div class="party-label">Acheteur</div>
+    <div class="party-name">${invoice.customer}</div>
+    <div class="party-info">
+      ${ci2.nif?`<span>NIF : ${ci2.nif}</span>`:""}${ci2.nis?`<span>NIS : ${ci2.nis}</span>`:""}${ci2.rc?`<span>RC : ${ci2.rc}</span>`:""}${ci2.article?`<span>Art. : ${ci2.article}</span>`:""}${ci2.rip?`<span>RIP : ${ci2.rip}</span>`:""}${ci2.adresse?`<span>${ci2.adresse}</span>`:""}${ci2.phone?`<span>Tél : ${ci2.phone}</span>`:""}
+    </div>
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th>Désignation</th><th class="tc">Qté</th><th class="tc">Unité</th>
+    <th style="text-align:right">${invTvaEnabled?"PU HT":"Prix unit."}</th>
+    <th class="tc">Remise</th>
+    <th style="text-align:right">${invTvaEnabled?"Montant HT":"Total"}</th>
+  </tr></thead>
+  <tbody>${rows2}</tbody>
+</table>
+<div class="totals-wrap"><div class="totals">
+  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
+  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt%1===0?tvaAmt.toLocaleString("fr-DZ"):tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small>(LF 2025)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
+</div></div>
+<div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres2}</div>
+${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-left:3px solid #1e293b;font-size:12px"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
+<div class="sigs">
+  <div class="sig"><div class="sig-label">Vendeur</div><div class="sig-name">${invoice.companyName||""}</div><div style="font-size:9px;color:#94a3b8">Cachet &amp; Signature</div></div>
+  <div class="sig"><div class="sig-label">Acheteur</div><div class="sig-name">${invoice.customer}</div><div style="font-size:9px;color:#94a3b8">Cachet &amp; Signature</div></div>
+</div>
+<div class="footer">
+  <div class="footer-legal">${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}${bs.adresse?`<br>${bs.adresse}`:""}</div>
+  <div class="footer-brand">Document généré par Fawtara</div>
+</div>
+</div></body></html>`;
+  };
+
   const openInTab=(autoPrint=false)=>{
-    const html=buildHTML(autoPrint);
+    const tpl=bs?.invTemplate||"classic";
+    const html=tpl==="modern"?buildHTML2(autoPrint):buildHTML(autoPrint);
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
@@ -3459,6 +3589,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
   const [invPrefix,setInvPrefix]=useState(settings?.invPrefix||"FAC");
   const [customUnites,setCustomUnites]=useState((settings?.customUnites||[]).join(", "));
+  const [invTemplate,setInvTemplate]=useState(settings?.invTemplate||"classic");
   const ok=name.trim().length>0;
 
   const handleLogo=e=>{
@@ -3472,7 +3603,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean),invTemplate});
     onClose();
   };
 
@@ -3522,6 +3653,25 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
                   {invPrefix||"FAC"}-{new Date().getFullYear()}-{String(settings?.invCounter||1).padStart(4,"0")}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* نموذج الفاتورة */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>🧾 Modèle de facture PDF</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {[
+                {id:"classic",label:"Classique",desc:"Avec paiements et historique",icon:"📄"},
+                {id:"modern",label:"Moderne",desc:"Sans paiements — épuré",icon:"✨"}
+              ].map(m=>(
+                <button key={m.id} onClick={()=>setInvTemplate(m.id)}
+                  style={{padding:"12px 10px",borderRadius:12,border:`2px solid ${invTemplate===m.id?"#2563EB":"#e5e7eb"}`,
+                    background:invTemplate===m.id?"#eff6ff":"#fff",cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontSize:20,marginBottom:4}}>{m.icon}</div>
+                  <div style={{fontWeight:700,fontSize:13,color:invTemplate===m.id?"#1d4ed8":"#111"}}>{m.label}</div>
+                  <div style={{fontSize:10,color:"#6b7280",marginTop:2}}>{m.desc}</div>
+                </button>
+              ))}
             </div>
           </div>
 
