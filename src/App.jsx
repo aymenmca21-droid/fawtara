@@ -2501,10 +2501,13 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
 
   const printProforma=()=>{
     const tpl=bs?.invTemplate||"classic";
-    const html=(tpl==="modern"?buildHTML2(false):buildHTML(false))
-      .replace(/>FACTURE</g,">FACTURE PROFORMA<")
-      .replace(/Facture N°/g,"Facture Proforma N°")
-      .replace(/<title>Facture /g,"<title>Proforma ");
+    let html=tpl==="modern"?buildHTML2(false):buildHTML(false);
+    // النموذج الكلاسيكي: FACTURE كبير
+    html=html.replace(/>FACTURE</g,">FACTURE PROFORMA<");
+    // النموذج الحديث: tb-title + tb-num
+    html=html.replace(/class="tb-title">Facture</g,'class="tb-title">PROFORMA');
+    html=html.replace(/class="tb-num">N°/g,'class="tb-num">N°');
+    html=html.replace(/<title>Facture /g,"<title>Proforma ");
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
