@@ -2381,6 +2381,7 @@ ${paidTxs.length>0?`
   *{box-sizing:border-box;margin:0;padding:0;color:#000!important}
   body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:0}
   a{color:#000!important;text-decoration:none}
+  .wrap{max-width:740px;margin:0 auto}
   .topbar{background:#1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
   .topbar *{color:#fff!important}
   .tb-left{display:flex;align-items:center;gap:14px}
@@ -2391,7 +2392,7 @@ ${paidTxs.length>0?`
   .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.7;margin-bottom:3px}
   .tb-num{font-size:22px;font-weight:900;font-family:monospace}
   .tb-date{font-size:11px;opacity:.8;margin-top:3px}
-  .page{max-width:740px;margin:0 auto;padding:0 28px 28px}
+  .page{padding:0 28px 28px}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
   .party{border-left:3px solid #1e293b;padding:10px 14px;background:#f8fafc}
   .party-label{font-size:8.5px;font-weight:800;color:#64748b!important;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:5px}
@@ -2425,6 +2426,7 @@ ${paidTxs.length>0?`
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </head><body>
+<div class="wrap">
 <div class="topbar">
   <div class="tb-left">
     ${bs.logo?`<div class="tb-logo"><img src="${bs.logo}" alt="logo"/></div>`:""}
@@ -2482,7 +2484,7 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
   <div class="footer-legal">${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}${bs.adresse?`<br>${bs.adresse}`:""}</div>
   <div class="footer-brand">Document généré par Fawtara</div>
 </div>
-</div></body></html>`;
+</div></div></body></html>`;
   };
 
   const openInTab=(autoPrint=false)=>{
@@ -2496,6 +2498,18 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
 
   const printPDF=()=>openInTab(false);
   const printDirect=()=>openInTab(true);
+
+  const printProforma=()=>{
+    const tpl=bs?.invTemplate||"classic";
+    const html=(tpl==="modern"?buildHTML2(false):buildHTML(false))
+      .replace(/>FACTURE</g,">FACTURE PROFORMA<")
+      .replace(/Facture N°/g,"Facture Proforma N°")
+      .replace(/<title>Facture /g,"<title>Proforma ");
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  };
 
   const printBL=()=>{
     const year=new Date().getFullYear();
@@ -2951,7 +2965,7 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
               ⬇ PDF
             </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:8}}>
             <button onClick={printBL}
               style={{padding:11,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🚚 BL
@@ -2963,6 +2977,10 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8
             <button onClick={()=>{setDocType("bv");printBV();}}
               style={{padding:11,background:"#f59e0b",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🧾 BV
+            </button>
+            <button onClick={printProforma}
+              style={{padding:11,background:"#7c3aed",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+              📝 PF
             </button>
             <button onClick={()=>{
               const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA\nDate: ${invoice.date}`);
