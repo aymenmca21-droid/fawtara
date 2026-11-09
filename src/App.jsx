@@ -2067,6 +2067,7 @@ function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
   .sign-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
   .sign-line{border-bottom:1px dashed #ccc;margin-top:50px}
   .footer{margin-top:24px;padding-top:12px;border-top:1px solid #ccc;font-size:10px;color:#666;text-align:center}
+  @page{margin:15mm}
   @media print{body{padding:20px}}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
@@ -2263,6 +2264,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #000;display:flex;justify-content:space-between;align-items:flex-end}
   .footer-legal{font-size:9.5px;color:#333;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:10px;color:#333;text-align:right}
+  @page{margin:15mm}
   @media print{body{padding:20px}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
@@ -2434,6 +2436,7 @@ ${!isProforma&&paidTxs.length>0?`
   .footer{border-top:1.5px solid #000;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
   .footer-legal{font-size:9px;color:#000!important;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:9px;color:#333!important;text-align:right}
+  @page{margin:15mm}
   @media print{
     body{padding:0}.page{padding:0 20px 20px}
     .tl.main{background:#000!important}
