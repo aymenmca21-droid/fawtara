@@ -2436,7 +2436,12 @@ ${!isProforma&&paidTxs.length>0?`
   .footer{border-top:1.5px solid #000;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
   .footer-legal{font-size:9px;color:#000!important;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:9px;color:#333!important;text-align:right}
-  @media print{body{padding:0}.page{padding:0 20px 20px}}
+  @media print{
+    body{padding:0}
+    .page{padding:0 20px 20px}
+    .topbar{background:#fff!important;border-bottom:2px solid #000;margin-bottom:20px}
+    .topbar *{color:#000!important}
+  }
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </head><body>
