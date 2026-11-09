@@ -2363,7 +2363,6 @@ ${!isProforma&&paidTxs.length>0?`
     ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.article?`Art: ${bs.article}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
     ${bs.adresse?`<br>${bs.adresse}`:""}
   </div>
-  <div class="footer-brand">Document généré par Fawtara</div>
 </div>
 
 </div></body></html>`;
@@ -2499,7 +2498,6 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f4
 </div>
 <div class="footer">
   <div class="footer-legal">${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.article?`Art: ${bs.article}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}${bs.adresse?`<br>${bs.adresse}`:""}</div>
-  <div class="footer-brand">Document généré par Fawtara</div>
 </div>
 </div></div></body></html>`;
   };
