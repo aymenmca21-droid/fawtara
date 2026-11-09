@@ -2396,20 +2396,19 @@ ${!isProforma&&paidTxs.length>0?`
   body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:0}
   a{color:#000!important;text-decoration:none}
   .wrap{max-width:740px;margin:0 auto}
-  .topbar{background:#1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
-  .topbar *{color:#fff!important}
+  .topbar{background:#fff;border-top:5px solid #1e293b;border-bottom:2px solid #1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+  .topbar *{color:#000!important}
   .tb-left{display:flex;align-items:center;gap:14px}
-  .tb-logo img{height:44px;max-width:120px;object-fit:contain;border-radius:4px;background:#fff;padding:3px}
-  .tb-co{font-size:16px;font-weight:900;letter-spacing:-0.5px}
-  .tb-info{font-size:9.5px;opacity:.9;line-height:1.6;margin-top:2px}
+  .tb-logo img{height:44px;max-width:120px;object-fit:contain;border-radius:4px;padding:3px}
+  .tb-co{font-size:16px;font-weight:900;letter-spacing:-0.5px;color:#1e293b}
+  .tb-info{font-size:9.5px;color:#333;line-height:1.6;margin-top:2px;font-family:monospace}
   .tb-right{text-align:right}
-  .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.9;margin-bottom:3px}
-  .tb-num{font-size:22px;font-weight:900;font-family:monospace}
-  .tb-date{font-size:11px;opacity:.95;margin-top:3px}
+  .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:3px}
+  .tb-num{font-size:22px;font-weight:900;font-family:monospace;color:#000}
+  .tb-date{font-size:11px;color:#333;margin-top:3px}
   .page{padding:0 28px 28px}
   .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
   .party{border-left:3px solid #000;padding:10px 14px;background:#f4f4f4}
-  .party-label{font-size:8.5px;font-weight:800;color:#000!important;text-transform:uppercase;letter-spacing:1.8px;margin-bottom:5px}
   .party-name{font-size:15px;font-weight:800;color:#000}
   .party-info{font-size:10px;color:#000!important;line-height:1.9;font-family:monospace;margin-top:4px}
   .party-info span{display:block}
@@ -2437,10 +2436,11 @@ ${!isProforma&&paidTxs.length>0?`
   .footer-legal{font-size:9px;color:#000!important;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:9px;color:#333!important;text-align:right}
   @media print{
-    body{padding:0}
-    .page{padding:0 20px 20px}
-    .topbar{background:#fff!important;border-bottom:2px solid #000;margin-bottom:20px}
-    .topbar *{color:#000!important}
+    body{padding:0}.page{padding:0 20px 20px}
+    .tl.main{background:#000!important}
+    thead tr{background:#000!important}
+    th{color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tl.main{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
