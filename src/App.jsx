@@ -2287,7 +2287,6 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="parties">
   <div class="party-block">
-    <div class="party-label">Vendeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
     <div class="party-info">
       ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
@@ -2301,7 +2300,6 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
     </div>
   </div>
   <div class="party-block">
-    <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
     <div class="party-info">
       ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
@@ -2460,14 +2458,12 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 <div class="page">
 <div class="parties">
   <div class="party">
-    <div class="party-label">Vendeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
     <div class="party-info">
       ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}${bs.rc?`<span>RC : ${bs.rc}</span>`:""}${bs.nin?`<span>NIN : ${bs.nin}</span>`:""}${bs.article?`<span>Art. : ${bs.article}</span>`:""}${bs.bp?`<span>BP : ${bs.bp}</span>`:""}${bs.rip?`<span>RIP : ${bs.rip}</span>`:""}${bs.adresse?`<span>${bs.adresse}</span>`:""}
     </div>
   </div>
   <div class="party">
-    <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
     <div class="party-info">
       ${ci2.nif?`<span>NIF : ${ci2.nif}</span>`:""}${ci2.nis?`<span>NIS : ${ci2.nis}</span>`:""}${ci2.rc?`<span>RC : ${ci2.rc}</span>`:""}${ci2.nin?`<span>NIN : ${ci2.nin}</span>`:""}${ci2.article?`<span>Art. : ${ci2.article}</span>`:""}${ci2.bp?`<span>BP : ${ci2.bp}</span>`:""}${ci2.rip?`<span>RIP : ${ci2.rip}</span>`:""}${ci2.adresse?`<span>${ci2.adresse}</span>`:""}${ci2.phone?`<span>Tél : ${ci2.phone}</span>`:""}
