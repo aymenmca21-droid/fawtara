@@ -1090,12 +1090,11 @@ function CustomerModal({existing,onSave,onClose,lang}){
   const [nif,setNif]=useState(existing?.nif||"");
   const [nis,setNis]=useState(existing?.nis||"");
   const [rc,setRc]=useState(existing?.rc||"");
-  const [nin,setNin]=useState(existing?.nin||"");
-  const [bp,setBp]=useState(existing?.bp||"");
   const [article,setArticle]=useState(existing?.article||"");
+  const [rib,setRib]=useState(existing?.rib||"");
   const [rip,setRip]=useState(existing?.rip||"");
   const [adresse,setAdresse]=useState(existing?.adresse||"");
-  const [isProf,setIsProf]=useState(!!(existing?.nif||existing?.rc||existing?.nin));
+  const [isProf,setIsProf]=useState(!!(existing?.nif||existing?.rc));
   const ok=name.trim();
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200,backdropFilter:"blur(6px)"}}>
@@ -1109,7 +1108,9 @@ function CustomerModal({existing,onSave,onClose,lang}){
           <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
           <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:10})}/>
           <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:10})}/>
-          <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="🏦 RIP — Ex: 007 99999 0012345678 90"
+          <input value={rib} onChange={e=>setRib(e.target.value)} placeholder="🏦 RIB — Ex: 002 00030 0000000000 00"
+            style={{...S.inp({marginBottom:8,fontFamily:"monospace",fontSize:13})}}/>
+          <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="📮 RIP (CCP) — Ex: 007 99999 0012345678 90"
             style={{...S.inp({marginBottom:16,fontFamily:"monospace",fontSize:13})}}/>
 
           {/* Type de client */}
@@ -1135,7 +1136,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
                   <input value={nis} onChange={e=>setNis(e.target.value)} placeholder="099812..." style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>RC — Registre du Commerce</div>
                   <input value={rc} onChange={e=>setRc(e.target.value)} placeholder="16/00-0012345B19" style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
@@ -1145,22 +1146,12 @@ function CustomerModal({existing,onSave,onClose,lang}){
                   <input value={article} onChange={e=>setArticle(e.target.value)} placeholder="Ex: 73211000..." style={{...S.inp({fontFamily:"monospace",fontSize:13,borderColor:"#93c5fd"}),width:"100%"}}/>
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                <div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>NIN — رقم التعريف الوطني</div>
-                  <input value={nin} onChange={e=>setNin(e.target.value)} placeholder="1234567890..." style={{...S.inp({fontFamily:"monospace",fontSize:13}),width:"100%"}}/>
-                </div>
-                <div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4}}>BP — Boîte Postale</div>
-                  <input value={bp} onChange={e=>setBp(e.target.value)} placeholder="Ex: BP 42" style={{...S.inp({fontSize:13}),width:"100%"}}/>
-                </div>
-              </div>
             </div>
           )}
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),nin:nin.trim(),bp:bp.trim(),article:article.trim(),rip:rip.trim()});onClose();}}
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim()});onClose();}}
             style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
@@ -1380,7 +1371,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       tvaRate:bizSettings?.tvaRate||19,
       timbreEnabled:bizSettings?.timbreEnabled||false,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
-      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,article:custObj.article,adresse:custObj.adresse,phone:custObj.phone,rip:custObj.rip}:null,
+      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,article:custObj.article,adresse:custObj.adresse,phone:custObj.phone,rib:custObj.rib,rip:custObj.rip}:null,
     };
     const txs=[];
     if(paidAmount>0) txs.push({id:uid(),type:"income",amount:paidAmount,desc:`Facture ${invId}`,client:customer.trim(),date:today(),paid:true,invoiceId:invId});
@@ -2067,7 +2058,6 @@ function buildAvoirHTML(avoir,bs,montant,tvaEnabled,tvaRate,timbreEnabled){
   .sign-label{font-size:10px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
   .sign-line{border-bottom:1px dashed #ccc;margin-top:50px}
   .footer{margin-top:24px;padding-top:12px;border-top:1px solid #ccc;font-size:10px;color:#666;text-align:center}
-  @page{margin:15mm}
   @media print{body{padding:20px}}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
@@ -2192,7 +2182,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
     setNewAmt(""); setNewNote(""); setShowForm(false);
   };
 
-  const buildHTML=(autoPrint=false,isProforma=false)=>{
+  const buildHTML=(autoPrint=false)=>{
     const rows=invoice.lines.map(l=>{
       const pu=parseFloat(l.price)||0;
       const qty=parseFloat(l.qty)||1;
@@ -2202,11 +2192,11 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
       const prod=bs?._products?.find?.(p=>p.name===l.name||p.id===l.productId);
       const codeLabel=[l.autoCode||prod?.autoCode,l.ref||prod?.ref].filter(Boolean).join(" · ");
       return `<tr>
-        <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#000;font-family:monospace">${codeLabel}</span>`:""}</td>
+        <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#94a3b8;font-family:monospace">${codeLabel}</span>`:""}</td>
         <td style="text-align:center">${qty}</td>
         <td style="text-align:center;font-size:11px;color:#000">${l.unite||"unité"}</td>
         <td style="text-align:right">${pu.toLocaleString()} DA</td>
-        ${rem>0?`<td style="text-align:center;font-weight:700">-${rem}%</td>`:`<td style="text-align:center;color:#000">—</td>`}
+        ${rem>0?`<td style="text-align:center;color:#d97706">-${rem}%</td>`:`<td style="text-align:center;color:#94a3b8">—</td>`}
         <td style="text-align:right;font-weight:600">${montant.toLocaleString()} DA</td>
       </tr>`;
     }).join("");
@@ -2220,7 +2210,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
     const ci=invoice.customerInfo||{};
     const lettres=montantEnLettres(totalFinal);
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>${isProforma?"Proforma":"Facture"} ${invoice.id}</title>
+<title>Facture ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;color:#000 !important}
   body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:32px}
@@ -2264,7 +2254,6 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
   .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #000;display:flex;justify-content:space-between;align-items:flex-end}
   .footer-legal{font-size:9.5px;color:#333;line-height:1.9;font-family:monospace}
   .footer-brand{font-size:10px;color:#333;text-align:right}
-  @page{margin:15mm}
   @media print{body{padding:20px}}
 </style>
 ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
@@ -2280,37 +2269,38 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
     </div>
   </div>
   <div class="inv-block">
-    <div class="inv-title">${isProforma?"FACTURE PROFORMA":"FACTURE"}</div>
+    <div class="inv-title">FACTURE</div>
     <div class="inv-number">N° ${invoice.id}</div>
     <div class="inv-date">Date : ${invoice.date}</div>
     ${invoice.echeance?`<div class="inv-date">Échéance : ${invoice.echeance}</div>`:""}
+    <div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
   </div>
 </div>
 
 <div class="parties">
   <div class="party-block">
+    <div class="party-label">Vendeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
     <div class="party-info">
       ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
       ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
       ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
-      ${bs.nin?`<span>NIN : ${bs.nin}</span>`:""}
       ${bs.article?`<span>Art. : ${bs.article}</span>`:""}
-      ${bs.bp?`<span>BP : ${bs.bp}</span>`:""}
-      ${bs.rip?`<span>🏦 RIP : ${bs.rip}</span>`:""}
+      ${bs.rib?`<span>🏦 RIB : ${bs.rib}</span>`:""}
+      ${bs.rip?`<span>📮 RIP : ${bs.rip}</span>`:""}
       ${bs.adresse?`<span>${bs.adresse}</span>`:""}
     </div>
   </div>
   <div class="party-block">
+    <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
     <div class="party-info">
       ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
       ${ci.nis?`<span>NIS : ${ci.nis}</span>`:""}
       ${ci.rc?`<span>RC : ${ci.rc}</span>`:""}
-      ${ci.nin?`<span>NIN : ${ci.nin}</span>`:""}
       ${ci.article?`<span>Art. : ${ci.article}</span>`:""}
-      ${ci.bp?`<span>BP : ${ci.bp}</span>`:""}
-      ${ci.rip?`<span>🏦 RIP : ${ci.rip}</span>`:""}
+      ${ci.rib?`<span>🏦 RIB : ${ci.rib}</span>`:""}
+      ${ci.rip?`<span>📮 RIP : ${ci.rip}</span>`:""}
       ${ci.adresse?`<span>${ci.adresse}</span>`:""}
       ${ci.phone?`<span>Tél : ${ci.phone}</span>`:""}
     </div>
@@ -2330,23 +2320,23 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </table>
 
 <div class="totals">
-  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
+  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
   ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt % 1 === 0 ? tvaAmt.toLocaleString("fr-DZ") : tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
   ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
-  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")+" DA".replace(" DA","")} DA</span></div>`:""}
   <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
 <div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres}</div>
 
-${!isProforma?`<div style="margin-bottom:14px;font-size:12px;color:#475569">
+<div style="margin-bottom:14px;font-size:12px;color:#475569">
   <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
   ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
-</div>`:""}
+</div>
 
 ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-left:3px solid #1e293b;border-radius:0 6px 6px 0;font-size:12px;color:#374151"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
 
-${!isProforma&&paidTxs.length>0?`
+${paidTxs.length>0?`
 <div style="margin-bottom:14px">
   <div style="font-size:9.5px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
   ${paidTxs.map((tx,i)=>`
@@ -2362,152 +2352,17 @@ ${!isProforma&&paidTxs.length>0?`
 
 <div class="footer">
   <div class="footer-legal">
-    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.article?`Art: ${bs.article}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
+    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.rib?`RIB: ${bs.rib}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
     ${bs.adresse?`<br>${bs.adresse}`:""}
   </div>
+  <div class="footer-brand">Document généré par Fawtara</div>
 </div>
 
 </div></body></html>`;
   };
 
-  // ═══ NMODELJ TANI — Moderne sans paiements ═══
-  const buildHTML2=(autoPrint=false,isProforma=false)=>{
-    const rows2=invoice.lines.map(l=>{
-      const pu=parseFloat(l.price)||0;
-      const qty=parseFloat(l.qty)||1;
-      const rem=parseFloat(l.remise)||0;
-      const montant=pu*qty*(1-rem/100);
-      const prod=bs?._products?.find?.(p=>p.name===l.name||p.id===l.productId);
-      const codeLabel=[l.autoCode||prod?.autoCode,l.ref||prod?.ref].filter(Boolean).join(" · ");
-      return `<tr>
-        <td>${l.name}${codeLabel?`<br><span style="font-size:9px;color:#000;font-family:monospace">${codeLabel}</span>`:""}</td>
-        <td class="tc">${qty}</td>
-        <td class="tc" style="font-size:11px">${l.unite||"unité"}</td>
-        <td style="text-align:right">${pu.toLocaleString()} DA</td>
-        ${rem>0?`<td class="tc" style="font-weight:700">-${rem}%</td>`:`<td class="tc" style="color:#000">—</td>`}
-        <td style="text-align:right;font-weight:700">${montant.toLocaleString()} DA</td>
-      </tr>`;
-    }).join("");
-    const ci2=invoice.customerInfo||{};
-    const lettres2=montantEnLettres(totalFinal);
-    return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>${isProforma?"Proforma":"Facture"} ${invoice.id}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0;color:#000!important}
-  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:0}
-  a{color:#000!important;text-decoration:none}
-  .wrap{max-width:740px;margin:0 auto}
-  .topbar{background:#fff;border-top:5px solid #1e293b;border-bottom:2px solid #1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
-  .topbar *{color:#000!important}
-  .tb-left{display:flex;align-items:center;gap:14px}
-  .tb-logo img{height:44px;max-width:120px;object-fit:contain;border-radius:4px;padding:3px}
-  .tb-co{font-size:16px;font-weight:900;letter-spacing:-0.5px;color:#1e293b}
-  .tb-info{font-size:9.5px;color:#333;line-height:1.6;margin-top:2px;font-family:monospace}
-  .tb-right{text-align:right}
-  .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:3px}
-  .tb-num{font-size:22px;font-weight:900;font-family:monospace;color:#000}
-  .tb-date{font-size:11px;color:#333;margin-top:3px}
-  .page{padding:0 28px 28px}
-  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-  .party{border-left:3px solid #000;padding:10px 14px;background:#f4f4f4}
-  .party-name{font-size:15px;font-weight:800;color:#000}
-  .party-info{font-size:10px;color:#000!important;line-height:1.9;font-family:monospace;margin-top:4px}
-  .party-info span{display:block}
-  table{width:100%;border-collapse:collapse;margin-bottom:18px}
-  thead tr{background:#fff;border-top:2px solid #000;border-bottom:2px solid #000}
-  th{font-size:9px;color:#000!important;text-transform:uppercase;letter-spacing:1px;padding:9px 10px;text-align:left;font-weight:900}
-  th.tc{text-align:center}
-  tbody tr{border-bottom:1px solid #bbb}
-  tbody tr:nth-child(even){background:#f4f4f4}
-  td{padding:10px 10px;font-size:13px;color:#000}
-  .tc{text-align:center}
-  .totals-wrap{display:flex;justify-content:flex-end;margin-bottom:18px}
-  .totals{width:60%;border:1.5px solid #000;border-radius:6px;overflow:hidden}
-  .tl{display:flex;justify-content:space-between;padding:7px 14px;font-size:13px;color:#000}
-  .tl:nth-child(even){background:#f4f4f4}
-  .tl.sep{border-top:2px solid #000}
-  .tl.main{font-size:17px;font-weight:900;background:#fff!important;border-top:2.5px solid #000;padding:11px 14px}
-  .tl.main *{color:#000!important}
-  .lettres{border:1.5px solid #000;border-radius:4px;padding:10px 14px;margin-bottom:18px;font-size:11px;color:#000;font-style:italic}
-  .sigs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;margin-bottom:16px}
-  .sig{border:1.5px solid #000;border-radius:6px;padding:14px;min-height:80px}
-  .sig-label{font-size:9px;font-weight:700;color:#000!important;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
-  .sig-name{font-size:12px;font-weight:600;color:#000;margin-bottom:30px}
-  .footer{border-top:1.5px solid #000;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
-  .footer-legal{font-size:9px;color:#000!important;line-height:1.9;font-family:monospace}
-  .footer-brand{font-size:9px;color:#333!important;text-align:right}
-  @page{margin:15mm}
-  @media print{
-    body{padding:0}.page{padding:0 20px 20px}
-    .tl.main{background:#000!important}
-    thead tr{background:#000!important}
-    th{color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .tl.main{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  }
-</style>
-${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
-</head><body>
-<div class="wrap">
-<div class="topbar">
-  <div class="tb-left">
-    ${bs.logo?`<div class="tb-logo"><img src="${bs.logo}" alt="logo"/></div>`:""}
-    <div>
-      <div class="tb-co">${invoice.companyName||"Fawtara"}</div>
-      <div class="tb-info">${[bs.activite,bs.adresse].filter(Boolean).join(" · ")}${bs.nif?`<br>NIF: ${bs.nif}${bs.nis?" · NIS: "+bs.nis:""}${bs.rc?" · RC: "+bs.rc:""}${bs.article?" · Art: "+bs.article:""}`:""}</div>
-    </div>
-  </div>
-  <div class="tb-right">
-    <div class="tb-title">${isProforma?"PROFORMA":"Facture"}</div>
-    <div class="tb-num">N° ${invoice.id}</div>
-    <div class="tb-date">Date : ${invoice.date}${invoice.echeance?" · Éch: "+invoice.echeance:""}</div>
-  </div>
-</div>
-<div class="page">
-<div class="parties">
-  <div class="party">
-    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
-    <div class="party-info">
-      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}${bs.rc?`<span>RC : ${bs.rc}</span>`:""}${bs.nin?`<span>NIN : ${bs.nin}</span>`:""}${bs.article?`<span>Art. : ${bs.article}</span>`:""}${bs.bp?`<span>BP : ${bs.bp}</span>`:""}${bs.rip?`<span>RIP : ${bs.rip}</span>`:""}${bs.adresse?`<span>${bs.adresse}</span>`:""}
-    </div>
-  </div>
-  <div class="party">
-    <div class="party-name">${invoice.customer}</div>
-    <div class="party-info">
-      ${ci2.nif?`<span>NIF : ${ci2.nif}</span>`:""}${ci2.nis?`<span>NIS : ${ci2.nis}</span>`:""}${ci2.rc?`<span>RC : ${ci2.rc}</span>`:""}${ci2.nin?`<span>NIN : ${ci2.nin}</span>`:""}${ci2.article?`<span>Art. : ${ci2.article}</span>`:""}${ci2.bp?`<span>BP : ${ci2.bp}</span>`:""}${ci2.rip?`<span>RIP : ${ci2.rip}</span>`:""}${ci2.adresse?`<span>${ci2.adresse}</span>`:""}${ci2.phone?`<span>Tél : ${ci2.phone}</span>`:""}
-    </div>
-  </div>
-</div>
-<table>
-  <thead><tr>
-    <th>Désignation</th><th class="tc">Qté</th><th class="tc">Unité</th>
-    <th style="text-align:right">${invTvaEnabled?"PU HT":"Prix unit."}</th>
-    <th class="tc">Remise</th>
-    <th style="text-align:right">${invTvaEnabled?"Montant HT":"Total"}</th>
-  </tr></thead>
-  <tbody>${rows2}</tbody>
-</table>
-<div class="totals-wrap"><div class="totals">
-  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
-  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt%1===0?tvaAmt.toLocaleString("fr-DZ"):tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
-  ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
-  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small>(LF 2025)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
-  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
-</div></div>
-<div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres2}</div>
-${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f4f4f4;border-left:3px solid #000;font-size:12px;color:#000"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
-<div class="sigs">
-  <div class="sig"><div class="sig-label">Vendeur</div><div class="sig-name">${invoice.companyName||""}</div><div style="font-size:9px;color:#000">Cachet &amp; Signature</div></div>
-  <div class="sig"><div class="sig-label">Acheteur</div><div class="sig-name">${invoice.customer}</div><div style="font-size:9px;color:#000">Cachet &amp; Signature</div></div>
-</div>
-<div class="footer">
-  <div class="footer-legal">${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.article?`Art: ${bs.article}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}${bs.adresse?`<br>${bs.adresse}`:""}</div>
-</div>
-</div></div></body></html>`;
-  };
-
   const openInTab=(autoPrint=false)=>{
-    const tpl=bs?.invTemplate||"classic";
-    const html=tpl==="modern"?buildHTML2(autoPrint):buildHTML(autoPrint);
+    const html=buildHTML(autoPrint);
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
@@ -2516,16 +2371,6 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f4
 
   const printPDF=()=>openInTab(false);
   const printDirect=()=>openInTab(true);
-
-  const printProforma=()=>{
-    const tpl=bs?.invTemplate||"classic";
-    // isProforma=true → يخفي Mode de règlement وHistorique مباشرة في بناء HTML
-    const html=tpl==="modern"?buildHTML2(false,true):buildHTML(false,true);
-    const blob=new Blob([html],{type:"text/html"});
-    const url=URL.createObjectURL(blob);
-    window.open(url,"_blank");
-    setTimeout(()=>URL.revokeObjectURL(url),10000);
-  };
 
   const printBL=()=>{
     const year=new Date().getFullYear();
@@ -2718,7 +2563,11 @@ ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f4
   <div class="total-main"><span>Total à payer</span><span>${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA</span></div>
 </div>
 
-${invoice.notes?`<div class="conditions"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
+<div class="conditions">
+  <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
+  ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
+  ${invoice.notes?`<br><strong>Remarques :</strong> ${invoice.notes}`:""}
+</div>
 
 <div class="sign-section">
   <div class="sign-box">
@@ -2977,7 +2826,7 @@ ${invoice.notes?`<div class="conditions"><strong>Remarques :</strong> ${invoice.
               ⬇ PDF
             </button>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
             <button onClick={printBL}
               style={{padding:11,background:"#0ea5e9",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🚚 BL
@@ -2989,10 +2838,6 @@ ${invoice.notes?`<div class="conditions"><strong>Remarques :</strong> ${invoice.
             <button onClick={()=>{setDocType("bv");printBV();}}
               style={{padding:11,background:"#f59e0b",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
               🧾 BV
-            </button>
-            <button onClick={printProforma}
-              style={{padding:11,background:"#7c3aed",color:"#fff",border:"none",borderRadius:12,fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-              📝 PF
             </button>
             <button onClick={()=>{
               const msg=encodeURIComponent(`Facture N° ${invoice.id}\nClient: ${invoice.customer}\nMontant: ${totalFinal.toLocaleString("fr-DZ",{minimumFractionDigits:totalFinal%1===0?0:2,maximumFractionDigits:2})} DA\nDate: ${invoice.date}`);
@@ -3610,18 +3455,16 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [nif,setNif]=useState(settings?.nif||"");
   const [nis,setNis]=useState(settings?.nis||"");
   const [rc,setRc]=useState(settings?.rc||"");
-  const [nin,setNin]=useState(settings?.nin||"");
-  const [bp,setBp]=useState(settings?.bp||"");
   const [activite,setActivite]=useState(settings?.activite||"");
   const [adresse,setAdresse]=useState(settings?.adresse||"");
   const [article,setArticle]=useState(settings?.article||"");
+  const [rib,setRib]=useState(settings?.rib||"");
   const [rip,setRip]=useState(settings?.rip||"");
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
   const [invPrefix,setInvPrefix]=useState(settings?.invPrefix||"FAC");
   const [customUnites,setCustomUnites]=useState((settings?.customUnites||[]).join(", "));
-  const [invTemplate,setInvTemplate]=useState(settings?.invTemplate||"classic");
   const ok=name.trim().length>0;
 
   const handleLogo=e=>{
@@ -3635,7 +3478,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),nin:nin.trim(),bp:bp.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean),invTemplate});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
     onClose();
   };
 
@@ -3685,25 +3528,6 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
                   {invPrefix||"FAC"}-{new Date().getFullYear()}-{String(settings?.invCounter||1).padStart(4,"0")}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* نموذج الفاتورة */}
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>🧾 Modèle de facture PDF</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {[
-                {id:"classic",label:"Classique",desc:"Avec paiements et historique",icon:"📄"},
-                {id:"modern",label:"Moderne",desc:"Sans paiements — épuré",icon:"✨"}
-              ].map(m=>(
-                <button key={m.id} onClick={()=>setInvTemplate(m.id)}
-                  style={{padding:"12px 10px",borderRadius:12,border:`2px solid ${invTemplate===m.id?"#2563EB":"#e5e7eb"}`,
-                    background:invTemplate===m.id?"#eff6ff":"#fff",cursor:"pointer",textAlign:"left"}}>
-                  <div style={{fontSize:20,marginBottom:4}}>{m.icon}</div>
-                  <div style={{fontWeight:700,fontSize:13,color:invTemplate===m.id?"#1d4ed8":"#111"}}>{m.label}</div>
-                  <div style={{fontSize:10,color:"#6b7280",marginTop:2}}>{m.desc}</div>
-                </button>
-              ))}
             </div>
           </div>
 
@@ -3757,20 +3581,6 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
                 style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
             </div>
 
-            {/* NIN */}
-            <div style={{marginBottom:10}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>NIN — رقم التعريف الوطني للمؤسسة</div>
-              <input value={nin} onChange={e=>setNin(e.target.value)} placeholder="Ex: 1234567890123456789"
-                style={{...S.inp({fontFamily:"monospace",fontSize:14})}}/>
-            </div>
-
-            {/* BP */}
-            <div style={{marginBottom:10}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>BP — Boîte Postale</div>
-              <input value={bp} onChange={e=>setBp(e.target.value)} placeholder="Ex: BP 42, Alger"
-                style={S.inp()}/>
-            </div>
-
             {/* Article */}
             <div style={{marginBottom:10}}>
               <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>Article — رقم المادة الجبائية</div>
@@ -3792,12 +3602,19 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
                 style={S.inp()}/>
             </div>
 
+            {/* RIB */}
+            <div style={{marginBottom:10,padding:"12px",background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIB — Relevé d'Identité Bancaire</div>
+              <input value={rib} onChange={e=>setRib(e.target.value)} placeholder="Ex: 002 00030 0000000000 00"
+                style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+              <div style={{fontSize:10,color:"#6b7280",marginTop:3}}>Compte bancaire — Apparaît sur les factures PDF</div>
+            </div>
             {/* RIP */}
-            <div style={{marginBottom:0,padding:"12px",background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe"}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIP — Relevé d'Identité Postale (CCP)</div>
+            <div style={{marginBottom:0,padding:"12px",background:"#f0fdf4",borderRadius:10,border:"1px solid #bbf7d0"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#15803d",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>📮 RIP — Relevé d'Identité Postale (CCP)</div>
               <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="Ex: 007 99999 0012345678 90"
                 style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
-              <div style={{fontSize:10,color:"#6b7280",marginTop:3}}>Apparaît sur les factures PDF</div>
+              <div style={{fontSize:10,color:"#6b7280",marginTop:3}}>Compte CCP / Algérie Poste — Apparaît sur les factures PDF</div>
             </div>
           </div>
 
@@ -5402,8 +5219,8 @@ export default function App(){
       // enrich customerInfo with article and rip from customers list
       if(inv.customer&&!inv.customerInfo?.article){
         const cust=custMap[inv.customer];
-        if(cust&&(cust.article||cust.rip)){
-          inv={...inv,customerInfo:{...(inv.customerInfo||{}),article:cust.article||inv.customerInfo?.article,rip:cust.rip||inv.customerInfo?.rip}};
+        if(cust&&(cust.article||cust.rip||cust.rib)){
+          inv={...inv,customerInfo:{...(inv.customerInfo||{}),article:cust.article||inv.customerInfo?.article,rib:cust.rib||inv.customerInfo?.rib,rip:cust.rip||inv.customerInfo?.rip}};
         }
       }
       // إذا لم يكن لها tvaEnabled محفوظ — تعني أنها أُنشئت قبل هذه الميزة
@@ -5542,6 +5359,7 @@ export default function App(){
         nis:c.nis||inv.customerInfo?.nis||"",
         rc:c.rc||inv.customerInfo?.rc||"",
         article:c.article||inv.customerInfo?.article||"",
+        rib:c.rib||inv.customerInfo?.rib||"",
         rip:c.rip||inv.customerInfo?.rip||"",
         adresse:c.adresse||inv.customerInfo?.adresse||"",
         phone:c.phone||inv.customerInfo?.phone||"",
