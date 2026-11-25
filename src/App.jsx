@@ -2182,7 +2182,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
     setNewAmt(""); setNewNote(""); setShowForm(false);
   };
 
-  const buildHTML=(autoPrint=false)=>{
+  const buildHTML=(autoPrint=false,isProforma=false)=>{
     const rows=invoice.lines.map(l=>{
       const pu=parseFloat(l.price)||0;
       const qty=parseFloat(l.qty)||1;
@@ -2210,7 +2210,7 @@ function InvoicePDFModal({invoice, lang, onClose, relatedTxs, onAddPayment, bizS
     const ci=invoice.customerInfo||{};
     const lettres=montantEnLettres(totalFinal);
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>Facture ${invoice.id}</title>
+<title>${isProforma?"Proforma":"Facture"} ${invoice.id}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;color:#000 !important}
   body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;padding:32px}
@@ -2269,11 +2269,11 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
     </div>
   </div>
   <div class="inv-block">
-    <div class="inv-title">FACTURE</div>
+    <div class="inv-title">${isProforma?"FACTURE PROFORMA":"FACTURE"}</div>
     <div class="inv-number">N° ${invoice.id}</div>
     <div class="inv-date">Date : ${invoice.date}</div>
     ${invoice.echeance?`<div class="inv-date">Échéance : ${invoice.echeance}</div>`:""}
-    <div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>
+    ${!isProforma?`<div class="badge ${isFullyPaid?"badge-paid":invoice.payStatus==="unpaid"?"badge-unpaid":"badge-partial"}">${statusLabel}</div>`:""}
   </div>
 </div>
 
@@ -2329,14 +2329,14 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${lettres}</div>
 
-<div style="margin-bottom:14px;font-size:12px;color:#475569">
+${!isProforma?`<div style="margin-bottom:14px;font-size:12px;color:#475569">
   <strong>Mode de règlement :</strong> ${invoice.modePaiement||"espèces"}
   ${invoice.echeance?` &nbsp;·&nbsp; <strong>Échéance :</strong> ${invoice.echeance}`:""}
-</div>
+</div>`:""}
 
 ${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-left:3px solid #1e293b;border-radius:0 6px 6px 0;font-size:12px;color:#374151"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
 
-${paidTxs.length>0?`
+${!isProforma&&paidTxs.length>0?`
 <div style="margin-bottom:14px">
   <div style="font-size:9.5px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">Historique des paiements</div>
   ${paidTxs.map((tx,i)=>`
@@ -2371,6 +2371,13 @@ ${paidTxs.length>0?`
 
   const printPDF=()=>openInTab(false);
   const printDirect=()=>openInTab(true);
+  const printProforma=()=>{
+    const html=buildHTML(false,true);
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  };
 
   const printBL=()=>{
     const year=new Date().getFullYear();
@@ -2847,6 +2854,11 @@ ${paidTxs.length>0?`
               📲 WA
             </button>
           </div>
+          {/* زر Proforma */}
+          <button onClick={printProforma}
+            style={{width:"100%",padding:12,background:"#fff",color:"#7c3aed",border:"1.5px dashed #7c3aed",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}>
+            📄 Facture Proforma
+          </button>
           {/* زر Avoir */}
           {onCreateAvoir&&(
             <button onClick={()=>setShowAvoirModal(true)}
