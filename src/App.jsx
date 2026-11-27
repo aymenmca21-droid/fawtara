@@ -1091,6 +1091,8 @@ function CustomerModal({existing,onSave,onClose,lang}){
   const [nis,setNis]=useState(existing?.nis||"");
   const [rc,setRc]=useState(existing?.rc||"");
   const [article,setArticle]=useState(existing?.article||"");
+  const [nin,setNin]=useState(existing?.nin||"");
+  const [bp,setBp]=useState(existing?.bp||"");
   const [rib,setRib]=useState(existing?.rib||"");
   const [rip,setRip]=useState(existing?.rip||"");
   const [adresse,setAdresse]=useState(existing?.adresse||"");
@@ -1108,6 +1110,8 @@ function CustomerModal({existing,onSave,onClose,lang}){
           <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.namePh} style={S.inp({marginBottom:10,fontSize:16,fontWeight:600})}/>
           <input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} placeholder={t.phonePh} style={S.inp({marginBottom:10})}/>
           <input value={adresse} onChange={e=>setAdresse(e.target.value)} placeholder="Adresse du client" style={S.inp({marginBottom:10})}/>
+          <input value={nin} onChange={e=>setNin(e.target.value)} placeholder="NIN — Numéro d'Identification National" style={S.inp({marginBottom:8,fontFamily:"monospace",fontSize:13})}/>
+          <input value={bp} onChange={e=>setBp(e.target.value)} placeholder="BP — Boîte Postale (Ex: BP 123)" style={S.inp({marginBottom:8,fontFamily:"monospace",fontSize:13})}/>
           <input value={rib} onChange={e=>setRib(e.target.value)} placeholder="🏦 RIB — Ex: 002 00030 0000000000 00"
             style={{...S.inp({marginBottom:8,fontFamily:"monospace",fontSize:13})}}/>
           <input value={rip} onChange={e=>setRip(e.target.value)} placeholder="📮 RIP (CCP) — Ex: 007 99999 0012345678 90"
@@ -1151,7 +1155,7 @@ function CustomerModal({existing,onSave,onClose,lang}){
         </div>
         <div style={{padding:"12px 20px 24px",borderTop:"1px solid #f3f4f6",display:"grid",gridTemplateColumns:"1fr 2fr",gap:10,flexShrink:0}}>
           <button onClick={onClose} style={{padding:14,borderRadius:12,border:"1.5px solid #e5e7eb",fontSize:14,fontWeight:600,color:"#6b7280",background:"#fff",cursor:"pointer"}}>{t.cancel}</button>
-          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim()});onClose();}}
+          <button onClick={()=>{if(!ok)return;onSave({id:existing?.id||uid(),name:name.trim(),phone:phone.trim(),adresse:adresse.trim(),nin:nin.trim(),bp:bp.trim(),nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim()});onClose();}}
             style={{padding:14,borderRadius:12,border:"none",fontSize:15,fontWeight:800,cursor:ok?"pointer":"default",background:ok?"#2563EB":"#e5e7eb",color:ok?"#fff":"#9ca3af"}}>{t.save}</button>
         </div>
       </div>
@@ -1371,7 +1375,7 @@ function InvoiceModal({products,customers,invoices,onClose,onCreated,lang,compan
       tvaRate:bizSettings?.tvaRate||19,
       timbreEnabled:bizSettings?.timbreEnabled||false,
       advanceUsed:useAdvance?Math.min(advanceAvailable,totalFinal):0,
-      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,article:custObj.article,adresse:custObj.adresse,phone:custObj.phone,rib:custObj.rib,rip:custObj.rip}:null,
+      customerInfo: custObj?{nif:custObj.nif,nis:custObj.nis,rc:custObj.rc,nin:custObj.nin,bp:custObj.bp,article:custObj.article,adresse:custObj.adresse,phone:custObj.phone,rib:custObj.rib,rip:custObj.rip}:null,
     };
     const txs=[];
     if(paidAmount>0) txs.push({id:uid(),type:"income",amount:paidAmount,desc:`Facture ${invId}`,client:customer.trim(),date:today(),paid:true,invoiceId:invId});
@@ -2127,7 +2131,7 @@ ${avoir.motif?`<div class="motif"><strong>Motif :</strong> ${avoir.motif}</div>`
   </div>
 </div>
 
-<div class="footer">Document généré par Fawtara · Avoir N° ${avoirNum} · ${avoir.date}</div>
+<div class="footer">Avoir N° ${avoirNum} · ${avoir.date}</div>
 </body></html>`;
 }
 
@@ -2279,26 +2283,28 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 
 <div class="parties">
   <div class="party-block">
-    <div class="party-label">Vendeur</div>
     <div class="party-name">${invoice.companyName||"Fawtara"}</div>
     <div class="party-info">
       ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
       ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
       ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
       ${bs.article?`<span>Art. : ${bs.article}</span>`:""}
+      ${bs.nin?`<span>NIN : ${bs.nin}</span>`:""}
+      ${bs.bp?`<span>BP : ${bs.bp}</span>`:""}
       ${bs.rib?`<span>🏦 RIB : ${bs.rib}</span>`:""}
       ${bs.rip?`<span>📮 RIP : ${bs.rip}</span>`:""}
       ${bs.adresse?`<span>${bs.adresse}</span>`:""}
     </div>
   </div>
   <div class="party-block">
-    <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
     <div class="party-info">
       ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
       ${ci.nis?`<span>NIS : ${ci.nis}</span>`:""}
       ${ci.rc?`<span>RC : ${ci.rc}</span>`:""}
       ${ci.article?`<span>Art. : ${ci.article}</span>`:""}
+      ${ci.nin?`<span>NIN : ${ci.nin}</span>`:""}
+      ${ci.bp?`<span>BP : ${ci.bp}</span>`:""}
       ${ci.rib?`<span>🏦 RIB : ${ci.rib}</span>`:""}
       ${ci.rip?`<span>📮 RIP : ${ci.rip}</span>`:""}
       ${ci.adresse?`<span>${ci.adresse}</span>`:""}
@@ -2320,7 +2326,7 @@ ${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
 </table>
 
 <div class="totals">
-  <div class="tl"><span>Sous-total HT</span><span>${montantHT.toLocaleString()} DA</span></div>
+  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
   ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt % 1 === 0 ? tvaAmt.toLocaleString("fr-DZ") : tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
   ${invTvaEnabled?`<div class="tl sep"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString("fr-DZ",{minimumFractionDigits:montantTTC%1===0?0:2,maximumFractionDigits:2})} DA</span></div>`:""}
   ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre <small style="color:#94a3b8">(LF 2025 Art.100)</small></span><span>+ ${timbreAmt.toFixed(2).replace(".",",")+" DA".replace(" DA","")} DA</span></div>`:""}
@@ -2352,10 +2358,10 @@ ${!isProforma&&paidTxs.length>0?`
 
 <div class="footer">
   <div class="footer-legal">
-    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.rib?`RIB: ${bs.rib}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
+    ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.article?`Art: ${bs.article}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rib?`RIB: ${bs.rib}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
     ${bs.adresse?`<br>${bs.adresse}`:""}
   </div>
-  <div class="footer-brand">Document généré par Fawtara</div>
+
 </div>
 
 </div></body></html>`;
@@ -2468,7 +2474,7 @@ ${!isProforma&&paidTxs.length>0?`
 
 <div class="footer">
   <span>${invoice.companyName||"Fawtara"}${bs?.nif?` · NIF: ${bs.nif}`:""}${bs?.rc?` · RC: ${bs.rc}`:""}</span>
-  <span>Document généré par Fawtara</span>
+
 </div>
 
 </div></body></html>`;
@@ -2546,7 +2552,6 @@ ${!isProforma&&paidTxs.length>0?`
     ${bs?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${bs.nif}</div>`:""}
   </div>
   <div class="party">
-    <div class="party-label">Acheteur</div>
     <div class="party-name">${invoice.customer}</div>
     ${invoice.customerInfo?.adresse?`<div style="font-size:11px;color:#000;margin-top:3px">${invoice.customerInfo.adresse}</div>`:""}
     ${invoice.customerInfo?.nif?`<div style="font-size:10px;color:#94a3b8;font-family:monospace;margin-top:2px">NIF: ${invoice.customerInfo.nif}</div>`:""}
@@ -2591,7 +2596,7 @@ ${!isProforma&&paidTxs.length>0?`
 
 <div class="footer">
   <span>${invoice.companyName||"Fawtara"}${bs?.nif?` · NIF: ${bs.nif}`:""}${bs?.rc?` · RC: ${bs.rc}`:""}</span>
-  <span>Document généré par Fawtara</span>
+
 </div>
 
 </div></body></html>`;
@@ -3179,7 +3184,7 @@ ${custVers.length>0?`
     </tr></tfoot>
   </table>
 </div>`:""}
-<div class="footer">Document généré par Fawtara</div>
+
 </div></body></html>`;
                 const blob=new Blob([html],{type:"text/html"});
                 const url=URL.createObjectURL(blob);
@@ -3470,6 +3475,8 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [activite,setActivite]=useState(settings?.activite||"");
   const [adresse,setAdresse]=useState(settings?.adresse||"");
   const [article,setArticle]=useState(settings?.article||"");
+  const [nin,setNin]=useState(settings?.nin||"");
+  const [bp,setBp]=useState(settings?.bp||"");
   const [rib,setRib]=useState(settings?.rib||"");
   const [rip,setRip]=useState(settings?.rip||"");
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
@@ -3490,7 +3497,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),nin:nin.trim(),bp:bp.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
     onClose();
   };
 
@@ -3614,6 +3621,18 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
                 style={S.inp()}/>
             </div>
 
+            {/* NIN */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>NIN — Numéro d'Identification National</div>
+              <input value={nin} onChange={e=>setNin(e.target.value)} placeholder="Ex: 12345678901234"
+                style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+            </div>
+            {/* BP */}
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>BP — Boîte Postale</div>
+              <input value={bp} onChange={e=>setBp(e.target.value)} placeholder="Ex: BP 123, Alger"
+                style={{...S.inp({fontFamily:"monospace",fontSize:13})}}/>
+            </div>
             {/* RIB */}
             <div style={{marginBottom:10,padding:"12px",background:"#eff6ff",borderRadius:10,border:"1px solid #bfdbfe"}}>
               <div style={{fontSize:10,fontWeight:700,color:"#1d4ed8",marginBottom:4,textTransform:"uppercase",letterSpacing:.6}}>🏦 RIB — Relevé d'Identité Bancaire</div>
@@ -4597,7 +4616,7 @@ function FournisseurDetail({fournisseur,txs,products,lang,onBack,onEdit,onDelete
   </div>
 </div>
 
-<div class="footer">Document généré par Fawtara · Bon d'Entrée N° BE-${tx.date?.replace(/-/g,"")}-${tx.id?.slice(-4)||"0001"}</div>
+
 </div></body></html>`;
                       const blob=new Blob([html],{type:"text/html"});
                       const url=URL.createObjectURL(blob);
@@ -5231,8 +5250,8 @@ export default function App(){
       // enrich customerInfo with article and rip from customers list
       if(inv.customer&&!inv.customerInfo?.article){
         const cust=custMap[inv.customer];
-        if(cust&&(cust.article||cust.rip||cust.rib)){
-          inv={...inv,customerInfo:{...(inv.customerInfo||{}),article:cust.article||inv.customerInfo?.article,rib:cust.rib||inv.customerInfo?.rib,rip:cust.rip||inv.customerInfo?.rip}};
+        if(cust&&(cust.article||cust.rip||cust.rib||cust.nin||cust.bp)){
+          inv={...inv,customerInfo:{...(inv.customerInfo||{}),article:cust.article||inv.customerInfo?.article,nin:cust.nin||inv.customerInfo?.nin,bp:cust.bp||inv.customerInfo?.bp,rib:cust.rib||inv.customerInfo?.rib,rip:cust.rip||inv.customerInfo?.rip}};
         }
       }
       // إذا لم يكن لها tvaEnabled محفوظ — تعني أنها أُنشئت قبل هذه الميزة
@@ -5371,6 +5390,8 @@ export default function App(){
         nis:c.nis||inv.customerInfo?.nis||"",
         rc:c.rc||inv.customerInfo?.rc||"",
         article:c.article||inv.customerInfo?.article||"",
+        nin:c.nin||inv.customerInfo?.nin||"",
+        bp:c.bp||inv.customerInfo?.bp||"",
         rib:c.rib||inv.customerInfo?.rib||"",
         rip:c.rip||inv.customerInfo?.rip||"",
         adresse:c.adresse||inv.customerInfo?.adresse||"",
@@ -5692,7 +5713,7 @@ export default function App(){
   </tr></thead>
   <tbody>${rows}</tbody>
 </table>
-<div style="text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px">Document généré par Fawtara · ${new Date().toLocaleDateString("fr-DZ")}</div>
+
 </div></body></html>`;
             const blob=new Blob([html],{type:"text/html"});
             const url=URL.createObjectURL(blob);
