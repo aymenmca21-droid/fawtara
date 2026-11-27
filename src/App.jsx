@@ -2367,8 +2367,168 @@ ${!isProforma&&paidTxs.length>0?`
 </div></body></html>`;
   };
 
+
+  const buildHTML2=(autoPrint=false,isProforma=false)=>{
+    const bs=bizSettings||{};
+    const rows=invoice.lines.map(l=>{
+      const pu=parseFloat(l.price)||0;
+      const qty=parseFloat(l.qty)||1;
+      const rem=parseFloat(l.remise)||0;
+      const montant=pu*qty*(1-rem/100);
+      return `<tr>
+        <td>${l.name}</td>
+        <td style="text-align:center">${qty}</td>
+        <td style="text-align:center;font-size:11px">${l.unite||"unité"}</td>
+        <td style="text-align:right">${pu.toLocaleString()} DA</td>
+        ${rem>0?`<td style="text-align:center;color:#555">-${rem}%</td>`:`<td style="text-align:center;color:#aaa">—</td>`}
+        <td style="text-align:right;font-weight:600">${montant.toLocaleString()} DA</td>
+      </tr>`;
+    }).join("");
+    const montantHT=invoice.lines.reduce((s,l)=>{
+      const pu=parseFloat(l.price)||0;
+      const qty=parseFloat(l.qty)||1;
+      const rem=parseFloat(l.remise)||0;
+      return s+pu*qty*(1-rem/100);
+    },0);
+    const invTvaEnabled=invoice.tvaEnabled===true;
+    const invTvaRate=invoice.tvaRate||19;
+    const tvaAmt=invTvaEnabled?parseFloat((montantHT*invTvaRate/100).toFixed(2)):0;
+    const montantTTC=montantHT+tvaAmt;
+    const invTimbreEnabled=invoice.timbreEnabled===true;
+    const timbreAmt=invTimbreEnabled?calcTimbre(montantTTC):0;
+    const totalFinal=montantTTC+timbreAmt;
+    const ci=invoice.customerInfo||{};
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${isProforma?"Proforma":"Facture"} ${invoice.id}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:#000}
+  .page{max-width:740px;margin:0 auto;padding:28px 28px 20px}
+  .topbar{background:#fff;border-top:5px solid #1e293b;border-bottom:2px solid #1e293b;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+  .topbar *{color:#000!important}
+  .tb-co{font-size:16px;font-weight:900;letter-spacing:-0.5px;color:#1e293b}
+  .tb-info{font-size:9.5px;color:#333;line-height:1.6;margin-top:2px;font-family:monospace}
+  .tb-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#555;margin-bottom:3px}
+  .tb-num{font-size:22px;font-weight:900;font-family:monospace;color:#000}
+  .tb-date{font-size:11px;color:#333;margin-top:3px}
+  .parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .party{padding:12px 14px;border:1.5px solid #000;border-radius:4px}
+  .party-name{font-size:14px;font-weight:800;margin-bottom:5px}
+  .party-info{font-size:10px;color:#333;line-height:1.8;font-family:monospace}
+  .party-info span{display:block}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}
+  thead tr{background:#fff;border-top:2px solid #000;border-bottom:2px solid #000}
+  th{font-size:9px;color:#000!important;text-transform:uppercase;letter-spacing:1px;padding:9px 10px;text-align:left;font-weight:900}
+  tbody tr{border-bottom:1px solid #ddd}
+  td{padding:9px 10px;font-size:13px}
+  .totals{border:1.5px solid #000;border-radius:4px;padding:14px 18px;margin-bottom:14px}
+  .tl{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+  .tl.main{font-size:17px;font-weight:900;background:#fff!important;border-top:2.5px solid #000;padding:11px 14px;margin:6px -18px -14px;border-radius:0 0 3px 3px}
+  .tl.main *{color:#000!important}
+  .lettres{background:#fff;border:1px solid #000;border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:11px}
+  .footer{margin-top:24px;padding-top:12px;border-top:1.5px solid #000;font-size:9.5px;color:#333;font-family:monospace;line-height:1.9}
+  @page{margin:15mm}
+  @media print{
+    body{padding:0}
+    .page{padding:0 20px 20px}
+    thead tr{background:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    th{color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tl.main{background:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .tl.main *{color:#fff!important}
+  }
+</style>
+${autoPrint?`<script>window.onload=function(){window.print();}<\/script>`:""}
+</head><body><div class="page">
+
+<div class="topbar">
+  <div>
+    ${bs.logo?`<img src="${bs.logo}" style="height:48px;max-width:120px;object-fit:contain;display:block;margin-bottom:6px" alt="logo"/>`:""}
+    <div class="tb-co">${invoice.companyName||"Fawtara"}</div>
+    <div class="tb-info">
+      ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.activite?bs.activite:"",bs.adresse?bs.adresse:""].filter(Boolean).join("  ·  ")}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div class="tb-title">${isProforma?"PROFORMA":"FACTURE"}</div>
+    <div class="tb-num">${invoice.id}</div>
+    <div class="tb-date">${invoice.date}</div>
+  </div>
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-name">${invoice.companyName||"Fawtara"}</div>
+    <div class="party-info">
+      ${bs.nif?`<span>NIF : ${bs.nif}</span>`:""}
+      ${bs.nis?`<span>NIS : ${bs.nis}</span>`:""}
+      ${bs.rc?`<span>RC : ${bs.rc}</span>`:""}
+      ${bs.nin?`<span>NIN : ${bs.nin}</span>`:""}
+      ${bs.bp?`<span>BP : ${bs.bp}</span>`:""}
+      ${bs.rib?`<span>🏦 RIB : ${bs.rib}</span>`:""}
+      ${bs.rip?`<span>📮 RIP : ${bs.rip}</span>`:""}
+      ${bs.adresse?`<span>${bs.adresse}</span>`:""}
+    </div>
+  </div>
+  <div class="party">
+    <div class="party-name">${invoice.customer}</div>
+    <div class="party-info">
+      ${ci.nif?`<span>NIF : ${ci.nif}</span>`:""}
+      ${ci.nis?`<span>NIS : ${ci.nis}</span>`:""}
+      ${ci.rc?`<span>RC : ${ci.rc}</span>`:""}
+      ${ci.nin?`<span>NIN : ${ci.nin}</span>`:""}
+      ${ci.bp?`<span>BP : ${ci.bp}</span>`:""}
+      ${ci.rib?`<span>🏦 RIB : ${ci.rib}</span>`:""}
+      ${ci.rip?`<span>📮 RIP : ${ci.rip}</span>`:""}
+      ${ci.adresse?`<span>${ci.adresse}</span>`:""}
+      ${ci.phone?`<span>Tél : ${ci.phone}</span>`:""}
+    </div>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Désignation</th>
+    <th style="text-align:center">Qté</th>
+    <th style="text-align:center">Unité</th>
+    <th style="text-align:right">${invTvaEnabled?"PU HT":"Prix unit."}</th>
+    <th style="text-align:center">Remise</th>
+    <th style="text-align:right">${invTvaEnabled?"Montant HT":"Total"}</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="totals">
+  <div class="tl"><span>${invTvaEnabled?"Sous-total HT":"Sous-total"}</span><span>${montantHT.toLocaleString()} DA</span></div>
+  ${invTvaEnabled?`<div class="tl"><span>TVA ${invTvaRate}%</span><span>+ ${tvaAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  ${invTvaEnabled?`<div class="tl"><span style="font-weight:600">Total TTC</span><span style="font-weight:700">${montantTTC.toLocaleString()} DA</span></div>`:""}
+  ${invTimbreEnabled?`<div class="tl"><span>Droit de Timbre</span><span>+ ${timbreAmt.toFixed(2).replace(".",",")} DA</span></div>`:""}
+  <div class="tl main"><span>Total à payer</span><span>${totalFinal.toLocaleString()} DA</span></div>
+</div>
+
+<div class="lettres"><strong>Arrêtée la présente facture à la somme de :</strong> ${montantEnLettres(totalFinal)}</div>
+
+${invoice.notes?`<div style="margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-left:3px solid #1e293b;border-radius:0 6px 6px 0;font-size:12px"><strong>Remarques :</strong> ${invoice.notes}</div>`:""}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px">
+  <div style="border:1.5px solid #000;border-radius:4px;padding:14px;min-height:80px">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;color:#555">Signature & Cachet</div>
+  </div>
+  <div style="border:1.5px solid #000;border-radius:4px;padding:14px;min-height:80px">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;color:#555">Bon pour accord</div>
+  </div>
+</div>
+
+<div class="footer">
+  ${[bs.nif?`NIF: ${bs.nif}`:"",bs.nis?`NIS: ${bs.nis}`:"",bs.rc?`RC: ${bs.rc}`:"",bs.nin?`NIN: ${bs.nin}`:"",bs.bp?`BP: ${bs.bp}`:"",bs.rib?`RIB: ${bs.rib}`:"",bs.rip?`RIP: ${bs.rip}`:""].filter(Boolean).join("  ·  ")}
+  ${bs.adresse?`<br>${bs.adresse}`:""}
+</div>
+
+</div></body></html>`;
+  };
+
   const openInTab=(autoPrint=false)=>{
-    const html=buildHTML(autoPrint);
+    const tpl=bizSettings?.invTemplate||"classic";
+    const html=tpl==="modern"?buildHTML2(autoPrint):buildHTML(autoPrint);
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
@@ -2378,7 +2538,8 @@ ${!isProforma&&paidTxs.length>0?`
   const printPDF=()=>openInTab(false);
   const printDirect=()=>openInTab(true);
   const printProforma=()=>{
-    const html=buildHTML(false,true);
+    const tpl=bizSettings?.invTemplate||"classic";
+    const html=tpl==="modern"?buildHTML2(false,true):buildHTML(false,true);
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
@@ -3479,6 +3640,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
   const [bp,setBp]=useState(settings?.bp||"");
   const [rib,setRib]=useState(settings?.rib||"");
   const [rip,setRip]=useState(settings?.rip||"");
+  const [invTemplate,setInvTemplate]=useState(settings?.invTemplate||"classic");
   const [tvaEnabled,setTvaEnabled]=useState(settings?.tvaEnabled||false);
   const [tvaRate,setTvaRate]=useState(settings?.tvaRate||19);
   const [timbreEnabled,setTimbreEnabled]=useState(settings?.timbreEnabled||false);
@@ -3497,7 +3659,7 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
 
   const save=()=>{
     if(!ok)return;
-    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),nin:nin.trim(),bp:bp.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim(),tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
+    onSave(name.trim(),{logo,nif:nif.trim(),nis:nis.trim(),rc:rc.trim(),nin:nin.trim(),bp:bp.trim(),activite:activite.trim(),adresse:adresse.trim(),article:article.trim(),rib:rib.trim(),rip:rip.trim(),invTemplate,tvaEnabled,tvaRate,timbreEnabled,invPrefix:invPrefix.trim()||"FAC",invCounter:settings?.invCounter||1,blCounter:settings?.blCounter||1,bcCounter:settings?.bcCounter||1,customUnites:customUnites.split(",").map(u=>u.trim()).filter(Boolean)});
     onClose();
   };
 
@@ -3528,6 +3690,20 @@ function SettingsModal({companyName,settings,onSave,onClose,lang}){
             <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>{t.companyNameLabel}</div>
             <input autoFocus value={name} onChange={e=>setName(e.target.value)} placeholder={t.companyNamePh}
               style={{...S.inp({fontSize:16,fontWeight:700,borderColor:ok?"#2563EB":"#e5e7eb"})}}/>
+          </div>
+
+          {/* Modèle de facture */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#374151",marginBottom:8,textTransform:"uppercase",letterSpacing:.6}}>🎨 Modèle de facture PDF</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {[{id:"classic",label:"Classique",desc:"Avec paiements · Style traditionnel"},{id:"modern",label:"Moderne",desc:"Design épuré · Monochrome"}].map(m=>(
+                <button key={m.id} onClick={()=>setInvTemplate(m.id)}
+                  style={{padding:"12px 10px",borderRadius:12,border:`2px solid ${invTemplate===m.id?"#2563EB":"#e5e7eb"}`,background:invTemplate===m.id?"#eff6ff":"#fff",cursor:"pointer",textAlign:"left"}}>
+                  <div style={{fontSize:13,fontWeight:800,color:invTemplate===m.id?"#2563EB":"#111",marginBottom:3}}>{m.label} {invTemplate===m.id?"✓":""}</div>
+                  <div style={{fontSize:10,color:"#6b7280"}}>{m.desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Préfixe facture */}
